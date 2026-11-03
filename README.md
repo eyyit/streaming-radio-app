@@ -24,10 +24,10 @@ No station catalog is bundled. Screenshots and personal test libraries do not im
 </p>
 <p>
   <img src="docs/images/settings.png" width="350" alt="Emulator app-content capture: equal-height Settings rows, including switches">
-  <img src="docs/images/theme.png" width="350" alt="Emulator app-content capture: accent-color choices with blue selected">
+  <img src="docs/images/station-image-editor-mock.png" width="350" alt="Approved design mock: station image editor with fixed Save image action; not a current app screenshot">
 </p>
 
-**Emulator screenshots, not photographs or captures from a Volvo.** These are actual app-content renders from an Android 13 / API33 emulator. The emulator's system bars and bottom dock are excluded; real vehicle system UI and available app area vary. No Volvo system interface has been simulated or composited into the images.
+**Emulator captures and an approved design mock, not Volvo photographs.** The player, station-list and Settings images are actual app-content renders from an Android 13 / API33 emulator. The fourth image is the approved station-image editor mock, not a capture of the current app build. The emulator's system bars and bottom dock are excluded; real vehicle system UI and available app area vary. No Volvo system interface has been simulated or composited into the images.
 
 The six demo stations, icons, artist **Paper Satellites**, track **Midnight Colors**, album art and quiet synthetic audio are screenshot fixtures, not a bundled radio catalog or commercial recording. Online artwork is enabled for this demo; it defaults off in release builds. The [Favorites capture](docs/images/favorites.png) also shows the up/down ordering controls. A disabled up arrow on the first row prevents moving past the beginning of the list.
 

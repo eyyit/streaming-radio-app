@@ -942,8 +942,8 @@
     },
     {
       "path": "docs/HANDOFF-NEXT.md",
-      "size": 15097,
-      "sha256": "d18d40cd0cda596e68fb782c9cf526f8ab0d9f64174bed2b006794f0a9e17e44"
+      "size": 15543,
+      "sha256": "3a908c98501e6038a925f93a988710e8a632b273eb32d5f65192d63939a43683"
     },
     {
       "path": "docs/INTERNAL-TEST-CHECKS.md",
@@ -987,8 +987,8 @@
     },
     {
       "path": "README.md",
-      "size": 7184,
-      "sha256": "5a905c33768e284bd570c0da956ea49b56e9ef88303ba07158dd1f707591b15e"
+      "size": 7381,
+      "sha256": "c5a2776b4f4982ffadc98cc97168ca8f3afb04bf3357ed197e3e2c02a8940280"
     },
     {
       "path": "SECURITY.md",
@@ -1039,11 +1039,6 @@
       "path": "docs/images/settings.png",
       "size": 53329,
       "sha256": "fb7407d33c9cfed4f5f8c98aa35888dfff603bf25dd9df59032a4feb60df9a24"
-    },
-    {
-      "path": "docs/images/theme.png",
-      "size": 51525,
-      "sha256": "b11845813dcc1970262b8c7a3c71dfdcc8ebd71ce7f4cac06ac4626743f26a60"
     },
     {
       "path": "docs/SCREENSHOTS.md",
@@ -1144,6 +1139,11 @@
       "path": "docs/VERIFICATION.md",
       "size": 2900,
       "sha256": "12a7020f215bbdccc904caff608ddb16174ddf528163f1701ef1c8f036a69b28"
+    },
+    {
+      "path": "docs/images/station-image-editor-mock.png",
+      "size": 112231,
+      "sha256": "bf6fc3e1382de07a150f2f8c0d753d026d72368390dba5229f577d2c33fd9442"
     }
   ],
   "warnings": [
