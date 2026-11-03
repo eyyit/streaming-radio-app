@@ -1,3 +1,7 @@
+# Latest verified status — 3 November 2026
+
+App code commit58364c536cadd03c6c0f86f39d571bbc421e6089 passed GitHub Actions run41644510296: https://github.com/eyyit/streaming-radio-app/actions/runs/41644510296 . Prepared source inventory, dependency-tool tests, SDK setup, both automotive JVM test variants, full release lint, unsigned bundle, runtime inventory, OSV scan and artifact retention passed. The CI issue was3stale upstream files left after an export overlay; those were reconciled and guarded. Done buttons now use the theme accent/onAccent, with emulator render checks passing. This handoff update changes documentation/inventory hashes only; application code is unchanged. No Play upload or physical-car action has occurred. Version4 is still unsigned locally; user signs with their own key before any future Play upload.
+
 # Current handoff — 2 November 2026
 
 ## Scope and location
