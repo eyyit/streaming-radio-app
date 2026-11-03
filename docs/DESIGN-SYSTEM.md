@@ -71,3 +71,5 @@ Settings sizing rule (3 November 2026): all Settings action and toggle cells are
 - Update handoff docs and regression coverage for any discovered inconsistency. Record source/build/install/render/CI/publication status separately. Never describe an unpushed workflow fix as a passing GitHub run.
 
 Settings caption font is shared sans-serif regular (weight400),22sp for both action and toggle rows. Done/Back/Cancel keep their existing18sp medium action style. The settings-typography instrumentation mode checks8captions,22sp,400weight and56dp rows and captures actual app content without replacing the user library.
+
+Done-button rule (3 November): every app-owned Done action uses the selected theme accent background and on-accent text, matching Theme. Back and Cancel remain neutral. Preserve caption typography, dimensions and control positions. Shared button defaults enforce the Done treatment.

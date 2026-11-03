@@ -12,8 +12,8 @@
   "includedFiles": [
     {
       "path": ".cursor/rules/streaming-radio-design.mdc",
-      "size": 1867,
-      "sha256": "53401282bc67d84d2d6771a9532f564d680c39fb898cea8e3cfbeab9649a18cd"
+      "size": 2004,
+      "sha256": "762b41a83b8c6e562dd1d3ad752d0aa8b26abf72fbecd677e248ca3e83902f9d"
     },
     {
       "path": ".github/dependabot.yml",
@@ -22,8 +22,8 @@
     },
     {
       "path": ".github/workflows/android-ci.yml",
-      "size": 2410,
-      "sha256": "27fd3c97a0dd418634e3d35ca7d4122aa0b8cef1916eadab7ad60fef7a962f00"
+      "size": 2502,
+      "sha256": "db9e49b8e3f90d95bbb425c30edbf5a02aa37782f1b9633b3ac77c40b2e3dc50"
     },
     {
       "path": ".gitignore",
@@ -37,8 +37,8 @@
     },
     {
       "path": "app/src/androidTest/java/net/mspanc/twinsenradio/automotive/PrototypeSmokeInstrumentation.kt",
-      "size": 36419,
-      "sha256": "19d024db5ed6fed9093a3fffc8bcfdcabaa4c66f9dc95bd358da064242f9e873"
+      "size": 37010,
+      "sha256": "f43a20aaddedf662b13101cbe626fc6534a62aa7d7c08e9e04571fa4e9a85759"
     },
     {
       "path": "app/src/automotive/AndroidManifest.xml",
@@ -72,8 +72,8 @@
     },
     {
       "path": "app/src/automotive/java/net/mspanc/twinsenradio/automotive/RadioManagement.kt",
-      "size": 23652,
-      "sha256": "152991bae474f3a5636025466a44f7244eee1b0c3d87152a047f05001e978f2c"
+      "size": 23660,
+      "sha256": "321c805a35747f0672ed2b6f8e008057909a0378f488e607551623902786ec5d"
     },
     {
       "path": "app/src/automotive/java/net/mspanc/twinsenradio/automotive/StationImageDialog.kt",
@@ -937,13 +937,13 @@
     },
     {
       "path": "docs/DESIGN-SYSTEM.md",
-      "size": 11256,
-      "sha256": "d6e86c0e19fb5d5985993fb73579de3e0226e3d93f22489d4fc7379a50e6c2ec"
+      "size": 11538,
+      "sha256": "5f39b91f6fa1870878c2086020d411b795f6731fba80b22afe4c4c84ba275eb6"
     },
     {
       "path": "docs/HANDOFF-NEXT.md",
-      "size": 10656,
-      "sha256": "7743e20837e5f1e9a331908320d412cc8edea384824a845ded3977c6749cfd66"
+      "size": 11895,
+      "sha256": "8b93f318c674ace57a82aba062a4acfb6d5e7d6d2d04cc7dc8ca84794b0f92fa"
     },
     {
       "path": "docs/INTERNAL-TEST-CHECKS.md",
@@ -1027,8 +1027,8 @@
     },
     {
       "path": "tools/export-public-source.cjs",
-      "size": 7895,
-      "sha256": "7f912b4cef06bdea75ac0e37669d1dd6f4dceef2043beb0953bc0f77260158a9"
+      "size": 7982,
+      "sha256": "607d96bff2f0e3dd4753df708f1f22e48a26b9be7682d7c943b0bf9f3a5fd483"
     },
     {
       "path": "UPSTREAM-README.md",
@@ -1037,8 +1037,8 @@
     },
     {
       "path": "docs/images/settings.png",
-      "size": 53245,
-      "sha256": "7cae02a888a577fc2f3d1a6bd1c226c55290eebb6478abd1adb5ab84a7b749c3"
+      "size": 53329,
+      "sha256": "fb7407d33c9cfed4f5f8c98aa35888dfff603bf25dd9df59032a4feb60df9a24"
     },
     {
       "path": "docs/images/theme.png",
@@ -1117,8 +1117,13 @@
     },
     {
       "path": "AGENTS.md",
-      "size": 2845,
-      "sha256": "51775536185a182e5fe391a04170cee048650caddd012430122ca6395b3a02ee"
+      "size": 3203,
+      "sha256": "77e63a4373cc5fd81ff138963780a103e42e02ec427f73f54dd6187fa5b9809d"
+    },
+    {
+      "path": "tools/check-source-tree.cjs",
+      "size": 1043,
+      "sha256": "2f55899a80689fc6315bf531c4b8895db347f0498859f011001150cfef1a1400"
     }
   ],
   "warnings": [

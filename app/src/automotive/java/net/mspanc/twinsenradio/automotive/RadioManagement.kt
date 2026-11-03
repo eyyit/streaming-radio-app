@@ -41,7 +41,7 @@ class RadioManagement(
  private fun text(value:String,size:Float=18f,color:Int=AutomotiveDesign.TEXT)=TextView(activity).apply {
   text=value; textSize=size; setTextColor(color); setPadding(dp(8),dp(6),dp(8),dp(6))
  }
- private fun button(value:String,accent:Boolean=false,action:()->Unit)=TextView(activity).apply {
+ private fun button(value:String,accent:Boolean=value=="Done",action:()->Unit)=TextView(activity).apply {
   text=value; textSize=AutomotiveDesign.BUTTON_TEXT_SP; setTypeface(Typeface.create("sans-serif-medium",Typeface.NORMAL)); setTextColor(if(accent)AppearanceTheme.current(activity).onAccent else AutomotiveDesign.TEXT); gravity=Gravity.CENTER; minHeight=dp(52)
   setPadding(dp(18),dp(6),dp(18),dp(6)); isFocusable=true
   background=RippleDrawable(ColorStateList.valueOf(0x30ffffff),rounded(if(accent)coral else AutomotiveDesign.CONTROL),null)

@@ -50,3 +50,8 @@ Latest debug + test APK + unsigned release bundle build passed2m1s. Installed on
 
 ## Publication authorized — 3 November
 User explicitly approved committing and pushing the prepared UI, README, design rules and Actions fixes and checking the resulting CI run until it passes. No Play upload, physical-car action, broadcaster outreach or credential transfer is authorized. Prior notes saying these changes await commit/push are historical. CI result must be checked against the new exact commit; no green claim yet.
+
+## Resumed: CI source reconciliation and Done accents — 3 November
+User resumed and supplied the failed Gradle block. Run41585517104 failed compiling R357NowPlayingTest because its R357NowPlaying implementation was removed. Prepared export overlay had retained3upstream files absent from the177-file app/src inventory: R357NowPlayingTest, TritonNowPlaying and TritonNowPlayingTest. Removed exactly those3files to match the tested prepared source. Active feature tests are retained; no test task was skipped. Early check-source-tree guard reproduced the mismatch before cleanup and passed after it. Gradlew now executable, and exporter preserves0755.
+Shared Done controls now use current theme accent/onAccent like Theme; Back/Cancel unchanged. Local debug/test/unsigned release builds,242release tests and full lint passed. Emulator settings-typography mode passed6checks:8captions,22sp,400weight,56dp rows and Done accent/text. Settings README capture refreshed; user library not replaced. Version4 remains the next unsigned candidate, existing Play upload remains3. No Play or physical car actions.
+These fixes are authorized for commit/push and another Actions run; priorCIstatus is failed until the new exact SHA is observed green.

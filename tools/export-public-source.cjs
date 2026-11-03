@@ -17,6 +17,7 @@ if(fs.existsSync(path.join(root,'app/src/automotiveDebug')))addTree('app/src/aut
 for(const f of ['README.md','BUILD.md','SECURITY.md','CHANGELOG.md'])addFile('docs/public/'+f,f);
 addFile('tools/export-public-source.cjs');
 addFile('AGENTS.md');
+addFile('tools/check-source-tree.cjs');
 addFile('docs/DESIGN-SYSTEM.md');
 addFile('.cursor/rules/streaming-radio-design.mdc');
 for(const f of ['tools/check-dependencies.cjs','tools/check-dependencies.test.cjs','.github/workflows/android-ci.yml','.github/dependabot.yml'])addFile(f);
@@ -56,5 +57,5 @@ if(found.length){for(const f of found)console.error('Potential '+f.name+' at '+f
 warnings.push('Secret-pattern scan is limited and is not a comprehensive secret, privacy, license, or security audit.');
 if(fs.existsSync(output)){const s=fs.lstatSync(output);if(s.isSymbolicLink()||!s.isDirectory())fail('destination is not a regular directory');if(fs.readdirSync(output).length)fail('destination is nonempty; move it aside manually before export')}else{let p=path.dirname(output);while(p!==path.dirname(p)&&!fs.existsSync(p))p=path.dirname(p);if(fs.existsSync(p)&&fs.realpathSync(p)!==p)fail('destination parent resolves through a symlink');fs.mkdirSync(output,{recursive:true})}
 const real=fs.realpathSync(output);if(real!==output)fail('destination resolves through symlink');const records=[];
-for(const [dest,item] of [...included].sort((a,b)=>a[0].localeCompare(b[0]))){const target=inside(real,path.join(real,dest));fs.mkdirSync(path.dirname(target),{recursive:true});const b=item.generated||fs.readFileSync(item.source);fs.writeFileSync(target,b,{flag:'wx'});records.push({path:dest,size:b.length,sha256:crypto.createHash('sha256').update(b).digest('hex')})}
+for(const [dest,item] of [...included].sort((a,b)=>a[0].localeCompare(b[0]))){const target=inside(real,path.join(real,dest));fs.mkdirSync(path.dirname(target),{recursive:true});const b=item.generated||fs.readFileSync(item.source);fs.writeFileSync(target,b,{flag:'wx'});if(dest==='gradlew')fs.chmodSync(target,0o755);records.push({path:dest,size:b.length,sha256:crypto.createHash('sha256').update(b).digest('hex')})}
 const manifest={formatVersion:1,project:'Twinsen Radio independent source candidate',gitHead,workingTree,hashAlgorithm:'SHA-256',selfHashExcluded:true,manifestFilesExcludedFromIncludedFiles:['SOURCE-MANIFEST.json','SOURCE-MANIFEST.sha256'],includedFiles:records,warnings};const mb=Buffer.from(JSON.stringify(manifest,null,2)+'\n','utf8');fs.writeFileSync(path.join(real,'SOURCE-MANIFEST.json'),mb,{flag:'wx'});const mh=crypto.createHash('sha256').update(mb).digest('hex');fs.writeFileSync(path.join(real,'SOURCE-MANIFEST.sha256'),mh+'  SOURCE-MANIFEST.json\n',{flag:'wx'});console.log('Exported '+records.length+' allowlisted files. Manifest SHA-256: '+mh);for(const w of warnings)console.log('Warning: '+w);

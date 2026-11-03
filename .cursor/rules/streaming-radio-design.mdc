@@ -19,3 +19,5 @@ Read docs/DESIGN-SYSTEM.md before any UI/mock/resource change. It is authoritati
 - AAOS native media host owns its driving layout; do not remove or pretend to redesign it from this APK.
 
 A sizing fix must preserve typography and all unrelated geometry/content. Equivalent rows share design tokens. Settings:22sp captions,56dp cells,48dp switches; Back/Done/Cancel stay18sp. Never silently shrink text. Verify every row in a rendered before/after comparison, not only the changed widget. See the mandatory consistency section in docs/DESIGN-SYSTEM.md.
+
+All Done actions use the selected theme accent background/onAccent text. Back/Cancel remain neutral; preserve fonts, sizes and placement.

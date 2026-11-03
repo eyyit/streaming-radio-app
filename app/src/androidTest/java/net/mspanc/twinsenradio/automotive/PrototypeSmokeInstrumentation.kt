@@ -143,6 +143,11 @@ class PrototypeSmokeInstrumentation : Instrumentation() {
                     checkThat("all Settings captions retain 22sp typography", found.all { kotlin.math.abs(it.textSize / targetContext.resources.displayMetrics.scaledDensity - 22f) < 0.1f })
                     checkThat("all Settings captions use regular font weight", found.all { it.typeface.weight == 400 })
                     checkThat("all Settings rows remain 56dp high", found.all { kotlin.math.abs(it.height / targetContext.resources.displayMetrics.density - 56f) < 0.1f })
+                    val done = labels(content).single { it.text.toString() == "Done" }
+                    val theme = net.mspanc.twinsenradio.data.AppearanceTheme.current(targetContext)
+                    val surface = (done.background as android.graphics.drawable.RippleDrawable).getDrawable(0) as android.graphics.drawable.GradientDrawable
+                    checkThat("Settings Done uses selected theme accent background", surface.color?.defaultColor == theme.accent)
+                    checkThat("Settings Done uses matching on-accent text", done.currentTextColor == theme.onAccent)
                     val bitmap = Bitmap.createBitmap(content.width, content.height, Bitmap.Config.ARGB_8888)
                     try {
                         content.draw(Canvas(bitmap))
