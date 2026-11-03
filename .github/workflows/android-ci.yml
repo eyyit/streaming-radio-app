@@ -33,29 +33,14 @@ jobs:
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: '24'
-      - name: Verify prepared app source tree
-        run: node tools/check-source-tree.cjs
-      - name: Check dependency gate regression tests
-        run: node --test tools/check-dependencies.test.cjs
       - name: Set up Android SDK tools
         uses: android-actions/setup-android@be39fa834029ff78f1a44aa3bb0819b8fc2bd8fd # v4.0.4
         with:
           packages: ''
       - name: Install Android SDK components
-        run: sdkmanager 'platforms;android-36' 'build-tools;36.0.0'
-      - name: Check automotive candidates and write runtime inventory
-        run: >-
-          bash ./gradlew --no-daemon
-          :app:testAutomotiveDebugUnitTest
-          :app:testAutomotiveReleaseUnitTest
-          :app:lintAutomotiveRelease
-          :app:bundleAutomotiveRelease
-          :app:writeAutomotiveReleaseInventory
-      - name: Check resolved dependencies with OSV
-        run: >-
-          node tools/check-dependencies.cjs
-          --inventory app/build/reports/release/runtime-components.json
-          --output app/build/reports/release/dependency-security-scan.json
+        run: sdkmanager 'platforms;android-36' 'build-tools;35.0.0'
+      - name: Run shared local and CI verification
+        run: node tools/verify-automotive.cjs
       - name: Retain review evidence
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4

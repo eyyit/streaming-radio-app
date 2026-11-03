@@ -58,6 +58,20 @@ On Windows use `gradlew.bat`. Gradle uses the available processor count by defau
 
 See [BUILD.md](BUILD.md) for toolchain and signing details. Never commit upload keys, passwords, `local.properties`, or personal playlists.
 
+## Verify before pushing
+
+```bash
+# Prerequisites, source-tree parity, and tooling regressions only
+node tools/verify-automotive.cjs --preflight
+
+# Same full verification command used by GitHub Actions
+node tools/verify-automotive.cjs
+```
+
+Run this from a fresh checkout of the exact candidate commit. The full command checks Java/SDK prerequisites, source parity and tooling regressions, then runs both automotive unit-test variants, full release lint, an unsigned bundle, runtime dependency inventory and OSV. It never starts an emulator or installs an app. Signing variables are removed from child processes. A quick debug build is not this full verification.
+
+Evidence is saved at `app/build/reports/verification/verification.json`, including the commit and clean/dirty working-tree status. A dirty working-tree pass is candidate evidence, not proof of the committed tree. See [verification guide](docs/VERIFICATION.md).
+
 ## Testing and release status
 
 Current source candidate: **0.3.0-rc2**, version code **4**, package `com.impostorlabs.streamingradio`. The previously uploaded internal test remains version 3; build and sign version 4 to include the equal-height Settings rows. Android 13 / API 33 is the development vehicle's OS level. Emulator playback has shown audio glitches; physical-car audio, focus/ducking, network recovery, and driving-transition acceptance are still pending. Passing tests is not a claim of vehicle certification or Play approval.

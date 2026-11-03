@@ -18,6 +18,7 @@ for(const f of ['README.md','BUILD.md','SECURITY.md','CHANGELOG.md'])addFile('do
 addFile('tools/export-public-source.cjs');
 addFile('AGENTS.md');
 addFile('tools/check-source-tree.cjs');
+for(const f of ['tools/check-source-tree.test.cjs','tools/verify-automotive.cjs','tools/verify-automotive.test.cjs'])addFile(f);
 addFile('docs/DESIGN-SYSTEM.md');
 addFile('.cursor/rules/streaming-radio-design.mdc');
 for(const f of ['tools/check-dependencies.cjs','tools/check-dependencies.test.cjs','.github/workflows/android-ci.yml','.github/dependabot.yml'])addFile(f);

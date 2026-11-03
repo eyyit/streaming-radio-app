@@ -22,8 +22,8 @@
     },
     {
       "path": ".github/workflows/android-ci.yml",
-      "size": 2502,
-      "sha256": "db9e49b8e3f90d95bbb425c30edbf5a02aa37782f1b9633b3ac77c40b2e3dc50"
+      "size": 1803,
+      "sha256": "aa97caf78aab7d5d5ec387ccf1d7d2bcbdd8eff30ae4de29644fe61d61cf75a4"
     },
     {
       "path": ".gitignore",
@@ -942,8 +942,8 @@
     },
     {
       "path": "docs/HANDOFF-NEXT.md",
-      "size": 13438,
-      "sha256": "d5845693ad68160ffa6c857cb91b21df0d36ea7da7ae2b9edbc774a0afb35f2d"
+      "size": 15097,
+      "sha256": "d18d40cd0cda596e68fb782c9cf526f8ab0d9f64174bed2b006794f0a9e17e44"
     },
     {
       "path": "docs/INTERNAL-TEST-CHECKS.md",
@@ -987,8 +987,8 @@
     },
     {
       "path": "README.md",
-      "size": 6258,
-      "sha256": "da2a0e6c5031b8c392ee2a876d0cff535d496235b4011efe320e42bbb2165a9b"
+      "size": 7184,
+      "sha256": "5a905c33768e284bd570c0da956ea49b56e9ef88303ba07158dd1f707591b15e"
     },
     {
       "path": "SECURITY.md",
@@ -1027,8 +1027,8 @@
     },
     {
       "path": "tools/export-public-source.cjs",
-      "size": 7982,
-      "sha256": "607d96bff2f0e3dd4753df708f1f22e48a26b9be7682d7c943b0bf9f3a5fd483"
+      "size": 8111,
+      "sha256": "1cf4bb56faff8e54afc12180782bda03772239e922c65831312c86710b87c7a0"
     },
     {
       "path": "UPSTREAM-README.md",
@@ -1117,13 +1117,33 @@
     },
     {
       "path": "AGENTS.md",
-      "size": 3203,
-      "sha256": "77e63a4373cc5fd81ff138963780a103e42e02ec427f73f54dd6187fa5b9809d"
+      "size": 3545,
+      "sha256": "2ac7434e2982bfa531b0f9747fd1d283c09b0f2b7da085c170e5f80b00cab31c"
     },
     {
       "path": "tools/check-source-tree.cjs",
-      "size": 1043,
-      "sha256": "2f55899a80689fc6315bf531c4b8895db347f0498859f011001150cfef1a1400"
+      "size": 6155,
+      "sha256": "f53582c10b14264a7a3ffa9d623bc8a889784339b969cb33658d66b47adae69f"
+    },
+    {
+      "path": "tools/check-source-tree.test.cjs",
+      "size": 6098,
+      "sha256": "a473a4dee0ad4cc2ab0220331816456f3a7102febe85cd7c0e91b6d718e47174"
+    },
+    {
+      "path": "tools/verify-automotive.cjs",
+      "size": 8128,
+      "sha256": "5dcf4113c9ad7a5aee72c5cf2fc53264d0159b24b7476f352ba64b5a5c55b256"
+    },
+    {
+      "path": "tools/verify-automotive.test.cjs",
+      "size": 5287,
+      "sha256": "fac07488acfce0bc3982858b8f50146d4f133eebeeacfbe1ed4425829072e795"
+    },
+    {
+      "path": "docs/VERIFICATION.md",
+      "size": 2900,
+      "sha256": "12a7020f215bbdccc904caff608ddb16174ddf528163f1701ef1c8f036a69b28"
     }
   ],
   "warnings": [
