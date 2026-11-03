@@ -104,32 +104,33 @@ class RadioManagement(
   dialog.window?.setLayout((activity.resources.displayMetrics.widthPixels*0.94f).toInt(),(activity.resources.displayMetrics.heightPixels*0.88f).toInt())
   return dialog
  }
- private fun addAction(parent:LinearLayout,caption:String,bottomMarginDp:Int=0,action:()->Unit) {
-  parent.addView(button(caption,action=action).apply { gravity=Gravity.CENTER_VERTICAL or Gravity.START },LinearLayout.LayoutParams(-1,dp(56)).apply { topMargin=dp(8); bottomMargin=dp(bottomMarginDp) })
+ private fun addAction(parent:LinearLayout,caption:String,bottomMarginDp:Int=0,captionSize:Float=AutomotiveDesign.BUTTON_TEXT_SP,captionTypeface:Typeface?=null,action:()->Unit) {
+  parent.addView(button(caption,action=action).apply { textSize=captionSize; if(captionTypeface!=null)typeface=captionTypeface; gravity=Gravity.CENTER_VERTICAL or Gravity.START },LinearLayout.LayoutParams(-1,dp(AutomotiveDesign.SETTINGS_ROW_HEIGHT_DP)).apply { topMargin=dp(8); bottomMargin=dp(bottomMarginDp) })
  }
  fun settings(onClose:()->Unit={}) {
   show("Settings",onClose=onClose) { body,settingsDialog ->
-   addAction(body,"Theme") {
+   fun settingsAction(caption:String,action:()->Unit) = addAction(body,caption,captionSize=AutomotiveDesign.SETTINGS_LABEL_SP,captionTypeface=Typeface.create(AutomotiveDesign.SETTINGS_FONT_FAMILY,Typeface.NORMAL),action=action)
+   settingsAction("Theme") {
     val settingsView=screens.firstOrNull { it.first===settingsDialog }?.second
     settingsView?.visibility=View.GONE
     ThemePicker.show(activity,changed,{ settingsView?.visibility=View.VISIBLE },host=host)
    }
-   addAction(body,"Manage playlists") { playlists() }
+   settingsAction("Manage playlists") { playlists() }
    fun toggle(caption:String,value:Boolean,action:(Boolean)->Unit) {
-    val row=LinearLayout(activity).apply { gravity=Gravity.CENTER_VERTICAL; background=rounded(AutomotiveDesign.CONTROL); setPadding(dp(12),dp(4),dp(16),dp(4)) }
-    row.addView(text(caption,22f),LinearLayout.LayoutParams(0,dp(56),1f))
+    val row=LinearLayout(activity).apply { gravity=Gravity.CENTER_VERTICAL; background=rounded(AutomotiveDesign.CONTROL); setPadding(dp(12),0,dp(16),0) }
+    row.addView(text(caption,AutomotiveDesign.SETTINGS_LABEL_SP).apply { gravity=Gravity.CENTER_VERTICAL; typeface=Typeface.create(AutomotiveDesign.SETTINGS_FONT_FAMILY,Typeface.NORMAL) },LinearLayout.LayoutParams(0,dp(AutomotiveDesign.SETTINGS_ROW_HEIGHT_DP),1f))
     row.addView(Switch(activity).apply {
-     contentDescription=caption; isChecked=value; thumbTintList=ColorStateList.valueOf(coral)
+     contentDescription=caption; isChecked=value; thumbTintList=ColorStateList.valueOf(coral); minHeight=dp(AutomotiveDesign.SETTINGS_SWITCH_HEIGHT_DP)
      setOnCheckedChangeListener { _,enabled -> action(enabled); changed() }
-    })
-    body.addView(row,LinearLayout.LayoutParams(-1,-2).apply { topMargin=dp(8) })
+    },LinearLayout.LayoutParams(-2,dp(AutomotiveDesign.SETTINGS_SWITCH_HEIGHT_DP)))
+    body.addView(row,LinearLayout.LayoutParams(-1,dp(AutomotiveDesign.SETTINGS_ROW_HEIGHT_DP)).apply { topMargin=dp(8) })
    }
    toggle("Automatic track and station artwork",prefs.onlineArtworkEnabled) { prefs.onlineArtworkEnabled=it }
    toggle("Animate artwork changes",prefs.artworkTransitionsEnabled) { prefs.artworkTransitionsEnabled=it }
-   addAction(body,"Station images") { chooseStationImage() }
-   addAction(body,"Refresh playlists") { refreshPlaylists() }
-   addAction(body,"Privacy policy") { legalDocument("Privacy policy",listOf("legal/privacy-policy.txt")) }
-   addAction(body,"Open-source licenses") { legalDocument("Open-source licenses",listOf("legal/open-source-notices.txt","legal/gpl-3.0.txt","legal/dependency-notices.txt","legal/runtime-dependency-notices.txt","legal/apache-2.0.txt","legal/lucide-isc.txt")) }
+   settingsAction("Station images") { chooseStationImage() }
+   settingsAction("Refresh playlists") { refreshPlaylists() }
+   settingsAction("Privacy policy") { legalDocument("Privacy policy",listOf("legal/privacy-policy.txt")) }
+   settingsAction("Open-source licenses") { legalDocument("Open-source licenses",listOf("legal/open-source-notices.txt","legal/gpl-3.0.txt","legal/dependency-notices.txt","legal/runtime-dependency-notices.txt","legal/apache-2.0.txt","legal/lucide-isc.txt")) }
   }
  }
  private fun legalDocument(title:String,assets:List<String>) {

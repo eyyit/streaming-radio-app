@@ -16,6 +16,7 @@ for(const d of ['main','automotive','debug','test','androidTest'])addTree('app/s
 if(fs.existsSync(path.join(root,'app/src/automotiveDebug')))addTree('app/src/automotiveDebug');
 for(const f of ['README.md','BUILD.md','SECURITY.md','CHANGELOG.md'])addFile('docs/public/'+f,f);
 addFile('tools/export-public-source.cjs');
+addFile('AGENTS.md');
 addFile('docs/DESIGN-SYSTEM.md');
 addFile('.cursor/rules/streaming-radio-design.mdc');
 for(const f of ['tools/check-dependencies.cjs','tools/check-dependencies.test.cjs','.github/workflows/android-ci.yml','.github/dependabot.yml'])addFile(f);

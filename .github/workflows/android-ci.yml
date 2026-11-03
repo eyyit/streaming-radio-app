@@ -17,7 +17,7 @@ concurrency:
 
 jobs:
   candidate:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 35
     steps:
       - name: Check out source
@@ -35,6 +35,10 @@ jobs:
           node-version: '24'
       - name: Check dependency gate regression tests
         run: node --test tools/check-dependencies.test.cjs
+      - name: Set up Android SDK tools
+        uses: android-actions/setup-android@be39fa834029ff78f1a44aa3bb0819b8fc2bd8fd # v4.0.4
+        with:
+          packages: ''
       - name: Install Android SDK components
         run: sdkmanager 'platforms;android-36' 'build-tools;36.0.0'
       - name: Check automotive candidates and write runtime inventory

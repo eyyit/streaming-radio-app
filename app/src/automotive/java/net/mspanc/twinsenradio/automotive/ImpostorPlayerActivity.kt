@@ -16,6 +16,7 @@ import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
 import android.widget.*
+import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import androidx.media3.common.MediaItem
@@ -106,6 +107,13 @@ class ImpostorPlayerActivity : AppCompatActivity() {
   content.addView(metadataFooter,FrameLayout.LayoutParams(-1,dp(28),Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL))
   managementHost=FrameLayout(this); content.addView(managementHost,FrameLayout.LayoutParams(-1,-1))
   management=RadioManagement(this,lifecycleScope,{ station,parent -> select(station,parent) },{ applyTheme(); refreshRows(); renderPlayer() },host=managementHost)
+  onBackPressedDispatcher.addCallback(this,object:OnBackPressedCallback(true) {
+   override fun handleOnBackPressed() {
+    if(management.handleBack()) return
+    isEnabled=false
+    try { onBackPressedDispatcher.onBackPressed() } finally { isEnabled=true }
+   }
+  })
   left=LinearLayout(this).apply { orientation=LinearLayout.VERTICAL; setPadding(dp(12),dp(12),dp(12),0) }
   tabs=LinearLayout(this); left.addView(tabs,LinearLayout.LayoutParams(-1,dp(52)))
   list=ListView(this).apply { dividerHeight=0; setPadding(0,dp(12),0,dp(12)); clipToPadding=true; isVerticalScrollBarEnabled=true }
@@ -339,7 +347,6 @@ class ImpostorPlayerActivity : AppCompatActivity() {
    }); renderPlayer(); adapter.notifyDataSetChanged()
   } },MoreExecutors.directExecutor())
  }
- override fun onBackPressed() { if(!management.handleBack())super.onBackPressed() }
  override fun onDestroy() { if(::management.isInitialized)management.close(); super.onDestroy() }
  override fun onStop() { footerHandler.removeCallbacks(footerTick); if(::artworkProgress.isInitialized) artworkProgress.stopForActivity(); generation++; controller?.release(); controller=null; super.onStop() }
  private inner class Stations:BaseAdapter() {

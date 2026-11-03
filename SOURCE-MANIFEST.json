@@ -12,8 +12,8 @@
   "includedFiles": [
     {
       "path": ".cursor/rules/streaming-radio-design.mdc",
-      "size": 1501,
-      "sha256": "4992b00151144b0dc9a36a32061d29bbdcfd8b92d6147158de784035aaf9dcfe"
+      "size": 1867,
+      "sha256": "53401282bc67d84d2d6771a9532f564d680c39fb898cea8e3cfbeab9649a18cd"
     },
     {
       "path": ".github/dependabot.yml",
@@ -22,8 +22,8 @@
     },
     {
       "path": ".github/workflows/android-ci.yml",
-      "size": 2241,
-      "sha256": "fc5f7f9bf9615b0b0b02c45c42b834cdafb129bc1d12bc297b7fa864135dbd0d"
+      "size": 2410,
+      "sha256": "27fd3c97a0dd418634e3d35ca7d4122aa0b8cef1916eadab7ad60fef7a962f00"
     },
     {
       "path": ".gitignore",
@@ -32,13 +32,13 @@
     },
     {
       "path": "app/build.gradle.kts",
-      "size": 5686,
-      "sha256": "5d174d447caf16d91dfff7a56c5d2cadc198e35469bcb2530995661e4ca05cd2"
+      "size": 5683,
+      "sha256": "610e4048ba1851e1c238fb7f571595d0b29c38e2c2d6c147ed783cc968112c12"
     },
     {
       "path": "app/src/androidTest/java/net/mspanc/twinsenradio/automotive/PrototypeSmokeInstrumentation.kt",
-      "size": 25465,
-      "sha256": "8371f99daf9673c7432f435f0bb9b9c5858a0caea7ac7cd5dc8c8ebeb9691da8"
+      "size": 36419,
+      "sha256": "19d024db5ed6fed9093a3fffc8bcfdcabaa4c66f9dc95bd358da064242f9e873"
     },
     {
       "path": "app/src/automotive/AndroidManifest.xml",
@@ -57,8 +57,8 @@
     },
     {
       "path": "app/src/automotive/java/net/mspanc/twinsenradio/automotive/AutomotiveDesign.kt",
-      "size": 503,
-      "sha256": "6d5c2070f7e70e7355b608e6d007f0c035f1307aea633c6e47568e443c38e3a3"
+      "size": 678,
+      "sha256": "5285eb3f87fed3e3313eafc1f899654178c743c792370934656460f592b68bc8"
     },
     {
       "path": "app/src/automotive/java/net/mspanc/twinsenradio/automotive/AutomotiveSettingsActivity.kt",
@@ -67,13 +67,13 @@
     },
     {
       "path": "app/src/automotive/java/net/mspanc/twinsenradio/automotive/ImpostorPlayerActivity.kt",
-      "size": 27482,
-      "sha256": "d95c61cd81b7d8806a9bc8bf2c17c3b3ad36d43bc1f38051ad94fa26097568db"
+      "size": 27713,
+      "sha256": "b39f7acc83acf22313514e0985a2bbbdc18d4be633cf5f118594de20bc0d9117"
     },
     {
       "path": "app/src/automotive/java/net/mspanc/twinsenradio/automotive/RadioManagement.kt",
-      "size": 22874,
-      "sha256": "1d77fda2748543f38d5792e3535380de336b1be90e3f8ce0beecebad1310720e"
+      "size": 23652,
+      "sha256": "152991bae474f3a5636025466a44f7244eee1b0c3d87152a047f05001e978f2c"
     },
     {
       "path": "app/src/automotive/java/net/mspanc/twinsenradio/automotive/StationImageDialog.kt",
@@ -937,13 +937,13 @@
     },
     {
       "path": "docs/DESIGN-SYSTEM.md",
-      "size": 8430,
-      "sha256": "3793ac30464e02cfa912fe6352b90669359bd925cd1317714ae5f0fe6e6a46c3"
+      "size": 11256,
+      "sha256": "d6e86c0e19fb5d5985993fb73579de3e0226e3d93f22489d4fc7379a50e6c2ec"
     },
     {
       "path": "docs/HANDOFF-NEXT.md",
-      "size": 4901,
-      "sha256": "a106e9a055b7317ae5602d70acd478ed244b55419576db470588f49081115811"
+      "size": 10656,
+      "sha256": "7743e20837e5f1e9a331908320d412cc8edea384824a845ded3977c6749cfd66"
     },
     {
       "path": "docs/INTERNAL-TEST-CHECKS.md",
@@ -987,8 +987,8 @@
     },
     {
       "path": "README.md",
-      "size": 1694,
-      "sha256": "045b38cb97f78cb18997bddf2ef9ca2c1dc29bfe699167fb13333a05bef97313"
+      "size": 6258,
+      "sha256": "da2a0e6c5031b8c392ee2a876d0cff535d496235b4011efe320e42bbb2165a9b"
     },
     {
       "path": "SECURITY.md",
@@ -1027,13 +1027,98 @@
     },
     {
       "path": "tools/export-public-source.cjs",
-      "size": 7873,
-      "sha256": "e948ca599ebdf50f497e8ccf1d36999b4e66f20fa48b3e7dda12c547411cddfe"
+      "size": 7895,
+      "sha256": "7f912b4cef06bdea75ac0e37669d1dd6f4dceef2043beb0953bc0f77260158a9"
     },
     {
       "path": "UPSTREAM-README.md",
       "size": 10980,
       "sha256": "49a068ea5bfbaeadccb60cec50bf1b945b94e19a80740e6717b933ae078ca93c"
+    },
+    {
+      "path": "docs/images/settings.png",
+      "size": 53245,
+      "sha256": "7cae02a888a577fc2f3d1a6bd1c226c55290eebb6478abd1adb5ab84a7b749c3"
+    },
+    {
+      "path": "docs/images/theme.png",
+      "size": 51525,
+      "sha256": "b11845813dcc1970262b8c7a3c71dfdcc8ebd71ce7f4cac06ac4626743f26a60"
+    },
+    {
+      "path": "docs/SCREENSHOTS.md",
+      "size": 1457,
+      "sha256": "e00b90b6a7fbf878529bd1c1d93f4ca622db153357587f0d6176248c3e43cd97"
+    },
+    {
+      "path": "tools/screenshot-fixtures/Make-Demo-Art.ps1",
+      "size": 2141,
+      "sha256": "6df3fa7e83e53744e73e475ae198bd97396116add9115f1029ea059fc2a09841"
+    },
+    {
+      "path": "tools/screenshot-fixtures/README.md",
+      "size": 1549,
+      "sha256": "a524ed9398cb93b813175ba45c0d5fd6e03c97cb6dd4b46c67fa89d1b956d1da"
+    },
+    {
+      "path": "tools/screenshot-fixtures/album.png",
+      "size": 141374,
+      "sha256": "1982963a614589892636f00612bd6ecca5b06f4109fee43e508f84f3b55573a2"
+    },
+    {
+      "path": "tools/screenshot-fixtures/demo-server.cjs",
+      "size": 1931,
+      "sha256": "2c281215365b856140b6449ead9eaac6dc26ee1f29942fe4894207181f247cdc"
+    },
+    {
+      "path": "tools/screenshot-fixtures/station-1.png",
+      "size": 136184,
+      "sha256": "3f7739613680d365657845f25f2dd76066d5b76402128bb2b9a9ff239c119d1d"
+    },
+    {
+      "path": "tools/screenshot-fixtures/station-2.png",
+      "size": 136406,
+      "sha256": "c6a6143bfbf5845f19196c15089cde1e2fd880d225a70e72a1ef0cdc57cc6aad"
+    },
+    {
+      "path": "tools/screenshot-fixtures/station-3.png",
+      "size": 139501,
+      "sha256": "c35343e5e92db525e491051cdbe17553974e91427ae3c454722a13171f9a1158"
+    },
+    {
+      "path": "tools/screenshot-fixtures/station-4.png",
+      "size": 139456,
+      "sha256": "9f0d46215d824a7f4da77b7af2313134703091a4d4306a35f10cac45cfa7a418"
+    },
+    {
+      "path": "tools/screenshot-fixtures/station-5.png",
+      "size": 136737,
+      "sha256": "4ac76035fb0d048cc51ca3838650ec719fee6202b858d5f73bb0c0e7f0d142e9"
+    },
+    {
+      "path": "tools/screenshot-fixtures/station-6.png",
+      "size": 138101,
+      "sha256": "407e7f5902b17938b8b8b8e0df7849468ae7a181e2c340c0128dafaf286fde4d"
+    },
+    {
+      "path": "docs/images/favorites.png",
+      "size": 134847,
+      "sha256": "0ce1ce3aca7bb3e86b0db210e9bcc78f2c3c347242aa7896ccdd580e7f1b186d"
+    },
+    {
+      "path": "docs/images/player.png",
+      "size": 202194,
+      "sha256": "a4e5c2b0a3bff935d478c64abbc0ceff1bf2cdc1de64d3d754ca8f4a284a7af2"
+    },
+    {
+      "path": "docs/images/reorder.png",
+      "size": 151392,
+      "sha256": "9961fd3bfe78d498364f8d403b75e92edf554f9b347ca05e4484925f1c5ae64d"
+    },
+    {
+      "path": "AGENTS.md",
+      "size": 2845,
+      "sha256": "51775536185a182e5fe391a04170cee048650caddd012430122ca6395b3a02ee"
     }
   ],
   "warnings": [

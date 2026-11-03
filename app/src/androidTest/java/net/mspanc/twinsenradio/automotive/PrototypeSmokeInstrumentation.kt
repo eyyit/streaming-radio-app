@@ -1,8 +1,14 @@
 package net.mspanc.twinsenradio.automotive
 
 import android.app.Instrumentation
+import android.content.BroadcastReceiver
 import android.content.ComponentName
+import android.content.Intent
+import android.content.IntentFilter
 import android.os.Bundle
+import android.graphics.Bitmap
+import android.graphics.Canvas
+import android.view.View
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
@@ -10,6 +16,8 @@ import androidx.media3.session.MediaBrowser
 import androidx.media3.session.SessionToken
 import kotlinx.coroutines.runBlocking
 import net.mspanc.twinsenradio.data.Prefs
+import net.mspanc.twinsenradio.data.M3uParser
+import net.mspanc.twinsenradio.data.PlaylistSource
 import net.mspanc.twinsenradio.data.Station
 import net.mspanc.twinsenradio.data.StationRepository
 import net.mspanc.twinsenradio.playback.RadioService
@@ -17,8 +25,10 @@ import net.mspanc.twinsenradio.playback.CoverArtLookup
 import net.mspanc.twinsenradio.playback.TrackArtworkStore
 import java.net.URL
 import java.util.concurrent.Callable
+import java.util.concurrent.CountDownLatch
 import java.util.concurrent.FutureTask
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicReference
 
 /** Exercises the installed service through its public Media3 browser/player contract. */
 @UnstableApi
@@ -110,10 +120,142 @@ class PrototypeSmokeInstrumentation : Instrumentation() {
         }
         try {
             require(expectedCount in 1..2000) { "expectedCount must be between 1 and 2000" }
-            require(mode in setOf("hosted", "offline", "artwork-audio", "empty-favorites", "fixture")) {
-                "Use hosted, offline, artwork-audio, empty-favorites, or explicit fixture mode"
+            require(mode in setOf("hosted", "offline", "artwork-audio", "empty-favorites", "fixture", "screenshots", "settings-typography")) {
+                "Use hosted, offline, artwork-audio, empty-favorites, fixture, or screenshots mode"
             }
-            if (mode == "artwork-audio") {
+            if (mode == "settings-typography") {
+                testActivity = startActivitySync(Intent(targetContext, ImpostorPlayerActivity::class.java)
+                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+                main {
+                    val manager = ImpostorPlayerActivity::class.java.getDeclaredField("management")
+                        .apply { isAccessible = true }.get(testActivity) as RadioManagement
+                    manager.settings()
+                }
+                waitForIdleSync()
+                main {
+                    val content = testActivity!!.findViewById<android.view.View>(android.R.id.content)
+                    fun labels(view: android.view.View): List<android.widget.TextView> =
+                        (if (view is android.widget.TextView) listOf(view) else emptyList()) +
+                        (if (view is android.view.ViewGroup) (0 until view.childCount).flatMap { labels(view.getChildAt(it)) } else emptyList())
+                    val captions = setOf("Theme", "Manage playlists", "Automatic track and station artwork", "Animate artwork changes", "Station images", "Refresh playlists", "Privacy policy", "Open-source licenses")
+                    val found = labels(content).filter { it.text.toString() in captions }
+                    checkThat("all eight Settings captions are present", found.size == 8)
+                    checkThat("all Settings captions retain 22sp typography", found.all { kotlin.math.abs(it.textSize / targetContext.resources.displayMetrics.scaledDensity - 22f) < 0.1f })
+                    checkThat("all Settings captions use regular font weight", found.all { it.typeface.weight == 400 })
+                    checkThat("all Settings rows remain 56dp high", found.all { kotlin.math.abs(it.height / targetContext.resources.displayMetrics.density - 56f) < 0.1f })
+                    val bitmap = Bitmap.createBitmap(content.width, content.height, Bitmap.Config.ARGB_8888)
+                    try {
+                        content.draw(Canvas(bitmap))
+                        val folder = java.io.File(targetContext.filesDir, "screenshots").apply { mkdirs() }
+                        java.io.FileOutputStream(java.io.File(folder, "settings-corrected.png")).use { check(bitmap.compress(Bitmap.CompressFormat.PNG, 100, it)) }
+                    } finally { bitmap.recycle() }
+                }
+            } else if (mode == "screenshots") {
+                val playlistUrl = "https://screenshots.example/playlist.m3u"
+                val stationNames = listOf("Afterglow FM", "Blue Note Radio", "Coastline Radio", "Night Drive", "Sunday Soul", "Signal Ambient")
+                val stationKeys = listOf("afterglow", "blue-note", "coastline", "night-drive", "sunday-soul", "signal-ambient")
+                val body = buildString {
+                    appendLine("#EXTM3U")
+                    stationNames.forEachIndexed { index, name ->
+                        appendLine("#EXTINF:-1 group-title=\"${if (index % 2 == 0) "Curated" else "Late Night"}\" tvg-logo=\"http://10.0.2.2:18766/station-${index + 1}.png\",$name")
+                        appendLine("http://10.0.2.2:18766/live.wav?station=${stationKeys[index]}")
+                    }
+                }
+                val source = PlaylistSource("screenshots-demo", playlistUrl, "Demo collection", stationNames.size)
+                val playlistPrefs = targetContext.getSharedPreferences("playlist_library", android.content.Context.MODE_PRIVATE)
+                val sourcesJson = org.json.JSONArray().put(org.json.JSONObject()
+                    .put("id", source.id).put("url", source.url).put("name", source.name).put("count", source.stationCount))
+                check(playlistPrefs.edit().putString("sources", sourcesJson.toString()).commit())
+                check(targetContext.getSharedPreferences("twinsen_radio", android.content.Context.MODE_PRIVATE)
+                    .edit().putString("user_m3u", playlistUrl).commit())
+                val cacheDir = java.io.File(targetContext.filesDir, "playlists").apply { mkdirs() }
+                java.io.File(cacheDir, M3uParser.stableKey(playlistUrl) + ".m3u").writeText(body)
+                prefs.onlineArtworkEnabled = true
+                val fixtureStations = M3uParser.parse(body, playlistUrl)
+                prefs.favourites = setOf(fixtureStations[0].id, fixtureStations[2].id)
+                prefs.presetOrder = listOf(fixtureStations[2].id, fixtureStations[0].id)
+                prefs.stationSort = net.mspanc.twinsenradio.data.StationSort.DEFAULT
+                prefs.activeBrowseParent = RadioService.NODE_ALL
+                prefs.discovered.toList().forEach { prefs.removeDiscovered(it.id) }
+                check(playlistPrefs.edit().remove("all_order").remove("favorite_order").commit())
+                val reload = repo.javaClass.getDeclaredMethod("reloadPlaylistCache", List::class.java).apply { isAccessible = true }
+                reload.invoke(repo, listOf(source))
+                checkThat("screenshot fixture loads six fictional stations", repo.all().map { it.name } == stationNames)
+
+                val trackCache = CoverArtLookup::class.java.getDeclaredField("cache").apply { isAccessible = true }
+                    .get(CoverArtLookup) as MutableMap<String, CoverArtLookup.TrackInfo?>
+                synchronized(trackCache) {
+                    trackCache["paper satellites|midnight colors"] = CoverArtLookup.TrackInfo(
+                        artworkUrl = "http://10.0.2.2:18766/album.png", album = "Midnight Colors",
+                        year = null, isSingle = false, trackName = "Midnight Colors", artistName = "Paper Satellites")
+                }
+                check(targetContext.getSharedPreferences("streaming_radio_ui", android.content.Context.MODE_PRIVATE)
+                    .edit().putInt("mode", 0).putString("browse", RadioService.NODE_ALL).commit())
+                testActivity = startActivitySync(android.content.Intent(targetContext, ImpostorPlayerActivity::class.java)
+                    .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK))
+                waitForIdleSync()
+                browser = main {
+                    MediaBrowser.Builder(targetContext, SessionToken(targetContext, ComponentName(targetContext, RadioService::class.java))).buildAsync()
+                }.get(30, TimeUnit.SECONDS)
+                main { browser.volume = 0f }
+                val first = children(RadioService.NODE_ALL, count = stationNames.size).first()
+                select(first)
+                waitFor("screenshot fixture stream reaches playing quietly", 45) { main { browser.isPlaying } }
+                waitFor("fictional ICY track metadata is published", 30) { main {
+                    browser.mediaMetadata.title?.toString()?.contains("Midnight Colors", ignoreCase = true) == true
+                } }
+                waitFor("custom fixture album art is published", 60) { main {
+                    browser.mediaMetadata.artworkUri?.pathSegments?.firstOrNull() == "track"
+                } }
+                checkThat("screenshot app remains open on the six-station library", testActivity?.isFinishing == false)
+                val captureAction = "com.impostorlabs.streamingradio.debug.CAPTURE_SCREENSHOT"
+                val finishAction = "com.impostorlabs.streamingradio.debug.FINISH_SCREENSHOTS"
+                val screenshotDone = CountDownLatch(1)
+                val screenshotFailure = AtomicReference<Throwable?>()
+                val captured = java.util.concurrent.CopyOnWriteArrayList<String>()
+                val screenshotDir = java.io.File(targetContext.filesDir, "screenshots").apply { mkdirs() }
+                val receiver = object : BroadcastReceiver() {
+                    override fun onReceive(context: android.content.Context, intent: Intent) {
+                        if (intent.action == finishAction) {
+                            screenshotDone.countDown()
+                            return
+                        }
+                        try {
+                            val name = intent.getStringExtra("name").orEmpty()
+                            require(Regex("[a-z0-9_-]+").matches(name)) { "Invalid screenshot name" }
+                            val activity = checkNotNull(testActivity) { "Player activity is unavailable" }
+                            val content = checkNotNull(activity.findViewById<View>(android.R.id.content)) {
+                                "App content view is unavailable"
+                            }
+                            check(content.width > 0 && content.height > 0) { "App content has no drawable size" }
+                            val bitmap = Bitmap.createBitmap(content.width, content.height, Bitmap.Config.ARGB_8888)
+                            try {
+                                content.draw(Canvas(bitmap))
+                                java.io.FileOutputStream(java.io.File(screenshotDir, "$name.png")).use { output ->
+                                    check(bitmap.compress(Bitmap.CompressFormat.PNG, 100, output)) {
+                                        "Could not encode screenshot"
+                                    }
+                                }
+                            } finally { bitmap.recycle() }
+                            captured += name
+                        } catch (failure: Throwable) {
+                            screenshotFailure.set(failure)
+                            screenshotDone.countDown()
+                        }
+                    }
+                }
+                val filter = IntentFilter().apply { addAction(captureAction); addAction(finishAction) }
+                targetContext.registerReceiver(receiver, filter, android.content.Context.RECEIVER_EXPORTED)
+                try {
+                    check(screenshotDone.await(10, TimeUnit.MINUTES)) {
+                        "Screenshot navigation timed out after 10 minutes"
+                    }
+                    screenshotFailure.get()?.let { throw it }
+                    checks += captured.map { "Captured app content screenshot files/screenshots/$it.png" }
+                    checks += "Captures contain the app content view only; emulator system bars and dock are excluded"
+                    checks += "Screenshot fixture is left running; restore the parent backup to return the original app data"
+                } finally { targetContext.unregisterReceiver(receiver) }
+            } else if (mode == "artwork-audio") {
                 savedCatalog("audio/artwork check")
                 val connection = main {
                     MediaBrowser.Builder(targetContext, SessionToken(targetContext, ComponentName(targetContext, RadioService::class.java))).buildAsync()
@@ -346,8 +488,8 @@ class PrototypeSmokeInstrumentation : Instrumentation() {
             outcome = ActivityResult.FAIL
             resultText = checks.joinToString("\nPASS: ", "PASS: ") + "\nFAIL: " + android.util.Log.getStackTraceString(failure)
         } finally {
-            testActivity?.let { activity -> main { activity.finish() } }
-            if (this::browser.isInitialized) main {
+            if (mode != "screenshots") testActivity?.let { activity -> main { activity.finish() } }
+            if (this::browser.isInitialized && mode != "screenshots") main {
                 if (fixtureMode || mode == "artwork-audio") browser.pause()
                 browser.release()
             }

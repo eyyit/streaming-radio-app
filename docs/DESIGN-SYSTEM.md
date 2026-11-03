@@ -56,3 +56,18 @@ Empty library: show styled clickable Add a playlist instead of Choose a station;
 
 
 Missing-track notice:14sp dim footer above fixed dock,28dp reserved strip. Wait actualplayback max30s/twoICYintervals (cap5min) before factual No track info received; no stationpermanentunsupportedclaim. User keys generated only by user; do not generate/upload implicitly.
+
+Settings sizing rule (3 November 2026): all Settings action and toggle cells are56dp high, including artwork and animation switches. Center captions and48dp switch touch targets within the cell; retain8dp row gaps. Screenshot documentation must say emulator/app-content captures, exclude generic emulator bars without depicting them as Volvo UI, and identify fictional demo content.
+
+## Preserve approved design; consistency is mandatory
+
+- A requested height/width/alignment fix changes only that property. Preserve font size, weight, line height, padding, colors, radii, icon geometry, labels, ordering and navigation unless explicitly requested or strictly necessary. State any necessary adjacent change before doing it. Never shrink text to make a row fit silently.
+- Equivalent items on the same screen use the same label typography, row dimensions, alignment and spacing. A switch does not create a new heading level or justify larger text/cells. Differences must come from an approved hierarchy, not widget defaults.
+- Use shared tokens/components rather than independent per-row literals. Settings labels are22sp; every Settings row56dp, switches48dp. Back/Done/Cancel remain18sp action typography; do not resize them with row captions. Preserve unrelated management views.
+- Review the entire affected view, including plain rows, switches, long labels, disabled states and bottom controls. Compare before/after against approved references. Build success is not proof of visual correctness. Capture and inspect the installed result before claiming completion.
+- Keep approved controls, touch targets, icons, content and artwork positions stable during unrelated fixes. Match established charcoal surfaces and theme semantics on every screen. Do not add headers, hide controls, redesign navigation or introduce a new font hierarchy as a side effect.
+- New flows/structural redesigns require identified mocks and approval. Narrow corrections to these existing requirements do not require the user to repeat or reapprove them.
+- Published screenshots must match the current source visually, identify emulator/app-content capture and fictional demo data, exclude misleading OS chrome without pretending it is Volvo UI, and never expose personal playlists or unlicensed broadcaster artwork.
+- Update handoff docs and regression coverage for any discovered inconsistency. Record source/build/install/render/CI/publication status separately. Never describe an unpushed workflow fix as a passing GitHub run.
+
+Settings caption font is shared sans-serif regular (weight400),22sp for both action and toggle rows. Done/Back/Cancel keep their existing18sp medium action style. The settings-typography instrumentation mode checks8captions,22sp,400weight and56dp rows and captures actual app content without replacing the user library.

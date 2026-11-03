@@ -1,4 +1,4 @@
-﻿import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
     id("com.android.application")
@@ -14,8 +14,8 @@ android {
         applicationId = "net.mspanc.twinsenradio"
         minSdk = 26
         targetSdk = 36
-        versionCode = 3
-        versionName = "0.3.0-rc1"
+        versionCode = 4
+        versionName = "0.3.0-rc2"
         testInstrumentationRunner = "net.mspanc.twinsenradio.automotive.PrototypeSmokeInstrumentation"
     }
 
