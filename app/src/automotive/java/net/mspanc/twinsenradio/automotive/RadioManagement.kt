@@ -47,6 +47,13 @@ class RadioManagement(
   background=RippleDrawable(ColorStateList.valueOf(0x30ffffff),rounded(if(accent)coral else AutomotiveDesign.CONTROL),null)
   setOnClickListener { action() }
  }
+ private fun refreshDoneButtons(view:View) {
+  if(view is TextView && view.text.toString()=="Done") {
+   view.setTextColor(AppearanceTheme.current(activity).onAccent)
+   view.background=RippleDrawable(ColorStateList.valueOf(0x30ffffff),rounded(coral),null)
+  }
+  if(view is ViewGroup) for(index in 0 until view.childCount)refreshDoneButtons(view.getChildAt(index))
+ }
  private fun column()=LinearLayout(activity).apply { orientation=LinearLayout.VERTICAL }
  private val screens=mutableListOf<Pair<Dialog,View>>()
  private val tasks=mutableMapOf<Dialog,MutableList<Job>>()
@@ -113,7 +120,7 @@ class RadioManagement(
    settingsAction("Theme") {
     val settingsView=screens.firstOrNull { it.first===settingsDialog }?.second
     settingsView?.visibility=View.GONE
-    ThemePicker.show(activity,changed,{ settingsView?.visibility=View.VISIBLE },host=host)
+    ThemePicker.show(activity,changed,{ settingsView?.let { refreshDoneButtons(it); it.visibility=View.VISIBLE } },host=host)
    }
    settingsAction("Manage playlists") { playlists() }
    fun toggle(caption:String,value:Boolean,action:(Boolean)->Unit) {

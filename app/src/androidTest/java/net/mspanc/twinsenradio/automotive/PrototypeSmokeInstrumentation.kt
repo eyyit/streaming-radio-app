@@ -148,6 +148,20 @@ class PrototypeSmokeInstrumentation : Instrumentation() {
                     val surface = (done.background as android.graphics.drawable.RippleDrawable).getDrawable(0) as android.graphics.drawable.GradientDrawable
                     checkThat("Settings Done uses selected theme accent background", surface.color?.defaultColor == theme.accent)
                     checkThat("Settings Done uses matching on-accent text", done.currentTextColor == theme.onAccent)
+                    val originalTheme = net.mspanc.twinsenradio.data.AppearanceTheme.current(targetContext)
+                    val alternate = net.mspanc.twinsenradio.data.AppearanceTheme.presets.first { it.id != originalTheme.id }
+                    try {
+                        found.single { it.text.toString() == "Theme" }.performClick()
+                        net.mspanc.twinsenradio.data.AppearanceTheme.select(targetContext, alternate.id)
+                        ThemePicker.handleBack()
+                        val updated = (done.background as android.graphics.drawable.RippleDrawable).getDrawable(0) as android.graphics.drawable.GradientDrawable
+                        checkThat("Settings Done refreshes after returning from changed theme", updated.color?.defaultColor == alternate.accent && done.currentTextColor == alternate.onAccent)
+                    } finally {
+                        net.mspanc.twinsenradio.data.AppearanceTheme.select(targetContext, originalTheme.id)
+                        ThemePicker.close(notifyClosed = true)
+                        found.single { it.text.toString() == "Theme" }.performClick()
+                        ThemePicker.handleBack()
+                    }
                     val bitmap = Bitmap.createBitmap(content.width, content.height, Bitmap.Config.ARGB_8888)
                     try {
                         content.draw(Canvas(bitmap))
@@ -242,6 +256,7 @@ class PrototypeSmokeInstrumentation : Instrumentation() {
                                     }
                                 }
                             } finally { bitmap.recycle() }
+
                             captured += name
                         } catch (failure: Throwable) {
                             screenshotFailure.set(failure)

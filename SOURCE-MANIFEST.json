@@ -37,8 +37,8 @@
     },
     {
       "path": "app/src/androidTest/java/net/mspanc/twinsenradio/automotive/PrototypeSmokeInstrumentation.kt",
-      "size": 37010,
-      "sha256": "f43a20aaddedf662b13101cbe626fc6534a62aa7d7c08e9e04571fa4e9a85759"
+      "size": 38224,
+      "sha256": "e80959db6c94b426c42f8778d54e09e93b185c16d9a5c680557898ef77e04ccd"
     },
     {
       "path": "app/src/automotive/AndroidManifest.xml",
@@ -72,8 +72,8 @@
     },
     {
       "path": "app/src/automotive/java/net/mspanc/twinsenradio/automotive/RadioManagement.kt",
-      "size": 23660,
-      "sha256": "321c805a35747f0672ed2b6f8e008057909a0378f488e607551623902786ec5d"
+      "size": 24063,
+      "sha256": "b0a213a7e6dc4b7fa968f1a8657092929ab9b7b454775e826784de1d47d4286d"
     },
     {
       "path": "app/src/automotive/java/net/mspanc/twinsenradio/automotive/StationImageDialog.kt",
@@ -937,13 +937,13 @@
     },
     {
       "path": "docs/DESIGN-SYSTEM.md",
-      "size": 11538,
-      "sha256": "5f39b91f6fa1870878c2086020d411b795f6731fba80b22afe4c4c84ba275eb6"
+      "size": 11732,
+      "sha256": "c26183d87105f15201198681aa6798d3e9aad3a22d454ec3239351e5905c2382"
     },
     {
       "path": "docs/HANDOFF-NEXT.md",
-      "size": 12732,
-      "sha256": "d0bfe5766e29f278ac90df82d929d65b33d4c95883a4acdbf5505d1e9812604b"
+      "size": 13438,
+      "sha256": "d5845693ad68160ffa6c857cb91b21df0d36ea7da7ae2b9edbc774a0afb35f2d"
     },
     {
       "path": "docs/INTERNAL-TEST-CHECKS.md",
