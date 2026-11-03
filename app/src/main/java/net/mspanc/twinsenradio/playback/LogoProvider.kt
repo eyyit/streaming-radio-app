@@ -9,75 +9,53 @@ import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Canvas
 import android.graphics.Paint
-import android.graphics.drawable.BitmapDrawable
 import android.net.Uri
 import android.os.ParcelFileDescriptor
 import android.provider.OpenableColumns
-import android.util.Log
+import android.util.AtomicFile
 import androidx.core.content.ContextCompat
 import net.mspanc.twinsenradio.R
+import net.mspanc.twinsenradio.data.Prefs
 import net.mspanc.twinsenradio.data.Station
 import net.mspanc.twinsenradio.data.StationRepository
+import net.mspanc.twinsenradio.net.SafeHttp
 import java.io.File
-import java.net.HttpURLConnection
-import java.net.URL
 
 /**
- * Serves station logos under a **stable** `content://.../logo/<id>` address.
- *
- * Why this exists at all: logos used to go to Android Auto as
- * `android.resource://net.mspanc.twinsenradio/2131165359`. That kind of
- * address embeds a numeric resource ID, and that ID changes on almost every
- * app rebuild - adding a single file to res/drawable is enough. Android Auto
- * caches downloaded artwork by address, so after an update the same number
- * would already point to a different station, and the head unit would draw
- * the logo from its own cache - hence "RMF FM" appearing under Radio Nowy
- * Swiat's logo.
- *
- * Here the address describes the station, not the resource, so it's stable
- * across versions. The resource number is appended as a `?v=` parameter, so
- * that when the artwork itself is swapped (same station ID, different file)
- * the cache is invalidated exactly once.
+ * Stable artwork addresses readable by Android Auto and native AAOS media hosts.
+ * Only app-registered resources/files/sources are served; callers cannot supply
+ * paths, resource IDs or remote URLs. Registrations survive process restart.
  */
 class LogoProvider : ContentProvider() {
-
     override fun onCreate(): Boolean = true
 
-    /** A presenter's photo is a JPEG - see [OnAirGuide]; everything else here is rendered to PNG. */
-    override fun getType(uri: Uri): String =
-        if (uri.getQueryParameter(PARAM_PATH)?.endsWith(".jpg") == true) "image/jpeg" else "image/png"
+    override fun getType(uri: Uri): String? = context?.let { context ->
+        ArtworkAccessPolicy.route(uri.toString(), authority(context))?.let {
+            if (it.first in setOf("track", "station") ||
+                (it.first == "custom" && registration(context, "custom", it.second)
+                    ?.substringAfterLast('.')?.lowercase() in setOf("jpg", "jpeg")))
+                "image/jpeg" else "image/png"
+        }
+    }
 
-    /**
-     * We hand back the image from a cached file rather than a pipe: readers
-     * on the other side (Android Auto, Glide) can query the size and seek,
-     * which a pipe doesn't support.
-     */
     override fun openFile(uri: Uri, mode: String): ParcelFileDescriptor? {
+        if (mode != "r") throw java.io.FileNotFoundException("Read-only artwork")
         val context = context ?: return null
         val file = renderToCache(context, uri) ?: return null
         return ParcelFileDescriptor.open(file, ParcelFileDescriptor.MODE_READ_ONLY)
     }
 
-    override fun query(
-        uri: Uri,
-        projection: Array<out String>?,
-        selection: String?,
-        selectionArgs: Array<out String>?,
-        sortOrder: String?
-    ): Cursor? {
+    override fun query(uri: Uri, projection: Array<out String>?, selection: String?,
+        selectionArgs: Array<out String>?, sortOrder: String?): Cursor? {
         val context = context ?: return null
         val file = renderToCache(context, uri) ?: return null
         val columns = projection ?: arrayOf(OpenableColumns.DISPLAY_NAME, OpenableColumns.SIZE)
         return MatrixCursor(columns).apply {
-            addRow(
-                columns.map { column ->
-                    when (column) {
-                        OpenableColumns.DISPLAY_NAME -> file.name
-                        OpenableColumns.SIZE -> file.length()
-                        else -> null
-                    }
-                }.toTypedArray()
-            )
+            addRow(columns.map { column -> when (column) {
+                OpenableColumns.DISPLAY_NAME -> file.name
+                OpenableColumns.SIZE -> file.length()
+                else -> null
+            } }.toTypedArray())
         }
     }
 
@@ -85,174 +63,150 @@ class LogoProvider : ContentProvider() {
     override fun update(uri: Uri, v: ContentValues?, s: String?, a: Array<out String>?): Int = 0
     override fun delete(uri: Uri, s: String?, a: Array<out String>?): Int = 0
 
-    /**
-     * Turns a resource into a PNG file. We render once - subsequent reads
-     * come from disk, and since the file name contains the resource number,
-     * a rebuild produces a new file.
-     */
     private fun renderToCache(context: Context, uri: Uri): File? = runCatching {
-        // The user's own custom artwork already sits ready in the app's
-        // directory - there's nothing to render, just hand it back.
-        if (uri.pathSegments.firstOrNull() == "custom") {
-            val path = uri.getQueryParameter(PARAM_PATH) ?: return@runCatching null
-            return@runCatching File(path).takeIf { it.exists() }
-        }
-        if (uri.pathSegments.firstOrNull() == "muted") return@runCatching renderMuted(context, uri)
-        val resId = uri.getQueryParameter(PARAM_VERSION)?.toIntOrNull()
-            ?: R.drawable.logo_placeholder
-        val dir = File(context.cacheDir, "logo").apply { mkdirs() }
-        val file = File(dir, "${uri.lastPathSegment}-$resId.png")
-        if (file.exists() && file.length() > 0) return@runCatching file
-
-        val bitmap = resourceBitmap(context, resId) ?: return@runCatching null
-        file.outputStream().use { out -> bitmap.compress(Bitmap.CompressFormat.PNG, 100, out) }
-        file
-    }.onFailure { Log.w(TAG, "nie udalo sie przygotowac logo dla $uri: ${it.message}") }
-        .getOrNull()
-
-    private fun resourceBitmap(context: Context, resId: Int): Bitmap? {
-        val drawable = ContextCompat.getDrawable(context, resId) ?: return null
-        return (drawable as? BitmapDrawable)?.bitmap ?: run {
-            Bitmap.createBitmap(SIZE, SIZE, Bitmap.Config.ARGB_8888).also { bmp ->
-                drawable.setBounds(0, 0, SIZE, SIZE)
-                drawable.draw(Canvas(bmp))
+        val (kind, id) = ArtworkAccessPolicy.route(uri.toString(), authority(context)) ?: return null
+        when (kind) {
+            "station" -> safeImage(context, StationArtworkStore.file(context, id))
+            "track" -> safeImage(context, TrackArtworkStore.cachedFile(context, id))
+            "custom" -> registration(context, kind, id)?.let { safeImage(context, File(it)) }
+            "logo", "icon" -> registration(context, kind, id)?.toIntOrNull()?.let { resource ->
+                cachedRender(context, "$kind-$id") { resourceBitmap(context, resource) }
             }
-        }
-    }
-
-    /**
-     * The station's logo faded back, for the head unit - see [mutedUriFor].
-     *
-     * Faded by alpha rather than towards a colour: the phone's screens fade the
-     * view, over a background that is dark or light with the system theme, and
-     * a transparent picture lands on the head unit's background the same way.
-     *
-     * A remote logo is fetched here, once - the head unit reads this on a
-     * binder thread, and the result is kept on disk under its source.
-     */
-    private fun renderMuted(context: Context, uri: Uri): File? {
-        val src = uri.getQueryParameter(PARAM_SRC) ?: return null
-        val dir = File(context.cacheDir, "logo").apply { mkdirs() }
-        val file = File(dir, "muted-${Integer.toHexString(src.hashCode())}.png")
-        if (file.exists() && file.length() > 0) return file
-
-        val source = Uri.parse(src)
-        val own = when (source.scheme) {
-            "file" -> BitmapFactory.decodeFile(source.path)
-            "http", "https" -> download(src)?.let { BitmapFactory.decodeByteArray(it, 0, it.size) }
-            else -> resourceBitmap(context, source.schemeSpecificPart.toIntOrNull() ?: R.drawable.logo_placeholder)
-        }
-        // An unreadable logo - a favicon.ico, which Android can't decode - is
-        // shown as the placeholder unfaded too, so the faded one follows suit.
-        if (own == null) Log.w(TAG, "wyblakle logo: nie da sie odczytac $src, zastepcze")
-        val logo = own ?: resourceBitmap(context, R.drawable.logo_placeholder) ?: return null
-
-        val faded = Bitmap.createBitmap(logo.width, logo.height, Bitmap.Config.ARGB_8888)
-        Canvas(faded).drawBitmap(logo, 0f, 0f, Paint().apply { alpha = (MUTED_ALPHA * 255).toInt() })
-        val tmp = File(dir, file.name + ".tmp")
-        tmp.outputStream().use { faded.compress(Bitmap.CompressFormat.PNG, 100, it) }
-        tmp.renameTo(file)
-        return file
-    }
-
-    private fun download(url: String): ByteArray? = runCatching {
-        val conn = (URL(url).openConnection() as HttpURLConnection).apply {
-            connectTimeout = 8_000
-            readTimeout = 8_000
-            instanceFollowRedirects = true
-            setRequestProperty("User-Agent", StationRepository.USER_AGENT)
-        }
-        try {
-            if (conn.responseCode !in 200..299) null else conn.inputStream.use { it.readBytes() }
-        } finally {
-            conn.disconnect()
+            "muted" -> renderMuted(context, id)
+            else -> null
         }
     }.getOrNull()
 
+    private fun safeImage(context: Context, file: File?): File? {
+        val safe = file?.let { ArtworkAccessPolicy.allowedFile(it, roots(context)) } ?: return null
+        val options = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+        BitmapFactory.decodeFile(safe.absolutePath, options)
+        return safe.takeIf { options.outWidth in 1..ArtworkAccessPolicy.MAX_DIMENSION &&
+            options.outHeight in 1..ArtworkAccessPolicy.MAX_DIMENSION }
+    }
+
+    private fun decode(bytes: ByteArray): Bitmap? {
+        val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+        BitmapFactory.decodeByteArray(bytes, 0, bytes.size, bounds)
+        val options = BitmapFactory.Options()
+        options.inSampleSize = ArtworkAccessPolicy.sampleSize(bounds.outWidth, bounds.outHeight) ?: return null
+        val bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size, options) ?: return null
+        if (bitmap.width > ArtworkAccessPolicy.MAX_DIMENSION || bitmap.height > ArtworkAccessPolicy.MAX_DIMENSION) {
+            bitmap.recycle()
+            return null
+        }
+        return bitmap
+    }
+
+    private fun resourceBitmap(context: Context, resId: Int): Bitmap? {
+        val drawable = ContextCompat.getDrawable(context, resId) ?: return null
+        return Bitmap.createBitmap(SIZE, SIZE, Bitmap.Config.ARGB_8888).also {
+            drawable.setBounds(0, 0, SIZE, SIZE)
+            drawable.draw(Canvas(it))
+        }
+    }
+
+    /** Serializes only bounded renders; no recursive ContentResolver calls. */
+    private fun renderMuted(context: Context, id: String): File? {
+        val src = registration(context, "muted", id) ?: return null
+        if (ArtworkAccessPolicy.httpsSource(src) && !Prefs(context).onlineArtworkEnabled) return null
+        return cachedRender(context, "muted-$id") {
+            val source = Uri.parse(src)
+            val own = when {
+                source.scheme == "content" -> {
+                    val route = ArtworkAccessPolicy.route(src, authority(context))
+                    if (route == null || route.first == "muted") null
+                    else renderToCache(context, source)?.inputStream()?.use { input ->
+                        ArtworkAccessPolicy.readBounded(input)?.let(::decode)
+                    }
+                }
+                source.scheme == "file" -> safeImage(context, source.path?.let(::File))?.inputStream()?.use {
+                    ArtworkAccessPolicy.readBounded(it)?.let(::decode)
+                }
+                source.scheme == "res" -> source.schemeSpecificPart.toIntOrNull()?.let {
+                    resourceBitmap(context, it)
+                }
+                ArtworkAccessPolicy.httpsSource(src) -> download(src)?.let(::decode)
+                else -> null
+            }
+            val logo = own ?: resourceBitmap(context, R.drawable.logo_placeholder) ?: return@cachedRender null
+            try {
+                Bitmap.createBitmap(logo.width, logo.height, Bitmap.Config.ARGB_8888).also { faded ->
+                    Canvas(faded).drawBitmap(logo, 0f, 0f, Paint().apply { alpha = (MUTED_ALPHA * 255).toInt() })
+                }
+            } finally { logo.recycle() }
+        }
+    }
+
+    private fun cachedRender(context: Context, name: String, render: () -> Bitmap?): File? = synchronized(renderLock) {
+        val dir = File(context.cacheDir, "logo").apply { mkdirs() }
+        val file = File(dir, "$name.png")
+        // Names are internal fixed prefixes plus validated SHA-256 tokens.
+        // Reject an existing symlink as well before AtomicFile opens a writer.
+        if (file.canonicalFile.parentFile != dir.canonicalFile) return@synchronized null
+        safeImage(context, file)?.let { return@synchronized it }
+        val bitmap = render() ?: return@synchronized null
+        val atomic = AtomicFile(file)
+        try {
+            val output = atomic.startWrite()
+            try {
+                check(bitmap.compress(Bitmap.CompressFormat.PNG, 100, output))
+                atomic.finishWrite(output)
+            } catch (error: Throwable) {
+                atomic.failWrite(output)
+                throw error
+            }
+        } finally { bitmap.recycle() }
+        safeImage(context, file)
+    }
+
+    private fun download(url: String): ByteArray? = runCatching {
+        SafeHttp.getBytes(url, ArtworkAccessPolicy.MAX_BYTES, StationRepository.USER_AGENT)
+    }.getOrNull()
+
     companion object {
-        private const val TAG = "LogoProvider"
-        private const val PARAM_VERSION = "v"
-        private const val PARAM_PATH = "p"
-        private const val PARAM_SRC = "src"
         private const val SIZE = 512
-
-        /**
-         * How far a logo is faded when nothing plays - the same on the phone's
-         * screens, which fade the view by it, and on the head unit, which gets
-         * [mutedUriFor].
-         */
+        private val renderLock = Any()
         const val MUTED_ALPHA = 0.3f
-
-        /**
-         * The station's logo faded back, as a picture the head unit can fetch.
-         *
-         * @param source where the logo itself is: a `file://` custom logo, an
-         *   http(s) one from the catalogue, or `res:<id>` for a bundled one. It
-         *   is the whole cache key - a new logo is a new address, and the head
-         *   unit's cache lets go of the old one.
-         */
-        fun mutedUriFor(context: Context, station: Station, source: Uri): Uri =
-            Uri.Builder()
-                .scheme("content")
-                .authority(authority(context))
-                .appendPath("muted")
-                .appendPath(station.id)
-                .appendQueryParameter(PARAM_SRC, source.toString())
-                .build()
-
-        /** Must match android:authorities in the manifest. */
         fun authority(context: Context): String = "${context.packageName}.logos"
+        private fun registry(context: Context) = context.getSharedPreferences("artwork_provider_registry", Context.MODE_PRIVATE)
+        private fun registration(context: Context, kind: String, id: String): String? =
+            registry(context).getString("$kind/$id", null)
+        private fun roots(context: Context) = listOf(
+            File(context.filesDir, "logo-custom"), File(context.filesDir, "standby"),
+            File(context.filesDir, "onair"),
+            File(context.filesDir, "station-art"), File(context.cacheDir, "track-art"),
+            File(context.cacheDir, "logo")
+        )
+        private fun register(context: Context, kind: String, value: String, revision: String): Uri {
+            val id = ArtworkAccessPolicy.key("$kind:$value:$revision")
+            registry(context).edit().putString("$kind/$id", value).apply()
+            return Uri.Builder().scheme("content").authority(authority(context)).appendPath(kind).appendPath(id).build()
+        }
 
-        /**
-         * @param resId the resource number from this version of the app -
-         *   included in the address solely to invalidate the cache when the
-         *   artwork is swapped.
-         */
+        fun mutedUriFor(context: Context, station: Station, source: Uri): Uri {
+            // Source comes from metadata construction, never from exported URI parameters.
+            val src = when (source.scheme) {
+                "content" -> source.takeIf {
+                    ArtworkAccessPolicy.route(it.toString(), authority(context))?.first in setOf("station", "track", "custom", "logo", "icon")
+                }
+                "file" -> source.path?.let(::File)?.let { ArtworkAccessPolicy.allowedFile(it, roots(context)) }?.let(Uri::fromFile)
+                "res" -> source.takeIf { it.schemeSpecificPart.toIntOrNull() != null }
+                "https" -> source.takeIf { ArtworkAccessPolicy.httpsSource(it.toString()) }
+                else -> null
+            } ?: Uri.fromParts("res", R.drawable.logo_placeholder.toString(), null)
+            return register(context, "muted", src.toString(), station.id)
+        }
+
         fun uriFor(context: Context, station: Station, resId: Int): Uri =
-            build(context, "logo", station.id, resId)
-
-        /**
-         * Address of a button icon in Android Auto. The reason is the same as
-         * for the logo, just the symptom differs: buttons used to get a
-         * resource number, and the head unit remembers the icon it drew under
-         * that number. After an app rebuild the numbers shift (adding a
-         * single file to res/drawable is enough), and where a filled star
-         * should be, whatever previously had that number would show up
-         * instead - an empty star, or even a plain square.
-         */
+            register(context, "logo", resId.toString(), station.id)
         fun iconUri(context: Context, name: String, resId: Int): Uri =
-            build(context, "icon", name, resId)
-
-        /**
-         * Artwork uploaded by the user. The file's modification time is
-         * included in the address, so that replacing the logo invalidates
-         * what the head unit has cached.
-         */
-        fun customUriFor(context: Context, station: Station, file: File): Uri =
-            fileUri(context, station.id, file)
-
-        /**
-         * Any picture the app keeps in its own directory - a custom logo, a
-         * presenter's photo - under a name of its own, with the file's
-         * modification time to invalidate what the head unit cached.
-         */
-        fun fileUri(context: Context, name: String, file: File): Uri =
-            Uri.Builder()
-                .scheme("content")
-                .authority(authority(context))
-                .appendPath("custom")
-                .appendPath(name)
-                .appendQueryParameter(PARAM_PATH, file.absolutePath)
-                .appendQueryParameter(PARAM_VERSION, file.lastModified().toString())
-                .build()
-
-        private fun build(context: Context, kind: String, name: String, resId: Int): Uri =
-            Uri.Builder()
-                .scheme("content")
-                .authority(authority(context))
-                .appendPath(kind)
-                .appendPath(name)
-                .appendQueryParameter(PARAM_VERSION, resId.toString())
-                .build()
+            register(context, "icon", resId.toString(), name)
+        fun customUriFor(context: Context, station: Station, file: File): Uri = fileUri(context, station.id, file)
+        fun fileUri(context: Context, name: String, file: File): Uri {
+            val safe = ArtworkAccessPolicy.allowedFile(file, roots(context))
+            return if (safe == null) register(context, "logo", R.drawable.logo_placeholder.toString(), name)
+            else register(context, "custom", safe.absolutePath, "$name:${safe.lastModified()}")
+        }
     }
 }

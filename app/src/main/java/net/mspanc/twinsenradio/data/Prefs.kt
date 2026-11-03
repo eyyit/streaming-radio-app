@@ -17,6 +17,19 @@ class Prefs(context: Context) {
     private val sp: SharedPreferences =
         context.applicationContext.getSharedPreferences("twinsen_radio", Context.MODE_PRIVATE)
 
+    /** Disables catalog lookup and publishing/downloading remote artwork, not just its display. */
+    var onlineArtworkEnabled: Boolean
+        get() = sp.getBoolean("online_artwork_enabled", net.mspanc.twinsenradio.BuildConfig.DEBUG)
+        set(value) = sp.edit { putBoolean("online_artwork_enabled", value) }
+
+    var artworkTransitionsEnabled: Boolean
+        get() = sp.getBoolean("artwork_transitions_enabled", true)
+        set(value) = sp.edit { putBoolean("artwork_transitions_enabled", value) }
+
+    var randomStationOrder: Boolean
+        get() = sp.getBoolean("random_station_order", false)
+        set(value) { sp.edit().putBoolean("random_station_order", value).commit() }
+
     /**
      * A mode where every metadata field gets its Polish field name shown
      * instead of its value.
@@ -42,15 +55,6 @@ class Prefs(context: Context) {
         get() = sp.getBoolean(KEY_STRIP_ICY, false)
         set(v) = sp.edit { putBoolean(KEY_STRIP_ICY, v) }
 
-    /**
-     * How the programme and its presenters are joined on one line - a position
-     * in [net.mspanc.twinsenradio.data.HostsJoin]. A probe for the AID, which
-     * wraps that line by itself; the dot until the car says otherwise.
-     */
-    var hostsJoin: Int
-        get() = sp.getInt(KEY_HOSTS_JOIN, 0)
-        set(v) = sp.edit { putInt(KEY_HOSTS_JOIN, v) }
-
     /** Whether to append the API field name to the Polish label, e.g. "TYTUL<title>". */
     var diagnosticShowApiName: Boolean
         get() = sp.getBoolean(KEY_DIAG_API, false)
@@ -62,7 +66,7 @@ class Prefs(context: Context) {
      * that was not recorded cannot be gone back to.
      */
     var traceEnabled: Boolean
-        get() = sp.getBoolean(KEY_TRACE, true)
+        get() = sp.getBoolean(KEY_TRACE, net.mspanc.twinsenradio.BuildConfig.DEBUG && !net.mspanc.twinsenradio.BuildConfig.IS_AUTOMOTIVE)
         set(v) = sp.edit { putBoolean(KEY_TRACE, v) }
 
     /** Presentation scheme for folders in Android Auto (see [ContentStyle]). */
@@ -258,7 +262,8 @@ class Prefs(context: Context) {
         set(v) = sp.edit { putInt(KEY_ARTWORK, v) }
 
     var userM3uUrls: List<String>
-        get() = sp.getString(KEY_M3U, "").orEmpty()
+        get() = sp.getString(KEY_M3U, if (net.mspanc.twinsenradio.BuildConfig.IS_AUTOMOTIVE)
+            net.mspanc.twinsenradio.BuildConfig.DEFAULT_PLAYLIST_URL else "").orEmpty()
             .lines().map { it.trim() }.filter { it.isNotEmpty() && !it.startsWith("#") }
         set(v) = sp.edit { putString(KEY_M3U, v.joinToString("\n")) }
 
@@ -302,8 +307,18 @@ class Prefs(context: Context) {
             true
         }
         favourites = cur
+        if (added && stationId !in presetOrder) presetOrder = presetOrder + stationId
         return added
     }
+
+    /** Ordered radio presets; membership continues to use the shared favorites set. */
+    var presetOrder: List<String>
+        get() = sp.getString("preset_order", "").orEmpty().lines().filter { it.isNotBlank() }
+        set(value) = sp.edit { putString("preset_order", value.distinct().joinToString("\n")) }
+
+    var activeBrowseParent: String
+        get() = sp.getString("active_browse_parent", "/all") ?: "/all"
+        set(value) = sp.edit { putString("active_browse_parent", value) }
 
     /**
      * Stations added manually from the online directory. We keep the full
@@ -348,7 +363,6 @@ class Prefs(context: Context) {
                     .put("stream", s.stream)
                     .put("streams", variants)
                     .put("logoUrl", s.logoUrl ?: "")
-                    .put("country", s.country ?: "")
             )
         }
         sp.edit { putString(KEY_DISCOVERED, arr.toString()) }
@@ -409,8 +423,7 @@ class Prefs(context: Context) {
                 logoUrl = o.optString("logoUrl").ifBlank { null },
                 source = Station.Source.DISCOVERED,
                 catalogName = catalog.takeIf { it != display },
-                renamed = own != null,
-                country = o.optString("country").ifBlank { null }
+                renamed = own != null
             )
         }
     }.getOrElse { emptyList() }
@@ -513,6 +526,13 @@ class Prefs(context: Context) {
     fun customLogo(stationId: String): String? =
         sp.getString(KEY_CUSTOM_LOGO_PREFIX + stationId, null)?.takeIf { it.isNotBlank() }
 
+    /** Synchronous result for artwork transactions; caller runs on artwork dispatcher. */
+    fun setCustomLogoCommitted(stationId: String, path: String?): Boolean {
+        val editor = sp.edit()
+        if (path.isNullOrBlank()) editor.remove(KEY_CUSTOM_LOGO_PREFIX + stationId)
+        else editor.putString(KEY_CUSTOM_LOGO_PREFIX + stationId, path)
+        return editor.commit()
+    }
     fun setCustomLogo(stationId: String, path: String?) = sp.edit {
         if (path.isNullOrBlank()) {
             remove(KEY_CUSTOM_LOGO_PREFIX + stationId)
@@ -592,7 +612,6 @@ class Prefs(context: Context) {
 
         const val KEY_DIAG = "diagnostic_mode"
         const val KEY_DIAG_API = "diagnostic_api_names"
-        const val KEY_HOSTS_JOIN = "hosts_join"
         const val KEY_TRACE = "trace_enabled"
         const val KEY_STRIP_ICY = "strip_icy_in_diagnostic"
         const val KEY_LINE_TOP = "line_top"

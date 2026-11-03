@@ -5,6 +5,7 @@ import androidx.media3.common.util.UnstableApi
 import androidx.media3.datasource.DataSource
 import androidx.media3.datasource.DataSpec
 import androidx.media3.datasource.TransferListener
+import androidx.media3.extractor.metadata.icy.IcyHeaders
 
 /**
  * A wrapper around a data source that can completely strip ICY metadata.
@@ -21,7 +22,8 @@ import androidx.media3.datasource.TransferListener
 class IcyFilteringDataSource(
     private val upstream: DataSource,
     private val stripIcy: Boolean,
-    private val onIcyBitrate: (Int) -> Unit = {}
+    private val onIcyBitrate: (Int) -> Unit = {},
+    private val onIcyTiming: (Int, Int) -> Unit = { _, _ -> }
 ) : DataSource {
 
     override fun addTransferListener(transferListener: TransferListener) {
@@ -44,6 +46,10 @@ class IcyFilteringDataSource(
      * Called on the loader's thread.
      */
     private fun reportBitrate() {
+        // Report every connection, including absent headers, to avoid carrying
+        // a previous connection's advertised timing into a new response.
+        val icy = if (stripIcy) null else IcyHeaders.parse(upstream.responseHeaders)
+        onIcyTiming(icy?.metadataInterval ?: -1, icy?.bitrate ?: -1)
         val br = upstream.responseHeaders.entries
             .firstOrNull { it.key.equals(ICY_BITRATE_HEADER, ignoreCase = true) }
             ?.value?.firstOrNull()?.substringBefore(',')?.trim()?.toIntOrNull()
@@ -69,10 +75,11 @@ class IcyFilteringDataSource(
     class Factory(
         private val delegate: DataSource.Factory,
         private val onIcyBitrate: (Int) -> Unit = {},
+        private val onIcyTiming: (Int, Int) -> Unit = { _, _ -> },
         private val stripIcy: () -> Boolean
     ) : DataSource.Factory {
         override fun createDataSource(): DataSource =
-            IcyFilteringDataSource(delegate.createDataSource(), stripIcy(), onIcyBitrate)
+            IcyFilteringDataSource(delegate.createDataSource(), stripIcy(), onIcyBitrate, onIcyTiming)
     }
 
     private companion object {

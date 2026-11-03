@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Streaming Radio</string>
+    <string name="root_title">Streaming Radio</string>
+    <string name="settings_title">Radio settings</string>
+    <string name="node_favourites">Favorites</string>
+    <string name="node_all">All stations</string>
+    <string name="node_recent">Recent</string>
+    <string name="node_genres">Sections</string>
+    <string name="fav_add">Add to Favorites</string>
+    <string name="fav_remove">Remove from Favorites</string>
+    <string name="tab_all">All stations</string>
+    <string name="tab_favourites">Favorites</string>
+    <string name="status_connecting">Connecting…</string>
+    <string name="status_buffering">Buffering…</string>
+    <string name="discover_title">Find stations online</string>
+    <string name="discover_hint">Station name…</string>
+</resources>
+
+

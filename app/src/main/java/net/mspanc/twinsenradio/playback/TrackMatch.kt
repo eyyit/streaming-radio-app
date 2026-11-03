@@ -76,10 +76,7 @@ object TrackMatch {
         // leaves it alone and the sweep below would delete it outright -
         // "Podsiadlo" would then fail to match "Podsiadło", which for a Polish
         // station is the common spelling difference rather than an exotic one.
-        // "Pt." is the catalogue's "Part": iTunes has "Oxygène, Pt. 4" where
-        // Radio 357 says "Oxygene Part 4" (30.10.2026), and the two were held
-        // to be different tracks. As a word only - "Captain" keeps its "pt".
-        val flattened = s.lowercase(Locale.ROOT).replace('ł', 'l').replace(PART, "part")
+        val flattened = s.lowercase(Locale.ROOT).replace('ł', 'l')
         return Normalizer.normalize(flattened, Normalizer.Form.NFD)
             .replace(COMBINING_MARK, "")
             .replace(NON_ALPHANUMERIC, "")
@@ -87,6 +84,5 @@ object TrackMatch {
 
     private val TRAILING_QUALIFIER = Regex("""\s*[(\[][^()\[\]]*[)\]]\s*$""")
     private val COMBINING_MARK = Regex("""\p{Mn}""")
-    private val PART = Regex("""\bpt\b""")
     private val NON_ALPHANUMERIC = Regex("""[^a-z0-9]""")
 }

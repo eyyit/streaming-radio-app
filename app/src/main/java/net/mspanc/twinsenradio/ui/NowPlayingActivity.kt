@@ -40,6 +40,7 @@ class NowPlayingActivity : AppCompatActivity() {
 
     /** The station on screen - the one playing, or before play the one play would start. */
     private var shown: Station? = null
+    private var artworkSlideDirection = 0
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -157,6 +158,7 @@ class NowPlayingActivity : AppCompatActivity() {
         val currentId = shown?.id
         val index = all.indexOfFirst { it.id == currentId }
         val target = if (index < 0) 0 else ((index + delta) % all.size + all.size) % all.size
+        artworkSlideDirection = delta.compareTo(0)
         play(all[target])
     }
 
@@ -185,8 +187,7 @@ class NowPlayingActivity : AppCompatActivity() {
         val onAir = if (joining) null else PlaybackStatusBus.onAir.value
         val text = if (playing != null) {
             MetadataFactory.forPhone(
-                now, PlaybackStatusBus.trackInfo.value, onAir, prefs.presentation, prefs.enrichWithYear,
-                station?.slashMayBeAlbum == true
+                now, PlaybackStatusBus.trackInfo.value, onAir, prefs.presentation, prefs.enrichWithYear
             )
         } else {
             PhoneText(station?.let { prefs.slogan(it.id) }.orEmpty(), "", "")
@@ -210,7 +211,7 @@ class NowPlayingActivity : AppCompatActivity() {
         // clock. This screen follows the layout's choice, clock included.
         // Not playing: the station's own picture for it, or its logo faded -
         // see renderMiniPlayer in MainActivity.
-        val standby = if (playing == null && station != null) {
+        val standby = if (playing == null && station != null && prefs.onlineArtworkEnabled) {
             StandbyArt.phoneUri(this, station, lifecycleScope) { render() }
         } else {
             null
@@ -224,7 +225,9 @@ class NowPlayingActivity : AppCompatActivity() {
             // Nothing playing yet, nothing to put a clock in place of.
             playing?.let { metadata.phoneClock(now?.isRealSong == true)?.takeUnless { joining } },
             muted = playing == null && standby == null,
-            blank = playing != null && PlaybackStatusBus.artPending()
+            blank = playing != null && PlaybackStatusBus.artPending(),
+            animate = prefs.artworkTransitionsEnabled,
+            slideDirection = artworkSlideDirection
         )
         val statusText = getString(
             when (PlaybackStatusBus.status.value) {

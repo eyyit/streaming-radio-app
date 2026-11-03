@@ -46,7 +46,7 @@ class LoadDiagnostics(
         loadEventInfo: LoadEventInfo,
         mediaLoadData: MediaLoadData
     ) {
-        Log.i(TAG, "start pobierania: ${loadEventInfo.dataSpec.uri}")
+        Log.i(TAG, "start pobierania: ${DiagnosticUrls.endpoint(loadEventInfo.dataSpec.uri.toString())}")
     }
 
     override fun onLoadCompleted(
@@ -57,7 +57,7 @@ class LoadDiagnostics(
         Log.i(
             TAG,
             "zakonczone: ${loadEventInfo.bytesLoaded} B w ${loadEventInfo.loadDurationMs} ms " +
-                "(${loadEventInfo.uri})"
+                "(${DiagnosticUrls.endpoint(loadEventInfo.uri.toString())})"
         )
     }
 
@@ -70,9 +70,9 @@ class LoadDiagnostics(
     ) {
         Log.w(
             TAG,
-            "BLAD pobierania (${loadEventInfo.uri}) po ${loadEventInfo.loadDurationMs} ms, " +
+            "BLAD pobierania (${DiagnosticUrls.endpoint(loadEventInfo.uri.toString())}) po ${loadEventInfo.loadDurationMs} ms, " +
                 "pobrano ${loadEventInfo.bytesLoaded} B, anulowane=$wasCanceled: " +
-                "${error.javaClass.simpleName}: ${error.message}"
+                DiagnosticUrls.failure(error)
         )
     }
 
@@ -81,7 +81,19 @@ class LoadDiagnostics(
         loadEventInfo: LoadEventInfo,
         mediaLoadData: MediaLoadData
     ) {
-        Log.i(TAG, "anulowano pobieranie: ${loadEventInfo.uri}")
+        Log.i(TAG, "anulowano pobieranie: ${DiagnosticUrls.endpoint(loadEventInfo.uri.toString())}")
+    }
+
+    private var audioUnderrunCount = 0
+    private var lastAudioUnderrunLogNs = 0L
+    override fun onAudioUnderrun(eventTime: AnalyticsListener.EventTime, bufferSize: Int,
+        bufferSizeMs: Long, elapsedSinceLastFeedMs: Long) {
+        audioUnderrunCount++
+        val now = System.nanoTime()
+        if (now - lastAudioUnderrunLogNs >= 1_000_000_000L) {
+            lastAudioUnderrunLogNs = now
+            Log.w(TAG, "Audio sink underrun count=$audioUnderrunCount bufferBytes=$bufferSize bufferMs=$bufferSizeMs sinceFeedMs=$elapsedSinceLastFeedMs")
+        }
     }
 
     private companion object {

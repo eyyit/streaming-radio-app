@@ -1,0 +1,8 @@
+<resources>
+ <style name="Theme.StreamingRadio" parent="Theme.Material3.Dark.NoActionBar">
+  <item name="colorPrimary">#FF5D64</item><item name="colorOnPrimary">#111115</item>
+  <item name="colorSurface">#17171E</item><item name="colorOnSurface">#F5F3F7</item>
+  <item name="android:windowBackground">#0D0E12</item><item name="android:colorBackground">#0D0E12</item>
+  <item name="android:statusBarColor">#0D0E12</item><item name="android:navigationBarColor">#0D0E12</item>
+ </style>
+</resources>

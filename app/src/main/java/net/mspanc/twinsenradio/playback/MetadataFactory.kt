@@ -11,13 +11,13 @@ import net.mspanc.twinsenradio.R
 import net.mspanc.twinsenradio.data.ArtContent
 import net.mspanc.twinsenradio.data.ArtworkMode
 import net.mspanc.twinsenradio.data.ClockColors
-import net.mspanc.twinsenradio.data.HostsJoin
 import net.mspanc.twinsenradio.data.LineContent
 import net.mspanc.twinsenradio.data.LineSpec
 import net.mspanc.twinsenradio.data.Prefs
 import net.mspanc.twinsenradio.data.Presentation
 import net.mspanc.twinsenradio.data.Station
 import net.mspanc.twinsenradio.data.StationNames
+import net.mspanc.twinsenradio.data.StationText
 import java.io.ByteArrayOutputStream
 import java.time.LocalDate
 import java.time.LocalTime
@@ -61,7 +61,9 @@ class MetadataFactory(private val context: Context, private val prefs: Prefs) {
     fun forBrowseItem(station: Station): MediaMetadata =
         MediaMetadata.Builder()
             .setTitle(station.name)
-            .setSubtitle(station.genre)
+            .setDisplayTitle(station.name)
+            .setSubtitle(StationText.subtitle(station))
+            .setDescription(StationText.subtitle(station))
             .setArtist(station.genre)
             .setStation(station.name)
             .setIsBrowsable(false)
@@ -94,7 +96,7 @@ class MetadataFactory(private val context: Context, private val prefs: Prefs) {
         stopped: Boolean = false,
         standby: java.io.File? = null
     ): MediaMetadata {
-        if (stopped) return forStopped(station, standby)
+        if (stopped && !net.mspanc.twinsenradio.BuildConfig.IS_AUTOMOTIVE) return forStopped(station, standby)
         val b = MediaMetadata.Builder()
             .setIsBrowsable(false)
             .setIsPlayable(true)
@@ -172,6 +174,23 @@ class MetadataFactory(private val context: Context, private val prefs: Prefs) {
                 .setAlbumTitle(trackInfo?.album.orEmpty())
                 .setStation(station.name)
                 .setGenre(station.genre)
+            if (net.mspanc.twinsenradio.BuildConfig.IS_AUTOMOTIVE) {
+                val lines = AutomotiveText.playback(station.name, titleLine(now, title), artist,
+                    trackInfo?.album, PlaybackStatusBus.quality.value)
+                b.setTitle(lines.title)
+                    .setDisplayTitle(station.name)
+                    .setSubtitle(lines.subtitle)
+                    .setDescription(lines.description)
+                    .setExtras(android.os.Bundle().apply {
+                        putString("com.impostorlabs.streamingradio.STATION_NAME", station.name)
+                        PlaybackStatusBus.quality.value?.let {
+                            putString("com.impostorlabs.streamingradio.CODEC", it.codec)
+                            putInt("com.impostorlabs.streamingradio.BITRATE_KBPS", it.bitrateKbps)
+                            putInt("com.impostorlabs.streamingradio.SAMPLE_RATE_HZ", it.sampleRateHz)
+                            putInt("com.impostorlabs.streamingradio.CHANNELS", it.channels)
+                        }
+                    })
+            }
         }
 
         applyArtwork(b, station, coverArtUrl, now?.isRealSong == true, onAir)
@@ -211,7 +230,9 @@ class MetadataFactory(private val context: Context, private val prefs: Prefs) {
      * The picture goes up once, when it is known. Lines with nothing to say
      * stay blank.
      */
-    fun forJoining(station: Station): MediaMetadata = withBlankArt(forPlayback(station, null))
+    fun forJoining(station: Station): MediaMetadata =
+        if (net.mspanc.twinsenradio.BuildConfig.IS_AUTOMOTIVE) forBrowseItem(station)
+        else withBlankArt(forPlayback(station, null))
 
     /**
      * The same description with the picture slot emptied - a song that is
@@ -242,8 +263,10 @@ class MetadataFactory(private val context: Context, private val prefs: Prefs) {
      * picks it, so the faded one is always the one shown unfaded elsewhere.
      */
     fun mutedLogoUri(station: Station): Uri {
+        if (net.mspanc.twinsenradio.BuildConfig.IS_AUTOMOTIVE)
+            return LogoProvider.mutedUriFor(context, station, logoUri(station))
         val source = customLogoFile(station)?.let { Uri.fromFile(it) }
-            ?: station.logoUrl?.let { Uri.parse(it) }
+            ?: station.logoUrl?.takeIf { prefs.onlineArtworkEnabled }?.let { Uri.parse(it) }
             ?: Uri.fromParts("res", logoResId(station).toString(), null)
         return LogoProvider.mutedUriFor(context, station, source)
     }
@@ -292,16 +315,9 @@ class MetadataFactory(private val context: Context, private val prefs: Prefs) {
         // that were never the same entry.
         if (spec.secondary.overlaps(spec.primary)) return first
         val second = shortenSecond(spec.secondary, lineText(spec.secondary, station, now, info, title, artist, onAir))
-        // The programme with its presenters takes the joiner being tried in the
-        // car - see [HostsJoin]. Every other pair keeps the dot.
-        val join = if (setOf(spec.primary, spec.secondary) == PROGRAMME_HOSTS) {
-            HostsJoin.at(prefs.hostsJoin).separator
-        } else {
-            JOIN
-        }
         // Distinct, because a programme with no guide behind it says what the
         // slogan says - next to "Slogan stacji" that would be the same words twice.
-        return listOf(first, second).filter { it.isNotBlank() }.distinct().joinToString(join)
+        return listOf(first, second).filter { it.isNotBlank() }.distinct().joinToString(JOIN)
     }
 
     /**
@@ -319,11 +335,6 @@ class MetadataFactory(private val context: Context, private val prefs: Prefs) {
      */
     private fun shortenSecond(content: LineContent, text: String): String {
         if (text.length <= SECOND_BUDGET) return text
-        // The programme guide is never cut by us (user's call, 31.10.2026): a
-        // clipped list of presenters named one of two, and passed for the whole
-        // list. If it doesn't fit, the head unit cuts it - from the end, where
-        // the line can at least be seen to go on.
-        if (content == LineContent.HOSTS || content == LineContent.PROGRAMME) return text
         // A station has a shorter form that is still its name; everything else
         // can only be cut, and is cut on a word so the remnant stays readable.
         if (content == LineContent.STATION) {
@@ -373,8 +384,7 @@ class MetadataFactory(private val context: Context, private val prefs: Prefs) {
         // Without the album RMF tacks onto the artist ("Wiktoria Kida / Ksiega"):
         // that has a line of its own now, and next to it the record was named
         // twice. The phone has always cut it the same way.
-        LineContent.ARTIST ->
-            if (now != null && now.isRealSong) composeArtistOnly(now, info, station.slashMayBeAlbum) else ""
+        LineContent.ARTIST -> if (now != null && now.isRealSong) composeArtistOnly(now, info) else ""
         LineContent.ALBUM ->
             if (now?.isRealSong == true) {
                 info?.albumLabel(prefs.enrichWithYear).orEmpty()
@@ -408,7 +418,7 @@ class MetadataFactory(private val context: Context, private val prefs: Prefs) {
      *
      */
     fun phoneArtwork(trackPlaying: Boolean, coverArtUrl: String?, onAir: OnAir?): Uri? =
-        when (prefs.presentation.artFor(trackPlaying)) {
+        if (!prefs.onlineArtworkEnabled) null else when (prefs.presentation.artFor(trackPlaying)) {
             ArtContent.COVER -> coverArtUrl?.let { Uri.parse(it) }
             ArtContent.HOST_PHOTO -> onAir?.photoUri
             ArtContent.LOGO, ArtContent.EMPTY, ArtContent.CLOCK_DIGITAL, ArtContent.CLOCK_ANALOG -> null
@@ -446,6 +456,7 @@ class MetadataFactory(private val context: Context, private val prefs: Prefs) {
         trackPlaying: Boolean,
         onAir: OnAir?
     ) {
+        if (!prefs.onlineArtworkEnabled) { applyLogo(b, station); return }
         // A clock belongs to the dashboard - see [carAttached]. With no head
         // unit listening it would only put a drawn clock in the phone's own
         // notification, so those two choices fall back to what the phone wants.
@@ -467,7 +478,7 @@ class MetadataFactory(private val context: Context, private val prefs: Prefs) {
             }
 
             ArtContent.COVER -> {
-                if (coverArtUrl != null) {
+                if (coverArtUrl != null && prefs.onlineArtworkEnabled) {
                     b.setArtworkUri(Uri.parse(coverArtUrl))
                 } else {
                     applyLogo(b, station)
@@ -515,7 +526,8 @@ class MetadataFactory(private val context: Context, private val prefs: Prefs) {
     fun logoUri(station: Station): Uri {
         // The user's own custom artwork beats everything else
         customLogoFile(station)?.let { return LogoProvider.customUriFor(context, station, it) }
-        station.logoUrl?.let { return Uri.parse(it) }
+        if (net.mspanc.twinsenradio.BuildConfig.IS_AUTOMOTIVE) return StationArtworkStore.uri(context, station)
+        station.logoUrl?.takeIf { prefs.onlineArtworkEnabled }?.let { return Uri.parse(it) }
         return LogoProvider.uriFor(context, station, logoResId(station))
     }
 
@@ -525,7 +537,8 @@ class MetadataFactory(private val context: Context, private val prefs: Prefs) {
      */
     fun logoDisplayUri(station: Station): Uri? =
         customLogoFile(station)?.let { Uri.fromFile(it) }
-            ?: station.logoUrl?.let { Uri.parse(it) }
+            ?: if (net.mspanc.twinsenradio.BuildConfig.IS_AUTOMOTIVE) StationArtworkStore.uri(context, station)
+            else station.logoUrl?.takeIf { prefs.onlineArtworkEnabled }?.let { Uri.parse(it) }
 
     private fun customLogoFile(station: Station): java.io.File? =
         prefs.customLogo(station.id)?.let { java.io.File(it) }?.takeIf { it.exists() }
@@ -583,8 +596,6 @@ class MetadataFactory(private val context: Context, private val prefs: Prefs) {
         /** The separator between two halves of a line, and inside a track line. */
         const val JOIN = " · "
 
-        private val PROGRAMME_HOSTS = setOf(LineContent.PROGRAMME, LineContent.HOSTS)
-
         /** An empty line as a value the head unit can draw - see [drawable]. */
         private const val BLANK = "\u00A0"
 
@@ -611,14 +622,13 @@ class MetadataFactory(private val context: Context, private val prefs: Prefs) {
             info: CoverArtLookup.TrackInfo?,
             onAir: OnAir?,
             p: Presentation,
-            includeYear: Boolean,
-            slashMayBeAlbum: Boolean = false
+            includeYear: Boolean
         ): PhoneText {
             if (now != null && now.isRealSong) {
                 val lines = p.playing
                 return PhoneText(
                     title = if (lines.shows(LineContent.Part.TITLE)) displayTitle(now, info) else "",
-                    artist = if (lines.shows(LineContent.Part.ARTIST)) composeArtistOnly(now, info, slashMayBeAlbum) else "",
+                    artist = if (lines.shows(LineContent.Part.ARTIST)) composeArtistOnly(now, info) else "",
                     album = if (lines.shows(LineContent.Part.ALBUM)) info?.albumLabel(includeYear).orEmpty() else ""
                 )
             }
@@ -695,43 +705,19 @@ class MetadataFactory(private val context: Context, private val prefs: Prefs) {
          * The artist alone, without the album - for use where the album should go
          * on a separate line (the phone's playback screen), not after a dot.
          */
-        /**
-         * @param slashMayBeAlbum see [Station.slashMayBeAlbum]: without the
-         *   catalogue to say which it is, such a station's slash is left alone.
-         */
-        fun composeArtistOnly(
-            now: NowPlaying,
-            info: CoverArtLookup.TrackInfo?,
-            slashMayBeAlbum: Boolean = false
-        ): String {
+        fun composeArtistOnly(now: NowPlaying, info: CoverArtLookup.TrackInfo?): String {
             val artist = displayArtist(now, info)
-            if (artist.isBlank()) return artist
-            if (info == null) return if (slashMayBeAlbum) artist else joinedArtists(artist)
+            if (artist.isBlank() || info == null) return artist
 
             // Only trim the tail when the catalog confirms it's an album
             // name. Otherwise "Shimza / AR/CO / Kasango" would lose its third artist.
             val parts = artist.split(Regex("\\s+[/,]\\s+"))
-            return joinedArtists(
-                if (parts.size > 1 && info.tailIsAlbum(parts.last())) {
-                    parts.dropLast(1).joinToString(" / ")
-                } else {
-                    artist
-                }
-            )
+            return if (parts.size > 1 && info.tailIsAlbum(parts.last())) {
+                parts.dropLast(1).joinToString(" / ")
+            } else {
+                artist
+            }
         }
-
-        /**
-         * Smooth FM and RMF join artists with " / " - "Bryan Adams / Mel C";
-         * shown as "&", the way Jacaranda's "[+]" is (see [joinedNames]).
-         *
-         * Only after RMF's album has come off the end, which is found by that
-         * same slash: "Wiktoria Kida / Ksiega" is an artist and a record, and
-         * swapped first it would read as two artists. A slash without spaces
-         * is part of a name and stays - "AC/DC", "AR/CO".
-         */
-        fun joinedArtists(text: String): String = text.replace(ARTIST_SLASH, " & ")
-
-        private val ARTIST_SLASH = Regex("""\s+/\s+""")
 
         /**
          * @param includeYear whether the album gets its year appended, when the

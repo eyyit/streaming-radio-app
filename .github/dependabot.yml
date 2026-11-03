@@ -1,0 +1,23 @@
+version: 2
+updates:
+  - package-ecosystem: gradle
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 2
+    groups:
+      media3-compatible:
+        patterns: ['androidx.media3:*']
+        update-types: [minor, patch]
+      androidx-compatible:
+        patterns: ['androidx.*']
+        exclude-patterns: ['androidx.media3:*']
+        update-types: [minor, patch]
+    # Major upgrades stay separate and require review; no automatic merging.
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 1

@@ -54,26 +54,8 @@ data class Station(
      * one (RNS: its placeholder banner). Without it the screen before play
      * shows the logo faded back.
      */
-    val standbyArtUrl: String? = null,
-    /**
-     * Where the station broadcasts from, as an ISO code ("PL", "AU"); null
-     * when nobody knows - stations added from the directory before it was
-     * kept. Decides which iTunes store is asked first for a cover: see
-     * [isPolish].
-     */
-    val country: String? = null,
-    /**
-     * Whether " / " in this station's artist may be the record rather than a
-     * second artist - RMF sends both "Wiktoria Kida / Ksiega" (artist / album)
-     * and "Sean Paul / Alexis Jordan" (two artists). Only the catalogue can
-     * tell them apart, so without it the slash is left as it came; anywhere
-     * else " / " joins artists and is shown as "&".
-     */
-    val slashMayBeAlbum: Boolean = false
+    val standbyArtUrl: String? = null
 ) {
-    /** Polish repertoire is looked up in the Polish iTunes store first. */
-    val isPolish: Boolean get() = country.equals("PL", ignoreCase = true)
-
     enum class Source {
         BUILT_IN,
         USER_M3U,
@@ -94,6 +76,16 @@ data class Station(
         const val DEFAULT_LABEL = "Strumień stacji"
 
         fun idFromMediaId(mediaId: String): String? =
-            if (mediaId.startsWith(MEDIA_ID_PREFIX)) mediaId.removePrefix(MEDIA_ID_PREFIX) else null
+            if (mediaId.startsWith(MEDIA_ID_PREFIX)) mediaId.removePrefix(MEDIA_ID_PREFIX).substringBefore(CONTEXT_SEPARATOR) else null
+
+        private const val CONTEXT_SEPARATOR = "!ctx!"
+        fun contextualMediaId(mediaId: String, parentId: String): String =
+            mediaId + CONTEXT_SEPARATOR + java.util.Base64.getUrlEncoder().withoutPadding()
+                .encodeToString(parentId.toByteArray(Charsets.UTF_8))
+
+        fun parentFromMediaId(mediaId: String): String? = runCatching {
+            if (CONTEXT_SEPARATOR !in mediaId) null else String(
+                java.util.Base64.getUrlDecoder().decode(mediaId.substringAfter(CONTEXT_SEPARATOR)), Charsets.UTF_8)
+        }.getOrNull()
     }
 }

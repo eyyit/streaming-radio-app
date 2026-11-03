@@ -1,5 +1,6 @@
 package net.mspanc.twinsenradio.playback
 
+import android.os.SystemClock
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 
@@ -9,6 +10,30 @@ import kotlinx.coroutines.flow.StateFlow
  * through a Binder.
  */
 object PlaybackStatusBus {
+
+    private val missingTrackGrace = MissingTrackInfoGrace()
+    private var actuallyPlaying = false
+
+    fun resetMissingTrackInfo() { missingTrackGrace.reset() }
+
+    fun setIcyMetadataTiming(intervalBytes: Int, bitrateBitsPerSecond: Int) {
+        missingTrackGrace.setIcyHeaders(intervalBytes.toLong(), bitrateBitsPerSecond.toLong())
+    }
+
+    fun setActuallyPlaying(value: Boolean) {
+        actuallyPlaying = value
+        updateMissingTrackInfo()
+    }
+
+    fun missingTrackInfoText(nowMs: Long): String? = missingTrackGrace.text(nowMs)
+
+    private fun updateMissingTrackInfo() {
+        val now = _nowPlaying.value
+        val content = now?.takeUnless { it.isStationSelfTitle || it.isAd || it.isControlMarker }
+        missingTrackGrace.update(_stationId.value, actuallyPlaying,
+            !content?.songTitle.isNullOrBlank(), !content?.artist.isNullOrBlank(),
+            SystemClock.elapsedRealtime())
+    }
 
     private val _stationId = MutableStateFlow<String?>(null)
     val stationId: StateFlow<String?> = _stationId
@@ -22,6 +47,10 @@ object PlaybackStatusBus {
      * station logo - the clock replacing the cover art is a feature meant
      * only for the screen in the car.
      */
+    private val _trackArtworkLoading = MutableStateFlow(false)
+    val trackArtworkLoading: StateFlow<Boolean> = _trackArtworkLoading
+    fun setTrackArtworkLoading(value: Boolean) { _trackArtworkLoading.value = value }
+
     private val _coverArtUrl = MutableStateFlow<String?>(null)
     val coverArtUrl: StateFlow<String?> = _coverArtUrl
 
@@ -156,11 +185,14 @@ object PlaybackStatusBus {
             // valid immediately, and we'll only learn the new one after the
             // first frame from the decoder.
             _quality.value = null
+            missingTrackGrace.reset()
+            updateMissingTrackInfo()
         }
     }
 
     fun setNowPlaying(np: NowPlaying?) {
         _nowPlaying.value = np
+        updateMissingTrackInfo()
     }
 
     fun setPlayerStatus(s: Status) {

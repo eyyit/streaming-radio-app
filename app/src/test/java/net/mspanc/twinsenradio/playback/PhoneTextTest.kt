@@ -17,11 +17,6 @@ class PhoneTextTest {
 
     private val rns = "Radio Nowy Swiat"
 
-    /** The presenters are off by default; these cases switch them on. */
-    private val withHosts = Presentation.DEFAULT.copy(
-        idle = Presentation.DEFAULT_IDLE.copy(bottom = LineSpec(LineContent.PROGRAMME, LineContent.HOSTS))
-    )
-
     private fun phone(
         now: NowPlaying?,
         info: CoverArtLookup.TrackInfo? = null,
@@ -66,14 +61,7 @@ class PhoneTextTest {
     fun `while the presenter talks the programme and its hosts are shown`() {
         val now = NowPlaying.parse("$rns - Pion i poziom!", rns)
         val onAir = OnAir("Poranek", "Jan Kowalski", null)
-        assertEquals(PhoneText("Poranek", "Jan Kowalski", ""), phone(now, onAir = onAir, p = withHosts))
-    }
-
-    @Test
-    fun `by default the programme goes without its hosts`() {
-        val now = NowPlaying.parse("$rns - Pion i poziom!", rns)
-        val onAir = OnAir("Poranek", "Jan Kowalski", null)
-        assertEquals(PhoneText("Poranek", "", ""), phone(now, onAir = onAir))
+        assertEquals(PhoneText("Poranek", "Jan Kowalski", ""), phone(now, onAir = onAir))
     }
 
     @Test
@@ -85,7 +73,7 @@ class PhoneTextTest {
     @Test
     fun `a talk with nothing said at all leaves the programme on its own`() {
         val onAir = OnAir("Poranek", "Jan Kowalski", null)
-        assertEquals(PhoneText("Poranek", "Jan Kowalski", ""), phone(null, onAir = onAir, p = withHosts))
+        assertEquals(PhoneText("Poranek", "Jan Kowalski", ""), phone(null, onAir = onAir))
     }
 
     @Test

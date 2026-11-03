@@ -101,30 +101,4 @@ class TrackMatchTest {
     fun `accents and case do not matter`() {
         assertTrue(accepts("Dawid Podsiadlo", "Na blysk", "Dawid Podsiadło", "NA BŁYSK"))
     }
-
-    /** Radio 357 against iTunes, 30.10.2026: the same track, spelled the catalogue's way. */
-    @Test
-    fun `a part abbreviated and accented is the same part`() {
-        assertTrue(
-            TrackMatch.plausible(
-                "Jean Michel Jarre", "Oxygene Part 4",
-                "Jean-Michel Jarre", "Oxygène, Pt. 4"
-            )
-        )
-    }
-
-    @Test
-    fun `a different part is still a different track`() {
-        assertFalse(
-            TrackMatch.plausible(
-                "Jean Michel Jarre", "Oxygene Part 4",
-                "Jean-Michel Jarre", "Oxygène, Pt. 2"
-            )
-        )
-    }
-
-    @Test
-    fun `pt inside a word is left alone`() {
-        assertFalse(TrackMatch.plausible("Bonnie Tyler", "Captain", "Bonnie Tyler", "Caparttain"))
-    }
 }

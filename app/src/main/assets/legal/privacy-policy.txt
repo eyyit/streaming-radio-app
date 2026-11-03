@@ -1,0 +1,44 @@
+Streaming Radio privacy notice — release candidate
+Prepared 2 November 2026. Publisher brand: Impostor Labs.
+Contact: impostor.labs@gmail.com
+
+This notice describes the local release candidate. A reviewed public policy
+URL and final release review are required before this app is published.
+
+The app has no app account, advertising or analytics SDK. It stores playlist
+URLs, last-good playlist contents, station order, Favorites, stream selections,
+settings and chosen artwork on your device. Automotive backup is disabled.
+Uninstalling or clearing app storage removes that app-private data. Removing a
+playlist does not remove saved Favorites or all cached artwork.
+
+Playlist refreshes and radio playback connect directly to your chosen hosts.
+Those hosts receive your IP address and ordinary request information. Do not
+put passwords or private tokens in public playlists. Release playlist/catalog
+and artwork requests use HTTPS. Some user-selected radio streams may use HTTP;
+HTTP playback is not encrypted. The app does not operate those stream hosts.
+
+Online artwork is optional. In the public release candidate it defaults off.
+When enabled, station-name queries go to Radio Browser and artist/title queries
+may go to MusicBrainz and Cover Art Archive/image hosts. Each recipient sees
+your request and IP address and applies its own privacy policy. User-entered
+image search terms are sent to the station directory. Cached images are local.
+The local debug prototype may also use Apple/iTunes Search; that integration
+is disabled in the public candidate pending its promotional-content terms.
+
+Turning off automatic artwork stops new artwork/catalog requests; it does not
+stop playlist retrieval or playback you request. Requests already in progress
+may finish. Track-image cache is bounded; selected station images remain until
+replaced, removed by cache maintenance, or app data is cleared.
+
+Optional diagnostic logs stay on the device. They may contain station/track
+metadata, URLs and controller details. Public builds do not enable drive traces
+by default. Do not share logs without reviewing them for private information.
+
+Third-party information:
+https://www.radio-browser.info/faq
+https://metabrainz.org/privacy
+https://coverartarchive.org/
+https://www.apple.com/legal/privacy/ (debug prototype only)
+
+No app account is created, so there is no app-account deletion procedure.
+Questions or privacy requests: impostor.labs@gmail.com

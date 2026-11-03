@@ -3,10 +3,10 @@ package net.mspanc.twinsenradio.playback
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.util.Log
+import android.util.AtomicFile
 import net.mspanc.twinsenradio.data.StationRepository
+import net.mspanc.twinsenradio.net.SafeHttp
 import java.io.File
-import java.net.HttpURLConnection
-import java.net.URL
 
 /**
  * A wide picture from a station's website, cut to the square the head unit and
@@ -30,30 +30,39 @@ object SquareArt {
         val bytes = download(url) ?: return false
         val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
         BitmapFactory.decodeByteArray(bytes, 0, bytes.size, bounds)
-        var sample = 1
-        while (minOf(bounds.outWidth, bounds.outHeight) / (sample * 2) >= SIZE) sample *= 2
+        val sample = ArtworkAccessPolicy.sampleSize(bounds.outWidth, bounds.outHeight) ?: return false
         val decoded = BitmapFactory.decodeByteArray(bytes, 0, bytes.size, BitmapFactory.Options().apply { inSampleSize = sample })
             ?: return false
-        val side = minOf(decoded.width, decoded.height)
-        val square = Bitmap.createBitmap(decoded, (decoded.width - side) / 2, (decoded.height - side) / 2, side, side)
-        val scaled = if (side > SIZE) Bitmap.createScaledBitmap(square, SIZE, SIZE, true) else square
-        file.parentFile?.mkdirs()
-        val tmp = File(file.parentFile, file.name + ".tmp")
-        tmp.outputStream().use { scaled.compress(Bitmap.CompressFormat.JPEG, 90, it) }
-        tmp.renameTo(file)
-    }.onFailure { Log.w(TAG, "$url: ${it.message}") }.getOrDefault(false)
+        var square: Bitmap? = null
+        var scaled: Bitmap? = null
+        try {
+            if (decoded.width > ArtworkAccessPolicy.MAX_DIMENSION || decoded.height > ArtworkAccessPolicy.MAX_DIMENSION) return false
+            val side = minOf(decoded.width, decoded.height)
+            val crop = Bitmap.createBitmap(decoded, (decoded.width - side) / 2, (decoded.height - side) / 2, side, side)
+            square = crop
+            val result = if (side > SIZE) Bitmap.createScaledBitmap(crop, SIZE, SIZE, true) else crop
+            scaled = result
+            val parent = file.parentFile ?: return false
+            parent.mkdirs()
+            if (file.canonicalFile.parentFile != parent.canonicalFile) return false
+            val atomic = AtomicFile(file)
+            val output = atomic.startWrite()
+            try {
+                check(result.compress(Bitmap.CompressFormat.JPEG, 90, output))
+                atomic.finishWrite(output)
+            } catch (failure: Throwable) {
+                atomic.failWrite(output)
+                throw failure
+            }
+            true
+        } finally {
+            if (scaled != null && scaled !== square && scaled !== decoded) scaled.recycle()
+            if (square != null && square !== decoded) square.recycle()
+            decoded.recycle()
+        }
+    }.onFailure { Log.w(TAG, "Artwork fetch/render failed: ${it.javaClass.simpleName}") }.getOrDefault(false)
 
     private fun download(url: String): ByteArray? = runCatching {
-        val conn = (URL(url).openConnection() as HttpURLConnection).apply {
-            connectTimeout = TIMEOUT_MS
-            readTimeout = TIMEOUT_MS
-            setRequestProperty("User-Agent", StationRepository.USER_AGENT)
-        }
-        try {
-            if (conn.responseCode != HttpURLConnection.HTTP_OK) null
-            else conn.inputStream.use { it.readBytes() }
-        } finally {
-            conn.disconnect()
-        }
-    }.onFailure { Log.w(TAG, "$url: ${it.message}") }.getOrNull()
+        SafeHttp.getBytes(url, ArtworkAccessPolicy.MAX_BYTES, StationRepository.USER_AGENT, TIMEOUT_MS)
+    }.getOrNull()
 }

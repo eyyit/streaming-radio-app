@@ -13,6 +13,12 @@ import net.mspanc.twinsenradio.data.StationRepository
 import net.mspanc.twinsenradio.playback.LogoProvider
 import java.net.HttpURLConnection
 import java.net.URL
+import android.graphics.drawable.BitmapDrawable
+import android.graphics.drawable.ColorDrawable
+import android.graphics.drawable.Drawable
+import android.graphics.drawable.TransitionDrawable
+import androidx.core.content.ContextCompat
+import net.mspanc.twinsenradio.data.Prefs
 
 /**
  * Loads cover art (or, failing that, a station logo) into an ImageView.
@@ -21,7 +27,9 @@ import java.net.URL
  */
 object ArtworkLoader {
 
-    private val cache = LruCache<String, Bitmap>(8)
+    private val cache = object : LruCache<String, Bitmap>(12 * 1024 * 1024) {
+        override fun sizeOf(key: String, value: Bitmap) = value.allocationByteCount
+    }
 
     /**
      * @param coverUri track cover art from session metadata; null or non-http(s)
@@ -49,19 +57,50 @@ object ArtworkLoader {
         target: ImageView,
         drawn: Bitmap? = null,
         muted: Boolean = false,
-        blank: Boolean = false
+        blank: Boolean = false,
+        animate: Boolean = false,
+        slideDirection: Int = 0
     ) {
+        fun show(key: String, drawable: Drawable) {
+            if (target.getTag(DISPLAY_KEY) == key) return
+            target.setTag(DISPLAY_KEY, key)
+            if (animate && slideDirection != 0 && target.width > 0) {
+                val distance = target.width.toFloat() * slideDirection
+                target.animate().cancel()
+                target.animate().translationX(-distance).setDuration(120).withEndAction {
+                    if (target.getTag(DISPLAY_KEY) == key) {
+                        target.setImageDrawable(drawable)
+                        target.translationX = distance
+                        target.animate().translationX(0f).setDuration(180).start()
+                    }
+                }.start()
+            } else if (animate) {
+                val previous = target.drawable.let {
+                    if (it is TransitionDrawable) it.getDrawable(it.numberOfLayers - 1) else it
+                } ?: ColorDrawable(android.graphics.Color.TRANSPARENT)
+                target.setImageDrawable(TransitionDrawable(arrayOf(previous, drawable)).apply {
+                    isCrossFadeEnabled = true
+                    startTransition(220)
+                })
+            } else {
+                target.animate().cancel()
+                target.translationX = 0f
+                target.setImageDrawable(drawable)
+            }
+        }
         target.alpha = if (muted) LogoProvider.MUTED_ALPHA else 1f
         if (blank) {
             // The picture isn't decided yet (see PlaybackStatusBus.join):
             // an empty slot now, the right picture once - not a logo first.
             target.setTag(TAG_KEY, null)
+            target.setTag(DISPLAY_KEY, null)
             target.setImageDrawable(null)
             return
         }
         if (drawn != null) {
             // A cover still on its way must not land on top of the clock.
             target.setTag(TAG_KEY, null)
+            target.setTag(DISPLAY_KEY, null)
             target.setImageBitmap(drawn)
             return
         }
@@ -78,22 +117,33 @@ object ArtworkLoader {
         // after play exists to prevent (seen 30.10.2026 on the phone, frame by
         // frame: empty, logo, cover).
         fun resting() {
-            if (localLogo != null) target.setImageBitmap(localLogo) else target.setImageResource(fallbackRes)
+            if (localLogo != null) show("local:$logoUri", BitmapDrawable(target.resources, localLogo))
+            else ContextCompat.getDrawable(target.context, fallbackRes)?.let { show("res:$fallbackRes", it) }
         }
 
         // What has to be fetched: the presenter's photo (ours already, behind
         // LogoProvider - the same address the head unit gets), the cover, or a
         // remote station logo.
-        val key = coverUri?.takeIf { it.scheme == "content" || it.scheme == "http" || it.scheme == "https" }
-            ?: logoUri?.takeIf { it.scheme == "http" || it.scheme == "https" }
+        val candidate = coverUri?.takeIf { it.scheme == "content" || it.scheme == "http" || it.scheme == "https" }
+            ?: logoUri?.takeIf { it.scheme in listOf("content", "http", "https") }
+        val key = candidate?.takeUnless {
+            it.scheme in listOf("http", "https") && !Prefs(target.context).onlineArtworkEnabled
+        }
         if (key == null) {
             target.setTag(TAG_KEY, null)
             resting()
             return
         }
+        // A favorite/order update must not re-open the same provider image,
+        // or enqueue another copy of a request that is already in flight.
+        if (target.getTag(DISPLAY_KEY) == key.toString()) {
+            target.setTag(TAG_KEY, null) // Invalidate any request for a different image.
+            return
+        }
+        if (target.getTag(TAG_KEY) == key.toString()) return
         cache.get(key.toString())?.let {
             target.setTag(TAG_KEY, null)
-            target.setImageBitmap(it)
+            show(key.toString(), BitmapDrawable(target.resources, it))
             return
         }
 
@@ -112,9 +162,10 @@ object ArtworkLoader {
             }
             // the track (or station) may have changed in the meantime
             if (target.getTag(TAG_KEY) != key.toString()) return@launch
+            target.setTag(TAG_KEY, null)
             if (bitmap != null) {
                 cache.put(key.toString(), bitmap)
-                target.setImageBitmap(bitmap)
+                show(key.toString(), BitmapDrawable(target.resources, bitmap))
             } else {
                 resting()
             }
@@ -136,4 +187,5 @@ object ArtworkLoader {
     }.getOrNull()
 
     private val TAG_KEY = "artwork_url".hashCode()
+    private val DISPLAY_KEY = "artwork_displayed".hashCode()
 }

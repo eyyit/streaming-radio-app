@@ -30,39 +30,13 @@ object StationTitleApi {
     class Source(
         val url: String,
         /** The response body as a StreamTitle; null = the answer said nothing usable. */
-        val toStreamTitle: (String) -> String?,
-        /**
-         * Whether the API describes the track, with the stream only a witness
-         * (RNS), or the other way round (Radio 357). Whichever source is the
-         * better one on a station decides there; the other is written down.
-         */
-        val decides: Boolean = true,
-        /**
-         * Triton's "now playing" (see [TritonNowPlaying]): the stream decides
-         * the titles, and this fills what it leaves unsaid - ads, and a track
-         * the stream hasn't named yet.
-         */
-        val triton: Boolean = false
+        val toStreamTitle: (String) -> String?
     )
 
-    /**
-     * Null for stations whose stream carries all they say.
-     *
-     * @param streamUrl the station's stream: any station streamed through
-     *   StreamTheWorld has Triton's "now playing", one added from the directory
-     *   as much as one in the catalogue.
-     */
-    fun forStation(stationId: String?, streamUrl: String? = null): Source? = when (stationId) {
+    /** Null for stations whose stream carries its own titles. */
+    fun forStation(stationId: String?): Source? = when (stationId) {
         "rns" -> RNS
-        "r357" -> R357
-        else -> TritonNowPlaying.mountOf(streamUrl)?.takeIf { TRITON_FILLS }?.let { mount ->
-            Source(
-                TritonNowPlaying.url(mount),
-                { body -> (TritonNowPlaying.latest(body) as? TritonNowPlaying.Event.Track)?.streamTitle },
-                decides = false,
-                triton = true
-            )
-        }
+        else -> null
     }
 
     /**
@@ -104,38 +78,12 @@ object StationTitleApi {
         }
     }
 
-    /**
-     * Radio 357 - the other way round from RNS: its stream decides and this is
-     * the witness. The address its own web player polls (`r357api.js`) sits
-     * behind Cloudflare with `stale-while-revalidate` of two days, and neither
-     * a query string nor `Cache-Control: no-cache` gets past it, so an answer
-     * can be minutes old: on 30.10.2026 "Eagles - Born to Boogie" started at
-     * 16:16:45, the stream said so at 16:16:54, this at 16:17:02. The stream
-     * agreed with it on every title that day and arrives as the sound plays.
-     * This answer still names the programme on air, which [OnAirGuide] reads.
-     */
-    private val R357 = Source(
-        "https://stream.radio357.pl/now/playing.json",
-        ::r357StreamTitle,
-        decides = false
-    )
-
-    /**
-     * `s` is already a StreamTitle - "Yazoo - Happy People", artist first - and
-     * between tracks the same slogan the stream sends, "Radio 357 - Najlepszy
-     * radiowy adres na swiecie!" (measured 30.10.2026, 16:03).
-     */
-    internal fun r357StreamTitle(body: String): String? {
-        val o = runCatching { JSONObject(body) }.getOrNull() ?: return null
-        return o.optString("s").trim().ifEmpty { null }
-    }
-
     /** One question to the station. Null on any failure - the next poll simply tries again. */
     suspend fun fetch(source: Source): String? = withContext(Dispatchers.IO) {
         // The answer comes with Cache-Control max-age of a year, and Cloudflare
         // honours it: a repeated address got a Massive Attack track from days
         // earlier. Their own player busts it with a timestamp, and so do we.
-        val url = source.url + (if ('?' in source.url) "&" else "?") + "tsapi=${System.currentTimeMillis()}"
+        val url = "${source.url}?tsapi=${System.currentTimeMillis()}"
         runCatching {
             val conn = (URL(url).openConnection() as HttpURLConnection).apply {
                 connectTimeout = TIMEOUT_MS
@@ -151,13 +99,6 @@ object StationTitleApi {
             }
         }.getOrNull()
     }
-
-    /**
-     * Triton's fill-in: on since an hour of Smooth FM was measured against
-     * Ucho (30.10.2026) - ads as "Reklama" with the logo, the station's own
-     * "(Link)" spots skipped, events shown once our sound reaches them.
-     */
-    private const val TRITON_FILLS = true
 
     /** Their own player asks every 10 s, so the station has already sized for that. */
     const val POLL_MS = 10_000L

@@ -52,28 +52,4 @@ class StationTitleApiTest {
     fun `the platform placeholder is no title`() {
         assertNull(NowPlaying.parse("Now Playing info goes here", stationName = "Radio Nowy Świat"))
     }
-
-    /** Radio 357's now/playing.json, 30.10.2026 15:44 - a song. */
-    @Test
-    fun `radio 357 gives the song as a stream title, artist first`() {
-        val body = """{"_":"2026-10-30 15:44:19","s":"Yazoo - Happy People","p":{"n":"Zlodziej czasu"}}"""
-        val now = NowPlaying.parse(StationTitleApi.r357StreamTitle(body), stationName = "Radio 357")!!
-        assertEquals("Yazoo", now.artist)
-        assertEquals("Happy People", now.songTitle)
-        assertTrue(now.isRealSong)
-    }
-
-    /** The same at 16:03, between tracks: the slogan the stream sends too. */
-    @Test
-    fun `radio 357 between tracks is the station talking, not a song`() {
-        val body = """{"s":"Radio 357 - Najlepszy radiowy adres na świecie!"}"""
-        val now = NowPlaying.parse(StationTitleApi.r357StreamTitle(body), stationName = "Radio 357")!!
-        assertEquals("Najlepszy radiowy adres na świecie!", now.slogan)
-        assertFalse(now.isRealSong)
-    }
-
-    @Test
-    fun `radio 357 with nothing to say is no title`() {
-        assertNull(StationTitleApi.r357StreamTitle("""{"s":""}"""))
-    }
 }

@@ -3,6 +3,8 @@ package net.mspanc.twinsenradio.playback
 import android.util.Log
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import net.mspanc.twinsenradio.data.StationRepository
 import org.json.JSONObject
 import java.net.HttpURLConnection
@@ -28,12 +30,14 @@ import java.net.URLEncoder
  * slower), Deezer API (free), Last.fm and Spotify (require a key).
  */
 object CoverArtLookup {
+    /** Diagnostic counter used to verify the opt-out prevents even cached catalog lookups. */
+    val lookupCalls = java.util.concurrent.atomic.AtomicInteger()
 
     private const val TAG = "CoverArt"
     private const val ENDPOINT = "https://itunes.apple.com/search"
     private const val MUSICBRAINZ = "https://musicbrainz.org/ws/2/recording"
     private const val COVER_ART = "https://coverartarchive.org"
-    private const val MUSICBRAINZ_AGENT = "TwinsenRadio/0.1 (twinsen@mspanc.net)"
+    private const val MUSICBRAINZ_AGENT = "StreamingRadio/0.3 (impostor.labs@gmail.com)"
 
     /**
      * What we managed to find out about the track. Besides artwork, the
@@ -181,15 +185,8 @@ object CoverArtLookup {
      *   so we don't keep re-querying for tracks that aren't in the catalogue
      *   (and there are plenty of those among Polish stations).
      */
-    /**
-     * @param polishFirst ask the Polish iTunes store before the US one - for a
-     *   Polish station. Without a country iTunes searches its US store, which
-     *   doesn't carry a good part of Polish releases at all: "Jakub Skorupa -
-     *   Pociagi towarowe" is 0 results there and the track, album and cover in
-     *   the Polish one (30.10.2026, Radio 357). For a foreign station the US
-     *   store comes first - the Australian stations' repertoire is found there.
-     */
-    suspend fun find(artist: String?, title: String?, polishFirst: Boolean = false): TrackInfo? = withContext(Dispatchers.IO) {
+    suspend fun find(artist: String?, title: String?): TrackInfo? = withContext(ArtworkWorkScheduler.trackDispatcher) {
+        lookupCalls.incrementAndGet()
         val a = artist?.trim().orEmpty()
         val t = title?.trim().orEmpty()
         if (t.isEmpty()) return@withContext null
@@ -197,29 +194,26 @@ object CoverArtLookup {
         val key = "$a|$t".lowercase()
         synchronized(cache) { if (cache.containsKey(key)) return@withContext cache[key] }
 
-        var result: TrackInfo? = null
-        for (store in if (polishFirst) listOf("PL", null) else listOf(null, "PL")) {
-            val name = "iTunes ${store ?: "US"}"
-            result = runCatching { query("$a $t".trim(), country = store) }
-                .onFailure { Log.w(TAG, "$name nie odpowiedzial: ${it.message}") }
-                .getOrNull()
-                ?.let { ourTrackOrNull(a, t, it, name) }
-            if (result != null) break
-        }
+        var result = (if(net.mspanc.twinsenradio.BuildConfig.ENABLE_ITUNES_ARTWORK) runCatching { query("$a $t".trim()) }
+            .onFailure { Log.w(TAG, "iTunes nie odpowiedzial: ${it.message}") }
+            .getOrNull()
+            ?.let { ourTrackOrNull(a, t, it, "iTunes") } else null)
 
         // iTunes has poor coverage of older Polish repertoire - "Czesław
         // Niemen - Lipowa łyżka" isn't there at all, while MusicBrainz knows
         // both the track and the release. We only query it when Apple
         // doesn't know the track.
         if (result == null && a.isNotEmpty()) {
+            currentCoroutineContext().ensureActive()
             result = runCatching { queryMusicBrainz(a, t) }
                 .onFailure { Log.w(TAG, "MusicBrainz nie odpowiedzial: ${it.message}") }
                 .getOrNull()
                 ?.let { ourTrackOrNull(a, t, it, "MusicBrainz") }
         }
 
+        currentCoroutineContext().ensureActive()
         synchronized(cache) { cache[key] = result }
-        Log.i(TAG, "'$a - $t' -> okladka=${result?.artworkUrl != null} album='${result?.albumLabel()}' (najpierw ${if (polishFirst) "PL" else "US"})")
+        if (net.mspanc.twinsenradio.BuildConfig.DEBUG) Log.i(TAG, "'$a - $t' -> okladka=${result?.artworkUrl != null} album='${result?.albumLabel()}'")
         result
     }
 
@@ -239,7 +233,7 @@ object CoverArtLookup {
         source: String
     ): TrackInfo? {
         if (TrackMatch.plausible(artist, title, found.artistName, found.trackName)) return found
-        Log.i(TAG, "$source odpowiedzial o czym innym: '$artist - $title' -> '${found.artistName} - ${found.trackName}'")
+        if (net.mspanc.twinsenradio.BuildConfig.DEBUG) Log.i(TAG, "$source odpowiedzial o czym innym: '$artist - $title' -> '${found.artistName} - ${found.trackName}'")
         Trace.write("katalog-odrzucony") {
             put("zrodlo", source)
             put("pytanieWykonawca", artist)
@@ -297,51 +291,43 @@ object CoverArtLookup {
     }
 
     private fun httpGet(url: String): String? {
-        val conn = (URL(url).openConnection() as HttpURLConnection).apply {
-            connectTimeout = 8_000
-            readTimeout = 8_000
-            instanceFollowRedirects = true
-            // MusicBrainz requires a recognizable User-Agent with contact info
-            setRequestProperty("User-Agent", MUSICBRAINZ_AGENT)
-        }
-        try {
-            if (conn.responseCode != 200) return null
-            return conn.inputStream.bufferedReader().use { it.readText() }
-        } finally {
-            conn.disconnect()
-        }
+        return runCatching { net.mspanc.twinsenradio.net.SafeHttp.getText(url,2*1024*1024,MUSICBRAINZ_AGENT) }.getOrNull()
     }
 
-    private fun headOk(url: String): Boolean = runCatching {
-        val conn = (URL(url).openConnection() as HttpURLConnection).apply {
-            requestMethod = "HEAD"
-            connectTimeout = 6_000
-            readTimeout = 6_000
-            instanceFollowRedirects = true
-            setRequestProperty("User-Agent", MUSICBRAINZ_AGENT)
-        }
-        try {
-            conn.responseCode == 200
-        } finally {
-            conn.disconnect()
-        }
-    }.getOrDefault(false)
+    private fun headOk(url: String): Boolean = net.mspanc.twinsenradio.net.SafeHttp.headOk(url,MUSICBRAINZ_AGENT,6_000)
 
-    /** @param country an iTunes store (ISO code); null is the US one. */
-    private fun query(term: String, country: String? = null): TrackInfo? {
-        val url = "$ENDPOINT?term=${URLEncoder.encode(term, "UTF-8")}&media=music&entity=song&limit=1" +
-            (country?.let { "&country=$it" } ?: "")
-        val conn = (URL(url).openConnection() as HttpURLConnection).apply {
-            connectTimeout = 8_000
-            readTimeout = 8_000
-            setRequestProperty("User-Agent", StationRepository.USER_AGENT)
-        }
-        try {
-            if (conn.responseCode != 200) return null
-            val body = conn.inputStream.bufferedReader().use { it.readText() }
+    /** Explicit user refresh: only accept another matching artist/title image. */
+    suspend fun findAlternative(artist: String?, title: String?, excluded: Set<String>): TrackInfo? = withContext(ArtworkWorkScheduler.trackDispatcher) {
+        lookupCalls.incrementAndGet()
+        val a = artist?.trim().orEmpty()
+        val t = title?.trim().orEmpty()
+        if (t.isBlank()) return@withContext null
+        val next = if (net.mspanc.twinsenradio.BuildConfig.ENABLE_ITUNES_ARTWORK) {
+            runCatching { query("$a $t".trim(), a, t, excluded) }.getOrNull()
+        } else if (a.isNotBlank()) {
+            runCatching { queryMusicBrainz(a, t) }.getOrNull()
+                ?.let { matchingAlternative(a, t, it, excluded) }
+        } else null
+        currentCoroutineContext().ensureActive()
+        next
+    }
+
+    /** A loose catalog search must still match the requested track on refresh. */
+    internal fun matchingAlternative(
+        artist: String?, title: String?, found: TrackInfo, excluded: Set<String>
+    ): TrackInfo? = found.takeIf {
+        !it.artworkUrl.isNullOrBlank() && it.artworkUrl !in excluded &&
+            TrackMatch.plausible(artist, title, it.artistName, it.trackName)
+    }
+
+    private suspend fun query(term: String, artist: String? = null, title: String? = null, excluded: Set<String> = emptySet()): TrackInfo? {
+        val url = "$ENDPOINT?term=${URLEncoder.encode(term, "UTF-8")}&media=music&entity=song&limit=${if (title == null) 1 else 20}"
+            val body = httpGet(url) ?: return null
             val results = JSONObject(body).optJSONArray("results") ?: return null
             if (results.length() == 0) return null
-            val row = results.getJSONObject(0)
+            for (index in 0 until results.length()) {
+            currentCoroutineContext().ensureActive()
+            val row = results.getJSONObject(index)
 
             // iTunes returns a 100x100 thumbnail; swapping it in the URL gives full size
             val art = row.optString("artworkUrl100").ifBlank { null }
@@ -358,7 +344,7 @@ object CoverArtLookup {
             val year = row.optString("releaseDate").take(4).toIntOrNull()
             val duration = row.optLong("trackTimeMillis", 0L)
 
-            return TrackInfo(
+            val candidate = TrackInfo(
                 artworkUrl = art,
                 album = album,
                 year = year,
@@ -367,8 +353,9 @@ object CoverArtLookup {
                 trackName = row.optString("trackName").ifBlank { null },
                 artistName = row.optString("artistName").ifBlank { null }
             )
-        } finally {
-            conn.disconnect()
-        }
+            if (title == null) return candidate
+            if (art != null && art !in excluded && ourTrackOrNull(artist.orEmpty(), title, candidate, "iTunes") != null) return candidate
+            }
+            return null
     }
 }

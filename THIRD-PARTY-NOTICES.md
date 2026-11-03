@@ -14,7 +14,7 @@ or an account.
 | [AndroidX ConstraintLayout](https://developer.android.com/jetpack/androidx/releases/constraintlayout) | 2.2.1 | Apache-2.0 | Screen layouts |
 | [AndroidX Media](https://developer.android.com/jetpack/androidx/releases/media) | 1.7.0 | Apache-2.0 | Compatibility with `MediaBrowserServiceCompat` |
 | [Kotlin Coroutines (Android)](https://github.com/Kotlin/kotlinx.coroutines) | 1.10.2 | Apache-2.0 | Concurrency, `StateFlow` |
-| [Guava (Android)](https://github.com/google/guava) | 33.3.1-android | Apache-2.0 | `ListenableFuture` required by Media3 |
+| [Guava (Android)](https://github.com/google/guava) | 33.7.2-android | Apache-2.0 | `ListenableFuture` required by Media3; security update for GHSA-xxph-c9ww-hj94 |
 
 Build tools: Android Gradle Plugin 8.13.2, Kotlin 2.2.21, Gradle 8.14.3
 (both fetched automatically by the wrapper).
@@ -31,3 +31,13 @@ key or registration:
 
 See [Legal disclaimers in README.md](README.md#legal-disclaimers) regarding
 station logos and the audio streams themselves.
+
+## Streaming Radio modifications (2 November 2026)
+
+The rounded Settings and refresh artwork glyphs derive from Lucide Icons,
+ISC license, copyright Lucide Icons and Contributors. Full GPLv3, Apache-2.0
+and Lucide ISC texts are bundled under app/src/main/assets/legal.
+The public release candidate disables the Apple/iTunes integration pending
+its promotional-content requirements. Radio Browser's directory-data license
+does not license the linked audio, branding or artwork. See the release privacy
+and license-compliance documents for external service disclosures.

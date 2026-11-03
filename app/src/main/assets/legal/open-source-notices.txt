@@ -1,0 +1,23 @@
+Streaming Radio — Impostor Labs
+
+Modified version of Twinsen Radio, https://github.com/szczepl/twinsen-radio
+Original copyright (C) 2026 Leszek Szczepanowski.
+AAOS, playlist, artwork and security modifications by Impostor Labs contributors,
+2026-10-30 through 2026-11-02. Upstream authors retain their copyrights.
+
+This program is free software: you can redistribute it and/or modify it under
+the GNU General Public License as published by the Free Software Foundation,
+either version 3, or (at your option) any later version.
+
+Distributed WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. The full license is
+included below. Dependency notices and the Lucide ISC license follow it.
+
+RELEASE-CANDIDATE SOURCE NOTICE: The public source repository and matching
+source-download URL have not yet been published. This build is not cleared
+for public distribution until its exact corresponding source is made available
+and linked from the distribution page. The local source archive is prepared
+separately, without signing keys or user data. Do not remove upstream notices.
+
+Station streams, station logos and album artwork remain the property of their
+respective rights holders. The software license does not license that content.

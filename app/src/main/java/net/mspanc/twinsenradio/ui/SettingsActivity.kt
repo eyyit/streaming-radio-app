@@ -11,7 +11,6 @@ import com.google.android.material.textfield.TextInputLayout
 import kotlinx.coroutines.launch
 import net.mspanc.twinsenradio.R
 import net.mspanc.twinsenradio.data.ArtContent
-import net.mspanc.twinsenradio.data.HostsJoin
 import net.mspanc.twinsenradio.data.ArtworkMode
 import net.mspanc.twinsenradio.data.BufferProfile
 import net.mspanc.twinsenradio.data.ClockColors
@@ -74,7 +73,6 @@ class SettingsActivity : AppCompatActivity() {
         b.swDiag.isChecked = prefs.diagnosticMode
         b.swDiagApi.isChecked = prefs.diagnosticShowApiName
         b.swDiagApi.setOnCheckedChangeListener { _, _ -> renderLegend() }
-        bind(b.ddHostsJoin, HostsJoin.LABELS, HostsJoin.at(prefs.hostsJoin).ordinal)
         renderLegend()
 
         b.swTrace.isChecked = prefs.traceEnabled
@@ -280,7 +278,6 @@ class SettingsActivity : AppCompatActivity() {
 
         prefs.diagnosticMode = b.swDiag.isChecked
         prefs.diagnosticShowApiName = b.swDiagApi.isChecked
-        prefs.hostsJoin = pick(b.ddHostsJoin)
         prefs.traceEnabled = b.swTrace.isChecked
 
         prefs.browsableStyle = ContentStyle.indexToValue(pick(b.ddBrowsable))

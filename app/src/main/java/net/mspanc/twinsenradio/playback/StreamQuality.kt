@@ -23,6 +23,15 @@ data class StreamQuality(
     val sampleRateHz: Int,
     val channels: Int
 ) {
+    fun compactLabel(): String = listOf(codec, bitrateKbps.takeIf { it > 0 }?.let { "$it kbps" }.orEmpty())
+        .filter { it.isNotBlank() }.joinToString(" · ")
+
+    fun technicalLabel(): String = listOf(
+        compactLabel(),
+        sampleRateHz.takeIf { it > 0 }?.let { String.format(java.util.Locale.US, "%.1f kHz", it / 1000.0) }.orEmpty(),
+        when (channels) { 1 -> "mono"; 2 -> "stereo"; in 3..Int.MAX_VALUE -> "$channels channels"; else -> "" }
+    ).filter { it.isNotBlank() }.joinToString(" · ")
+
     /**
      * What the playback screen's quality chip says, e.g. "MP3 · 128 kbit ·
      * stereo" - for every station, not only the ones with a choice of streams:

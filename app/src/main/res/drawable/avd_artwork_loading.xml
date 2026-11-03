@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<animated-vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:drawable="@drawable/ic_artwork_loading">
+    <target
+        android:name="loading_rotation"
+        android:animation="@animator/artwork_loading_rotation" />
+</animated-vector>

@@ -20,6 +20,27 @@ import androidx.media3.common.util.UnstableApi
  */
 @UnstableApi
 class KeepCurrentStreamPlayer(player: Player) : ForwardingPlayer(player) {
+    var stationNavigation: ((Int) -> Boolean)? = null
+
+    override fun seekToPrevious() {
+        if (stationNavigation?.invoke(-1) == true) return
+        if (net.mspanc.twinsenradio.BuildConfig.IS_AUTOMOTIVE) super.seekToPreviousMediaItem()
+        else super.seekToPrevious()
+    }
+
+    override fun seekToNext() {
+        if (stationNavigation?.invoke(1) == true) return
+        if (net.mspanc.twinsenradio.BuildConfig.IS_AUTOMOTIVE) super.seekToNextMediaItem()
+        else super.seekToNext()
+    }
+
+    override fun seekToNextMediaItem() {
+        if (stationNavigation?.invoke(1) != true) super.seekToNextMediaItem()
+    }
+
+    override fun seekToPreviousMediaItem() {
+        if (stationNavigation?.invoke(-1) != true) super.seekToPreviousMediaItem()
+    }
 
     override fun setMediaItem(mediaItem: MediaItem) {
         if (isAlreadyPlaying(listOf(mediaItem))) return
@@ -51,6 +72,19 @@ class KeepCurrentStreamPlayer(player: Player) : ForwardingPlayer(player) {
         startIndex: Int,
         startPositionMs: Long
     ) {
+        if (net.mspanc.twinsenradio.BuildConfig.IS_AUTOMOTIVE &&
+            startIndex in mediaItems.indices &&
+            mediaItems[startIndex].mediaId == currentMediaItem?.mediaId &&
+            playbackState != Player.STATE_IDLE && playbackState != Player.STATE_ENDED) {
+            // Keep the current stream; only change its neighbors when choosing another browse context.
+            val index = currentMediaItemIndex
+            super.removeMediaItems(index + 1, mediaItemCount)
+            super.removeMediaItems(0, index)
+            super.addMediaItems(0, mediaItems.take(startIndex))
+            super.addMediaItems(mediaItems.drop(startIndex + 1))
+            if (!playWhenReady) play()
+            return
+        }
         if (isAlreadyPlaying(mediaItems)) return
         super.setMediaItems(mediaItems, startIndex, startPositionMs)
     }

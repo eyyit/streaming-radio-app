@@ -140,13 +140,13 @@ object Trace {
         // Built here, on the caller's thread, because the values it reads are
         // the caller's and may have moved on by the time the writer runs.
         val line = runCatching {
-            JSONObject().apply {
+            DiagnosticUrls.redact(JSONObject().apply {
                 put("t", wallClock.format(Date()))
                 put("up", SystemClock.elapsedRealtime())
                 put("e", event)
                 put("st", station)
                 fields()
-            }.toString()
+            }).toString()
         }.getOrElse { return }
 
         io.execute {

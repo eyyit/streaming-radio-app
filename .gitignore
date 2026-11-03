@@ -1,5 +1,6 @@
 *.iml
 .gradle/
+.kotlin/
 build/
 local.properties
 .idea/
@@ -15,3 +16,15 @@ keystore.properties
 
 # Slady przebiegow sciagniete z telefonu - dane z jazdy, nie kod
 slady/
+
+# Release/private local material
+dist/
+*.env
+.env*
+*.p12
+*.pfx
+*signing*.properties
+release-key*
+.codex/
+.claude/
+*.log

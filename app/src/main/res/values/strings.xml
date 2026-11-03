@@ -114,8 +114,6 @@
     <string name="opt_diag_sub">Każde pole metadanych dostaje swoją polską nazwę zamiast realnej wartości. Do pozycjonowania z AID.</string>
     <string name="opt_diag_api">Dopisz nazwę pola z API</string>
     <string name="opt_diag_api_sub">np. „TYTUŁ‹title›” zamiast samego „TYTUŁ”.</string>
-    <string name="opt_hosts_join">Łącznik audycji i prowadzących</string>
-    <string name="opt_hosts_join_sub">Tylko w wierszu złożonym z audycji i prowadzących. Do sprawdzenia, jak AID łamie ten wiersz — czy przyjmuje nową linię albo twardą spację.</string>
     <string name="opt_trace">Zapis przebiegu do pliku</string>
     <string name="opt_trace_sub">Każde przełączenie stacji, każdy blok ICY i każdy komplet wysłany do auta, ze znacznikiem czasu.</string>
     <string name="opt_trace_state">%1$d plików · %2$s</string>

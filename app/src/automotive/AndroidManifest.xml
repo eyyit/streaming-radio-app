@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+    <uses-feature android:name="android.hardware.type.automotive" android:required="true" />
+    <uses-feature android:name="android.hardware.touchscreen" android:required="false" />
+    <application android:appCategory="audio" android:allowBackup="false" android:theme="@style/Theme.StreamingRadio" tools:replace="android:allowBackup,android:theme">
+        <meta-data android:name="com.google.android.gms.car.application" tools:node="remove" />
+        <meta-data android:name="com.google.android.gms.car.application.theme" tools:node="remove" />
+        <meta-data android:name="com.google.android.gms.car.notification.SmallIcon" tools:node="remove" />
+        <meta-data android:name="com.android.automotive" android:resource="@xml/automotive_app_desc" />
+        <!-- Internal parked settings tools retain upstream search, stream editing and display options. -->
+        <activity android:name=".ui.MainActivity" android:exported="false" tools:replace="android:exported">
+            <intent-filter tools:node="removeAll" />
+        </activity>
+        <activity android:name=".automotive.AutomotiveSettingsActivity" android:exported="true"
+            android:label="Radio settings">
+            <intent-filter>
+                <action android:name="android.intent.action.APPLICATION_PREFERENCES" />
+            </intent-filter>
+        </activity>
+        <activity android:name=".automotive.ImpostorPlayerActivity" android:exported="true"
+            android:label="Streaming Radio" />
+    </application>
+</manifest>

@@ -53,6 +53,7 @@ class ReconnectController(
     private var pendingRetry: Runnable? = null
     private var stuckCheck: Runnable? = null
     private var registered = false
+    private val networkRecovery = NetworkRecoveryPolicy<Network>(emptySet())
 
     var status: Status = Status.OK
         private set(value) {
@@ -63,17 +64,20 @@ class ReconnectController(
         }
 
     private val networkCallback = object : ConnectivityManager.NetworkCallback() {
-        override fun onAvailable(network: Network) {
-            handler.post { if (needsRevive()) networkBack("siec wrocila") }
+        override fun onLost(network: Network) {
+            handler.post { networkRecovery.update(network, false) }
         }
 
         override fun onCapabilitiesChanged(network: Network, caps: NetworkCapabilities) {
-            if (!caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)) return
-            if (!caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)) return
-            handler.post { if (needsRevive()) networkBack("siec zwalidowana") }
+            val usable = caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) &&
+                caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)
+            handler.post {
+                if (networkRecovery.update(network, usable) && needsRevive()) {
+                    networkBack("siec zwalidowana po utracie")
+                }
+            }
         }
     }
-
     /**
      * A returning network starts the count of failed attempts afresh. The ones
      * made without a network say nothing about the station - carried over,
@@ -103,6 +107,12 @@ class ReconnectController(
 
     fun start() {
         if (registered) return
+        // Registration delivers the current network too; it is not a recovery.
+        val current = connectivity?.activeNetwork
+        val caps = current?.let { connectivity?.getNetworkCapabilities(it) }
+        val validated = caps?.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) == true &&
+            caps?.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED) == true
+        networkRecovery.reset(if (validated && current != null) setOf(current) else emptySet())
         val request = NetworkRequest.Builder()
             .addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
             .build()
@@ -125,7 +135,7 @@ class ReconnectController(
     // --- Player.Listener -----------------------------------------------------
 
     override fun onPlayerError(error: PlaybackException) {
-        Log.w(TAG, "Blad odtwarzania: ${error.errorCodeName}", error)
+        Log.w(TAG, "Blad odtwarzania: ${error.errorCodeName} (${DiagnosticUrls.failure(error)})")
         if (!player.playWhenReady) {
             // The user didn't want to play anyway - there's nothing to rescue.
             status = Status.OK
@@ -154,9 +164,9 @@ class ReconnectController(
 
     // --- internal --------------------------------------------------------------
 
-    private fun scheduleRetry() {
+    private fun scheduleRetry(minDelayMs: Long = 0) {
         cancelPending()
-        val delay = BACKOFF_MS.getOrElse(attempt) { BACKOFF_MS.last() }
+        val delay = BACKOFF_MS.getOrElse(attempt) { BACKOFF_MS.last() }.coerceAtLeast(minDelayMs)
         attempt = (attempt + 1).coerceAtMost(BACKOFF_MS.size - 1)
         val runnable = Runnable { retryNow("backoff") }
         pendingRetry = runnable
@@ -170,11 +180,16 @@ class ReconnectController(
         Log.i(TAG, "Wznawiam odtwarzanie ($reason)")
         status = currentStatus()
         runCatching {
+            // prepare() alone is a no-op while silently retrying BUFFERING, and may retain
+            // a stale byte/time position. Internet radio must rejoin a fresh live connection.
+            player.stop()
+            player.seekToDefaultPosition()
             player.prepare()
             player.play()
-        }.onFailure { Log.w(TAG, "prepare() nie wyszlo", it) }
+        }.onFailure { Log.w(TAG, "prepare() nie wyszlo: ${DiagnosticUrls.failure(it)}") }
         // If this fails, onPlayerError will schedule the next attempt.
-        scheduleRetry()
+        // Give the fresh connection time to fill its startup buffer before restarting it again.
+        scheduleRetry(STUCK_MS)
     }
 
     private fun cancelPending() {
@@ -237,5 +252,28 @@ class ReconnectController(
          * increasing backoff.
          */
         const val ATTEMPTS_BEFORE_UNREACHABLE = 4
+    }
+}
+
+/** One recovery edge, rather than a restart for each initial/capability callback. */
+internal class NetworkRecoveryPolicy<T>(initialValidated: Set<T>) {
+    private val validated = initialValidated.toMutableSet()
+    private var recovering = initialValidated.isEmpty()
+
+    fun reset(initialValidated: Set<T>) {
+        validated.clear()
+        validated.addAll(initialValidated)
+        recovering = validated.isEmpty()
+    }
+
+    fun update(network: T, usable: Boolean): Boolean {
+        if (!usable) {
+            if (validated.remove(network) && validated.isEmpty()) recovering = true
+            return false
+        }
+        validated.add(network)
+        val recovered = recovering
+        recovering = false
+        return recovered
     }
 }

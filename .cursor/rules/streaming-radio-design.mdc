@@ -1,0 +1,19 @@
+---
+description: Official Streaming Radio art direction and approval boundaries
+alwaysApply: true
+---
+
+# Streaming Radio design contract
+
+Read docs/DESIGN-SYSTEM.md before any UI/mock/resource change. It is authoritative for app-owned screens across this project. Existing user-approved mocks and later explicit instructions take precedence.
+
+- Use shared AutomotiveDesign tokens for neutral charcoal surfaces; no purple-tinted, white or square legacy dialog surfaces.
+- Theme accents apply to controls, never broadcaster artwork. Preserve semantic red warnings.
+- Preserve approved layout, dock order, icon paths/sizes and picker geometry. Do not move unrelated controls while fixing another issue.
+- Mock new flows/layouts first and obtain explicit approval; targeted requested fixes may proceed.
+- Single-line ellipsize station/candidate names; stable status slots. Keyboard overlays image picker rather than resizing it.
+- No unsolicited headers, Playing live labels, sections, full-playlist mode or Android car player menu.
+- Use native display-timed vector artwork spinner only during real requests; same arc/location as refresh,19dp, translucent white/keyline.
+- Protect audio from image work. Keep bounded network/decode/cache jobs off Main/playback threads.
+- Verify actual installed UI against approved references and update handoff docs. Tests/builds alone are not visual acceptance.
+- AAOS native media host owns its driving layout; do not remove or pretend to redesign it from this APK.

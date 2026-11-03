@@ -252,45 +252,6 @@ data class LineSpec(
 }
 
 /**
- * How the programme and its presenters are joined when they share a line -
- * a diagnostic choice, not a layout one.
- *
- * The AID wraps a long bottom line onto a second row by itself, and it breaks
- * after a space: "Koncert zyczen ·" on one row, the names on the next, the
- * dot left hanging (seen in the car, 31.10.2026). What the head unit does with
- * a line break or a non-breaking space inside a field is unknown - nobody has
- * looked - so every candidate is on offer, to be tried in the car rather than
- * guessed at the desk.
- *
- * Stored as a position in this list; new variants go on the end.
- */
-enum class HostsJoin(val label: String, val separator: String) {
-    DOT("Kropka „ · ” (jak dotąd)", " · "),
-    LF("Nowa linia (LF, \\n)", "\n"),
-    CRLF("Nowa linia (CRLF, \\r\\n)", "\r\n"),
-    CR("Powrót karetki (CR, \\r)", "\r"),
-    LINE_SEPARATOR("Separator wiersza Unicode (U+2028)", "\u2028"),
-    NEL("Następna linia (NEL, U+0085)", "\u0085"),
-    DOT_NBSP_AFTER("Kropka, twarda spacja za nią", " ·\u00A0"),
-    DOT_NBSP_BOTH("Kropka między twardymi spacjami", "\u00A0·\u00A0"),
-    DOT_NBSP_BEFORE("Kropka, twarda spacja przed nią", "\u00A0· "),
-    LF_DOT("Nowa linia, kropka na początku drugiej", "\n· "),
-    DASH("Półpauza „ – ”", " – "),
-    PIPE("Kreska „ | ”", " | "),
-    SLASH("Ukośnik „ / ”", " / "),
-    COMMA("Przecinek „, ”", ", "),
-    COLON("Dwukropek „: ”", ": "),
-    SPACE("Sama spacja", " "),
-    DOUBLE_SPACE("Dwie spacje", "  ");
-
-    companion object {
-        val LABELS get() = entries.map { it.label }
-
-        fun at(index: Int) = entries.getOrElse(index) { DOT }
-    }
-}
-
-/**
  * Which line on the dashboard. Order as on the AID, from the top.
  */
 enum class Line(val label: String, val hint: String) {
@@ -428,19 +389,14 @@ data class Presentation(
          * Default between tracks. Chosen to say something useful rather than to
          * reproduce what the old single-set layout happened to produce: the time
          * where the artist was, the station where it already was, and on the
-         * line the AID prints boldest the programme - or, where there is no
-         * programme guide, whatever the station is saying for itself.
-         *
-         * The presenters are off (31.10.2026). Next to the programme they were
-         * the second half of the line, and two names never fit its budget:
-         * "Sobotni brzask · Patryk Rabiega…" was what reached the car, one
-         * presenter of two. They are a choice of their own - the second half
-         * of this line, or a line to themselves, where nothing is cut.
+         * line the AID prints boldest the programme and who presents it - or,
+         * where there is no programme guide, whatever the station is saying
+         * for itself.
          */
         val DEFAULT_IDLE = LineSet(
             top = LineSpec(LineContent.CLOCK),
             middle = LineSpec(LineContent.STATION),
-            bottom = LineSpec(LineContent.PROGRAMME)
+            bottom = LineSpec(LineContent.PROGRAMME, LineContent.HOSTS)
         )
 
         val DEFAULT = Presentation(

@@ -11,6 +11,7 @@ class App : Application() {
 
     override fun onCreate() {
         super.onCreate()
+        if (BuildConfig.IS_AUTOMOTIVE) AutomotiveUxGuard.initialize(this)
         // The user's M3U lists are fetched in the background, so the first
         // entry into Android Auto doesn't wait on the network - the built-in
         // list is available immediately.

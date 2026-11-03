@@ -2,6 +2,7 @@ package net.mspanc.twinsenradio.data
 
 import android.util.Log
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import java.net.HttpURLConnection
@@ -104,8 +105,7 @@ object RadioBrowser {
                 stream = stream,
                 streams = (listOf(own) + alternates).sortedByDescending { it.kbps },
                 logoUrl = faviconUrl,
-                source = Station.Source.DISCOVERED,
-                country = country?.uppercase()
+                source = Station.Source.DISCOVERED
             )
         }
 
@@ -116,11 +116,24 @@ object RadioBrowser {
         ).joinToString(" ").ifBlank { Station.DEFAULT_LABEL }
     }
 
+    /** Logo URL copied from the raw directory response before stream merging. */
+    data class ArtworkLogo(
+        val name: String,
+        val url: String,
+        val stream: String,
+        val votes: Int
+    )
+
+    sealed class ArtworkSearchResult {
+        data class Success(val logos: List<ArtworkLogo>) : ArtworkSearchResult()
+        object Failure : ArtworkSearchResult()
+    }
+
     /**
      * @param query fragment of the station name; an empty query makes no sense,
      *   since the directory would then hand back a random 50 thousand entries.
      */
-    suspend fun search(query: String, limit: Int = 40): List<Found> = withContext(Dispatchers.IO) {
+    suspend fun search(query: String, limit: Int = 40, timeoutMs: Int = 15_000): List<Found> = withContext(Dispatchers.IO) {
         val q = query.trim()
         if (q.length < 2) return@withContext emptyList()
 
@@ -128,7 +141,8 @@ object RadioBrowser {
             "&order=votes&reverse=true&name=${URLEncoder.encode(q, "UTF-8")}"
 
         for (mirror in MIRRORS) {
-            val body = runCatching { get(mirror + path) }
+            kotlinx.coroutines.currentCoroutineContext().ensureActive()
+            val body = runCatching { get(mirror + path, timeoutMs) }
                 .onFailure { Log.w(TAG, "$mirror nie odpowiedzial: ${it.message}") }
                 .getOrNull() ?: continue
             val parsed = runCatching { parse(body) }.getOrNull() ?: continue
@@ -137,6 +151,48 @@ object RadioBrowser {
         }
         Log.w(TAG, "zaden serwer katalogu nie odpowiedzial")
         emptyList()
+    }
+
+    /** Search raw records for every distinct logo URL, independent of stream merge. */
+    suspend fun searchArtwork(query: String, limit: Int = 80, timeoutMs: Int = 8_000): ArtworkSearchResult = withContext(net.mspanc.twinsenradio.playback.ArtworkWorkScheduler.dispatcher) {
+        val q = query.trim()
+        if (q.length < 2) return@withContext ArtworkSearchResult.Success(emptyList())
+        val encodedQuery = URLEncoder.encode(q, "UTF-8")
+        val path = "/json/stations/search?limit=$limit&hidebroken=true" +
+            "&order=votes&reverse=true&name=$encodedQuery"
+        for (mirror in MIRRORS) {
+            kotlinx.coroutines.currentCoroutineContext().ensureActive()
+            val parsed = try {
+                parseArtwork(get(mirror + path, timeoutMs))
+            } catch (cancel: kotlinx.coroutines.CancellationException) {
+                throw cancel
+            } catch (error: Throwable) {
+                kotlinx.coroutines.currentCoroutineContext().ensureActive()
+                Log.w(TAG, "$mirror artwork search failed: ${error.message}")
+                continue
+            }
+            kotlinx.coroutines.currentCoroutineContext().ensureActive()
+            return@withContext ArtworkSearchResult.Success(parsed)
+        }
+        kotlinx.coroutines.currentCoroutineContext().ensureActive()
+        Log.w(TAG, "no directory server returned an artwork result")
+        ArtworkSearchResult.Failure
+    }
+
+    /** Parse logo alternatives without deduplicating by stream URL or bitrate. */
+    internal fun parseArtwork(body: String): List<ArtworkLogo> {
+        val arr = JSONArray(body)
+        val seenUrls = HashSet<String>()
+        return (0 until arr.length()).mapNotNull { i ->
+            val o = arr.getJSONObject(i)
+            val stream = o.optString("url_resolved").ifBlank { o.optString("url") }
+            val name = o.optString("name").trim()
+            val logo = o.optString("favicon").trim()
+            if (stream.isBlank() || name.isBlank() || logo.isBlank()) return@mapNotNull null
+            if (!logo.startsWith("https://") && !logo.startsWith("http://")) return@mapNotNull null
+            if (!seenUrls.add(logo)) return@mapNotNull null
+            ArtworkLogo(name, logo, stream, o.optInt("votes", 0))
+        }
     }
 
     /**
@@ -162,7 +218,7 @@ object RadioBrowser {
         }
     }
 
-    private fun parse(body: String): List<Found> {
+    internal fun parse(body: String): List<Found> {
         val arr = JSONArray(body)
         val seen = HashSet<String>()
         val found = (0 until arr.length()).mapNotNull { i ->
@@ -192,19 +248,8 @@ object RadioBrowser {
         return merge(found)
     }
 
-    private fun get(url: String): String {
-        val conn = (URL(url).openConnection() as HttpURLConnection).apply {
-            connectTimeout = 10_000
-            readTimeout = 15_000
-            instanceFollowRedirects = true
-            setRequestProperty("User-Agent", StationRepository.USER_AGENT)
-        }
-        try {
-            if (conn.responseCode != 200) error("HTTP ${conn.responseCode}")
-            return conn.inputStream.bufferedReader().use { it.readText() }
-        } finally {
-            conn.disconnect()
-        }
+    private fun get(url: String, timeoutMs: Int): String {
+        return net.mspanc.twinsenradio.net.SafeHttp.getText(url,2*1024*1024,StationRepository.USER_AGENT,timeoutMs)
     }
 
     const val DISCOVERED_PREFIX = "rb:"

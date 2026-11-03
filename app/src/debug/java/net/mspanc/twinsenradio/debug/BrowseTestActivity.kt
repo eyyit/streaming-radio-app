@@ -15,6 +15,7 @@ import net.mspanc.twinsenradio.playback.RadioService
  *   adb shell am start -n net.mspanc.twinsenradio/.debug.BrowseTestActivity
  *   adb logcat -s BrowseTest
  */
+@androidx.media3.common.util.UnstableApi
 class BrowseTestActivity : AppCompatActivity() {
 
     private lateinit var browser: MediaBrowserCompat

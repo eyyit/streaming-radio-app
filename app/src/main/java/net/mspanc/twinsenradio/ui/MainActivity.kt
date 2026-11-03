@@ -269,12 +269,17 @@ class MainActivity : AppCompatActivity() {
         // The same station that's already playing - we don't touch the stream,
         // just open the playback screen. Resetting the position again used to
         // drop the connection and you'd hear a gap.
-        if (PlaybackStatusBus.stationId.value == station.id && c.isPlaying) {
+        if (!net.mspanc.twinsenradio.BuildConfig.IS_AUTOMOTIVE &&
+            PlaybackStatusBus.stationId.value == station.id && c.isPlaying) {
             startActivity(Intent(this, NowPlayingActivity::class.java))
             return
         }
 
-        c.setMediaItem(MediaItem.Builder().setMediaId(station.mediaId).build())
+        val mediaId = if (net.mspanc.twinsenradio.BuildConfig.IS_AUTOMOTIVE)
+            Station.contextualMediaId(station.mediaId,
+                if (b.tabs.selectedTabPosition == 1) RadioService.NODE_FAVOURITES else RadioService.NODE_ALL)
+        else station.mediaId
+        c.setMediaItem(MediaItem.Builder().setMediaId(mediaId).build())
         c.prepare()
         c.play()
     }
@@ -346,7 +351,10 @@ class MainActivity : AppCompatActivity() {
         val query = b.search.text?.toString().orEmpty()
         val found = repo.search(query)
         val list = if (b.tabs.selectedTabPosition == 1) {
-            found.filter { it.id in prefs.favourites }
+            if (net.mspanc.twinsenradio.BuildConfig.IS_AUTOMOTIVE) {
+                val matching = found.map { it.id }.toSet()
+                repo.favourites().filter { it.id in matching }
+            } else found.filter { it.id in prefs.favourites }
         } else {
             found
         }
@@ -374,7 +382,8 @@ class MainActivity : AppCompatActivity() {
                 b.miniSubtitle.text = prefs.slogan(next.id) ?: next.genre
                 // "Zatrzymane" for a pause, the reason for a long silence
                 b.miniStatus.text = getString(statusLabel())
-                val standby = StandbyArt.phoneUri(this, next, lifecycleScope) { renderMiniPlayer() }
+                val standby = if (prefs.onlineArtworkEnabled)
+                    StandbyArt.phoneUri(this, next, lifecycleScope) { renderMiniPlayer() } else null
                 ArtworkLoader.into(
                     lifecycleScope, null, standby ?: metadata.logoDisplayUri(next), metadata.logoResId(next),
                     b.miniLogo, muted = standby == null
@@ -391,8 +400,7 @@ class MainActivity : AppCompatActivity() {
         // Only the genre is the bar's own, for a gap the layout says nothing about.
         val onAir = if (joining) null else PlaybackStatusBus.onAir.value
         val text = MetadataFactory.forPhone(
-            now, PlaybackStatusBus.trackInfo.value, onAir, prefs.presentation, prefs.enrichWithYear,
-            station?.slashMayBeAlbum == true
+            now, PlaybackStatusBus.trackInfo.value, onAir, prefs.presentation, prefs.enrichWithYear
         )
         b.miniSubtitle.text = if (now?.isRealSong == true) {
             listOf(text.artist, text.title).filter { it.isNotBlank() }.joinToString(" — ")
