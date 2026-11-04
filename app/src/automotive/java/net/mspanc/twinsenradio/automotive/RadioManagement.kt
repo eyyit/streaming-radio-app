@@ -20,6 +20,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.withContext
+import kotlin.math.ceil
 import net.mspanc.twinsenradio.R
 import net.mspanc.twinsenradio.data.*
 import net.mspanc.twinsenradio.playback.MetadataFactory
@@ -28,7 +29,7 @@ import net.mspanc.twinsenradio.playback.MetadataFactory
 class RadioManagement(
  private val activity:Activity,
  private val scope:CoroutineScope,
- private val play:(Station,String)->Unit,
+ private val play:((Station,String)->Unit)?,
  private val changed:()->Unit,
  private val host:ViewGroup?=null
 ) {
@@ -37,6 +38,11 @@ class RadioManagement(
  private val coral get()=AppearanceTheme.current(activity).accent
  private val muted=AutomotiveDesign.MUTED
  private fun dp(value:Int)=(value*activity.resources.displayMetrics.density).toInt()
+ private fun settingsRowHeightDp(fullArea:Boolean):Int {
+  if(!fullArea) return AutomotiveDesign.SETTINGS_ROW_HEIGHT_DP
+  val fontScale=activity.resources.configuration.fontScale
+  return ceil(80f*fontScale).toInt().coerceAtLeast(80)
+ }
  private fun rounded(color:Int,radius:Int=18)=GradientDrawable().apply { setColor(color); cornerRadius=dp(radius).toFloat() }
  private fun text(value:String,size:Float=18f,color:Int=AutomotiveDesign.TEXT)=TextView(activity).apply {
   text=value; textSize=size; setTextColor(color); setPadding(dp(8),dp(6),dp(8),dp(6))
@@ -73,7 +79,7 @@ class RadioManagement(
   }
   return logo
  }
- private fun show(title:String,done:String="Done",onClose:()->Unit={},scroll:Boolean=true,build:(LinearLayout,Dialog)->Unit):Dialog {
+ private fun show(title:String,done:String="Done",onClose:()->Unit={},scroll:Boolean=true,settingsLayout:Boolean=false,build:(LinearLayout,Dialog)->Unit):Dialog {
   lateinit var root:LinearLayout
   var dismissed=false
   fun finish(dialog:Dialog) {
@@ -88,15 +94,18 @@ class RadioManagement(
    override fun dismiss() { if(host!=null) finish(this) else super.dismiss() }
   }
   dialog.requestWindowFeature(Window.FEATURE_NO_TITLE)
-  root=column().apply { setPadding(dp(24),dp(16),dp(24),dp(16)); setBackgroundColor(AutomotiveDesign.CANVAS); isClickable=true; isFocusable=true }
-  val panel=column().apply { setPadding(dp(24),dp(12),dp(24),dp(20)); background=rounded(AutomotiveDesign.SURFACE,28) }
+  root=column().apply { setPadding(if(settingsLayout)0 else dp(24),if(settingsLayout)0 else dp(16),if(settingsLayout)0 else dp(24),if(settingsLayout)0 else dp(16)); setBackgroundColor(AutomotiveDesign.CANVAS); isClickable=true; isFocusable=true }
+  val panel=column().apply {
+   setPadding(dp(24),dp(12),dp(24),dp(20))
+   background=if(settingsLayout)rounded(Color.TRANSPARENT,0) else rounded(AutomotiveDesign.SURFACE,28)
+  }
   root.addView(panel,LinearLayout.LayoutParams(-1,-1))
   val header=LinearLayout(activity).apply { gravity=Gravity.CENTER_VERTICAL }
   header.addView(text(title,30f).apply { setTypeface(null,Typeface.BOLD); maxLines=1; ellipsize=android.text.TextUtils.TruncateAt.END },LinearLayout.LayoutParams(0,dp(60),1f))
   header.addView(button(done) { dialog.dismiss() },LinearLayout.LayoutParams(-2,dp(52)))
   panel.addView(header)
   val body=column()
-  val content:View=if(scroll) ScrollView(activity).apply { isFillViewport=false; addView(body) } else body
+  val content:View=if(scroll) ScrollView(activity).apply { isFillViewport=settingsLayout; clipToPadding=false; addView(body) } else body
   panel.addView(content,LinearLayout.LayoutParams(-1,0,1f))
   if(host!=null) {
    screens.lastOrNull()?.second?.visibility=View.GONE
@@ -114,30 +123,106 @@ class RadioManagement(
  private fun addAction(parent:LinearLayout,caption:String,bottomMarginDp:Int=0,captionSize:Float=AutomotiveDesign.BUTTON_TEXT_SP,captionTypeface:Typeface?=null,action:()->Unit) {
   parent.addView(button(caption,action=action).apply { textSize=captionSize; if(captionTypeface!=null)typeface=captionTypeface; gravity=Gravity.CENTER_VERTICAL or Gravity.START },LinearLayout.LayoutParams(-1,dp(AutomotiveDesign.SETTINGS_ROW_HEIGHT_DP)).apply { topMargin=dp(8); bottomMargin=dp(bottomMarginDp) })
  }
- fun settings(onClose:()->Unit={}) {
-  show("Settings",onClose=onClose) { body,settingsDialog ->
-   fun settingsAction(caption:String,action:()->Unit) = addAction(body,caption,captionSize=AutomotiveDesign.SETTINGS_LABEL_SP,captionTypeface=Typeface.create(AutomotiveDesign.SETTINGS_FONT_FAMILY,Typeface.NORMAL),action=action)
-   settingsAction("Theme") {
+ fun settings(onClose:()->Unit={}) = settingsScreen(includeArtworkTransitions=play!=null,fullArea=play==null,onClose=onClose)
+
+ /** OEM preferences surface; keep custom-player-only options out of retail settings. */
+ fun nativeSettings(onClose:()->Unit={}) = settingsScreen(includeArtworkTransitions=false,fullArea=true,onClose=onClose)
+
+ private fun settingsScreen(includeArtworkTransitions:Boolean,fullArea:Boolean,onClose:()->Unit) {
+  show("Settings",onClose=onClose,settingsLayout=fullArea) { body,settingsDialog ->
+   fun settingsAction(parent:LinearLayout,caption:String,action:()->Unit) {
+    if(!fullArea) {
+     addAction(parent,caption,captionSize=AutomotiveDesign.SETTINGS_LABEL_SP,captionTypeface=Typeface.create(AutomotiveDesign.SETTINGS_FONT_FAMILY,Typeface.NORMAL),action=action)
+     return
+    }
+    val row=TextView(activity).apply {
+     text=caption
+     textSize=26f
+     setTextColor(AutomotiveDesign.TEXT)
+     typeface=Typeface.create(AutomotiveDesign.SETTINGS_FONT_FAMILY,Typeface.NORMAL)
+     gravity=Gravity.CENTER_VERTICAL
+     setPadding(dp(12),dp(4),dp(12),dp(4))
+     maxLines=2
+     isFocusable=true
+     contentDescription=caption
+     background=RippleDrawable(ColorStateList.valueOf(0x22ffffff),rounded(Color.TRANSPARENT,12),null)
+     setOnClickListener { action() }
+    }
+    addSettingsRow(parent,row,settingsRowHeightDp(fullArea))
+   }
+   fun settingsGroup(build:(LinearLayout)->Unit):LinearLayout {
+    val group=column().apply {
+     background=rounded(AutomotiveDesign.SURFACE,20)
+     setPadding(dp(12),dp(4),dp(12),dp(4))
+    }
+    body.addView(group,LinearLayout.LayoutParams(-1,-2).apply { bottomMargin=dp(20) })
+    build(group)
+    return group
+   }
+   fun toggle(parent:LinearLayout,caption:String,value:Boolean,action:(Boolean)->Unit) {
+    val row=LinearLayout(activity).apply {
+     gravity=Gravity.CENTER_VERTICAL
+     if(!fullArea) {
+      background=rounded(AutomotiveDesign.CONTROL)
+      setPadding(dp(12),0,dp(16),0)
+     }
+    }
+    row.addView(text(caption,if(fullArea)26f else AutomotiveDesign.SETTINGS_LABEL_SP).apply {
+     gravity=Gravity.CENTER_VERTICAL
+     typeface=Typeface.create(AutomotiveDesign.SETTINGS_FONT_FAMILY,Typeface.NORMAL)
+     maxLines=if(fullArea)2 else 1
+    },LinearLayout.LayoutParams(0,dp(settingsRowHeightDp(fullArea)),1f).apply {
+     if(fullArea) marginStart=dp(12)
+    })
+    row.addView(Switch(activity).apply {
+     contentDescription=caption
+     isChecked=value
+     val states=arrayOf(intArrayOf(android.R.attr.state_checked),intArrayOf())
+     thumbTintList=if(fullArea) ColorStateList(states,intArrayOf(Color.WHITE,AutomotiveDesign.MUTED)) else ColorStateList.valueOf(coral)
+     if(fullArea) trackTintList=ColorStateList(states,intArrayOf(coral,AutomotiveDesign.BORDER))
+     minHeight=dp(AutomotiveDesign.SETTINGS_SWITCH_HEIGHT_DP)
+     setOnCheckedChangeListener { _,enabled -> action(enabled); changed() }
+    },LinearLayout.LayoutParams(-2,dp(AutomotiveDesign.SETTINGS_SWITCH_HEIGHT_DP)).apply {
+     if(fullArea) { marginStart=dp(8); marginEnd=dp(8) }
+    })
+    if(fullArea) addSettingsRow(parent,row,settingsRowHeightDp(fullArea))
+    else parent.addView(row,LinearLayout.LayoutParams(-1,dp(AutomotiveDesign.SETTINGS_ROW_HEIGHT_DP)).apply { topMargin=dp(8) })
+   }
+   val themeAction:()->Unit = {
     val settingsView=screens.firstOrNull { it.first===settingsDialog }?.second
     settingsView?.visibility=View.GONE
     ThemePicker.show(activity,changed,{ settingsView?.let { refreshDoneButtons(it); it.visibility=View.VISIBLE } },host=host)
    }
-   settingsAction("Manage playlists") { playlists() }
-   fun toggle(caption:String,value:Boolean,action:(Boolean)->Unit) {
-    val row=LinearLayout(activity).apply { gravity=Gravity.CENTER_VERTICAL; background=rounded(AutomotiveDesign.CONTROL); setPadding(dp(12),0,dp(16),0) }
-    row.addView(text(caption,AutomotiveDesign.SETTINGS_LABEL_SP).apply { gravity=Gravity.CENTER_VERTICAL; typeface=Typeface.create(AutomotiveDesign.SETTINGS_FONT_FAMILY,Typeface.NORMAL) },LinearLayout.LayoutParams(0,dp(AutomotiveDesign.SETTINGS_ROW_HEIGHT_DP),1f))
-    row.addView(Switch(activity).apply {
-     contentDescription=caption; isChecked=value; thumbTintList=ColorStateList.valueOf(coral); minHeight=dp(AutomotiveDesign.SETTINGS_SWITCH_HEIGHT_DP)
-     setOnCheckedChangeListener { _,enabled -> action(enabled); changed() }
-    },LinearLayout.LayoutParams(-2,dp(AutomotiveDesign.SETTINGS_SWITCH_HEIGHT_DP)))
-    body.addView(row,LinearLayout.LayoutParams(-1,dp(AutomotiveDesign.SETTINGS_ROW_HEIGHT_DP)).apply { topMargin=dp(8) })
+   if(fullArea) {
+    settingsGroup { group ->
+     settingsAction(group,"Theme",themeAction)
+     settingsAction(group,"Manage playlists") { playlists() }
+     toggle(group,"Automatic track and station artwork",prefs.onlineArtworkEnabled) { prefs.onlineArtworkEnabled=it }
+     settingsAction(group,"Refresh playlists") { refreshPlaylists() }
+    }
+    settingsGroup { group ->
+     settingsAction(group,"Privacy policy") { legalDocument("Privacy policy",listOf("legal/privacy-policy.txt")) }
+     settingsAction(group,"Open-source licenses") { legalDocument("Open-source licenses",listOf("legal/open-source-notices.txt","legal/gpl-3.0.txt","legal/dependency-notices.txt","legal/runtime-dependency-notices.txt","legal/apache-2.0.txt","legal/lucide-isc.txt")) }
+    }
+   } else {
+    settingsAction(body,"Theme",themeAction)
+    settingsAction(body,"Manage playlists") { playlists() }
+    toggle(body,"Automatic track and station artwork",prefs.onlineArtworkEnabled) { prefs.onlineArtworkEnabled=it }
+    if(includeArtworkTransitions) toggle(body,"Animate artwork changes",prefs.artworkTransitionsEnabled) { prefs.artworkTransitionsEnabled=it }
+    settingsAction(body,"Refresh playlists") { refreshPlaylists() }
+    settingsAction(body,"Privacy policy") { legalDocument("Privacy policy",listOf("legal/privacy-policy.txt")) }
+    settingsAction(body,"Open-source licenses") { legalDocument("Open-source licenses",listOf("legal/open-source-notices.txt","legal/gpl-3.0.txt","legal/dependency-notices.txt","legal/runtime-dependency-notices.txt","legal/apache-2.0.txt","legal/lucide-isc.txt")) }
    }
-   toggle("Automatic track and station artwork",prefs.onlineArtworkEnabled) { prefs.onlineArtworkEnabled=it }
-   toggle("Animate artwork changes",prefs.artworkTransitionsEnabled) { prefs.artworkTransitionsEnabled=it }
-   settingsAction("Refresh playlists") { refreshPlaylists() }
-   settingsAction("Privacy policy") { legalDocument("Privacy policy",listOf("legal/privacy-policy.txt")) }
-   settingsAction("Open-source licenses") { legalDocument("Open-source licenses",listOf("legal/open-source-notices.txt","legal/gpl-3.0.txt","legal/dependency-notices.txt","legal/runtime-dependency-notices.txt","legal/apache-2.0.txt","legal/lucide-isc.txt")) }
   }
+ }
+ private fun addSettingsRow(parent:LinearLayout,row:View,heightDp:Int) {
+  if(parent.childCount>0) {
+   parent.addView(View(activity).apply { setBackgroundColor(0x66778390) },LinearLayout.LayoutParams(-1,dp(1)).apply {
+    marginStart=dp(8)
+    marginEnd=dp(8)
+   })
+  }
+  parent.addView(row,LinearLayout.LayoutParams(-1,dp(heightDp)))
  }
  private fun legalDocument(title:String,assets:List<String>) {
   show(title) { body,_ ->
@@ -194,7 +279,9 @@ class RadioManagement(
     row.addView(details,LinearLayout.LayoutParams(0,dp(112),1f))
     val captions=column()
     details.addView(captions,FrameLayout.LayoutParams(-1,-1))
-    captions.addView(text(station.name,23f).apply { setTypeface(null,Typeface.BOLD); maxLines=1; ellipsize=android.text.TextUtils.TruncateAt.END; setPadding(dp(8),0,dp(112),0); setOnClickListener { play(station,"/playlist/$id") } },LinearLayout.LayoutParams(-1,dp(32)))
+    val stationName=text(station.name,23f).apply { setTypeface(null,Typeface.BOLD); maxLines=1; ellipsize=android.text.TextUtils.TruncateAt.END; setPadding(dp(8),0,dp(112),0) }
+    if(play!=null) stationName.setOnClickListener { play.invoke(station,"/playlist/$id") }
+    captions.addView(stationName,LinearLayout.LayoutParams(-1,dp(32)))
     captions.addView(text(StationText.subtitle(station),16f,muted).apply { maxLines=1; ellipsize=android.text.TextUtils.TruncateAt.END; setPadding(dp(8),0,dp(8),0) },LinearLayout.LayoutParams(-1,dp(28)))
     val stationActions=LinearLayout(activity).apply { gravity=Gravity.CENTER_VERTICAL }
     details.addView(stationActions,FrameLayout.LayoutParams(-2,dp(48),Gravity.TOP or Gravity.END))

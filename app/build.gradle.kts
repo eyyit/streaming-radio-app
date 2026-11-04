@@ -14,15 +14,27 @@ android {
         applicationId = "net.mspanc.twinsenradio"
         minSdk = 26
         targetSdk = 36
-        versionCode = 6
-        versionName = "0.3.0-rc4"
+        versionCode = 7
+        versionName = "0.3.0-rc5"
         testInstrumentationRunner = "net.mspanc.twinsenradio.automotive.PrototypeSmokeInstrumentation"
     }
 
+    fun signingPassword(name: String): String? {
+        val direct = providers.environmentVariable(name).orNull
+        val secretPath = providers.environmentVariable("${name}_FILE").orNull
+        require(direct == null || secretPath == null) {
+            "Configure a signing password value or its file, not both."
+        }
+        return direct ?: secretPath?.let {
+            val secretFile = file(it)
+            require(secretFile.isFile) { "Signing password file is unavailable." }
+            secretFile.readText(Charsets.UTF_8).removeSuffix("\n").removeSuffix("\r")
+        }
+    }
     val uploadStore = providers.environmentVariable("STREAMING_RADIO_KEYSTORE").orNull
-    val uploadStorePassword = providers.environmentVariable("STREAMING_RADIO_STORE_PASSWORD").orNull
+    val uploadStorePassword = signingPassword("STREAMING_RADIO_STORE_PASSWORD")
     val uploadAlias = providers.environmentVariable("STREAMING_RADIO_KEY_ALIAS").orNull
-    val uploadKeyPassword = providers.environmentVariable("STREAMING_RADIO_KEY_PASSWORD").orNull
+    val uploadKeyPassword = signingPassword("STREAMING_RADIO_KEY_PASSWORD")
     val uploadValues = listOf(uploadStore,uploadStorePassword,uploadAlias,uploadKeyPassword)
     require(uploadValues.all { it == null } || uploadValues.all { !it.isNullOrBlank() }) {
         "Configure all four STREAMING_RADIO signing environment variables, or leave all unset for an unsigned candidate."

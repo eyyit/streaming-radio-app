@@ -1,17 +1,34 @@
 package net.mspanc.twinsenradio.automotive
 
-import android.app.Activity
-import android.content.Intent
+import androidx.activity.ComponentActivity
+import androidx.activity.addCallback
 import android.os.Bundle
+import android.view.ViewGroup
+import android.widget.FrameLayout
 import kotlinx.coroutines.*
 
 /** Native media-host preferences entry; shares the parked player settings. */
 @androidx.media3.common.util.UnstableApi
-class AutomotiveSettingsActivity:Activity() {
+class AutomotiveSettingsActivity:ComponentActivity() {
  private val scope=CoroutineScope(SupervisorJob()+Dispatchers.Main)
+ private lateinit var management:RadioManagement
  override fun onCreate(state:Bundle?) {
   super.onCreate(state)
-  RadioManagement(this,scope,{ _,_ -> startActivity(Intent(this,ImpostorPlayerActivity::class.java)) },{}).settings { finish() }
+  val host=FrameLayout(this).apply { setBackgroundColor(AutomotiveDesign.CANVAS) }
+  setContentView(host,ViewGroup.LayoutParams(-1,-1))
+  management=RadioManagement(this,scope,null,{},host)
+  management.nativeSettings { finish() }
+  onBackPressedDispatcher.addCallback(this) {
+   if(!management.handleBack()) {
+    isEnabled=false
+    onBackPressedDispatcher.onBackPressed()
+   }
+  }
  }
- override fun onDestroy() { scope.cancel(); super.onDestroy() }
+
+ override fun onDestroy() {
+  if(::management.isInitialized) management.close()
+  scope.cancel()
+  super.onDestroy()
+ }
 }
