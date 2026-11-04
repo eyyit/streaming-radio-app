@@ -1,7 +1,7 @@
 {
   "formatVersion": 1,
   "project": "Twinsen Radio independent source candidate",
-  "gitHead": "d48e74dea558fb8a82815e97ef7be6aa10997520",
+  "gitHead": "21454fbbfa4db923f11a1f1c893d122cab00a30c",
   "workingTree": "dirty",
   "hashAlgorithm": "SHA-256",
   "selfHashExcluded": true,
@@ -1127,13 +1127,13 @@
     },
     {
       "path": "tools/verify-automotive.cjs",
-      "size": 8128,
-      "sha256": "5dcf4113c9ad7a5aee72c5cf2fc53264d0159b24b7476f352ba64b5a5c55b256"
+      "size": 8933,
+      "sha256": "d0cd996398248f3ee2aade16c7457aef512b1f3b4f94a6b46d540a837db29793"
     },
     {
       "path": "tools/verify-automotive.test.cjs",
-      "size": 5287,
-      "sha256": "fac07488acfce0bc3982858b8f50146d4f133eebeeacfbe1ed4425829072e795"
+      "size": 5948,
+      "sha256": "7402e24608371528dc8a445d345d440cadcc2b24dd827928e80ce72d457b8056"
     },
     {
       "path": "docs/VERIFICATION.md",
@@ -1212,8 +1212,8 @@
     },
     {
       "path": "tools/install.ps1",
-      "size": 1629,
-      "sha256": "9d83f393cd527c01352c5f63479dbf1221c2b8c6445e2b95041d3e8979614db5"
+      "size": 3448,
+      "sha256": "8762e344009acc293e491e1c663ec0e175bd0fb23cc946b004d41992e7b6841b"
     },
     {
       "path": "tools/meta-log.bat",
@@ -1304,6 +1304,11 @@
       "path": "tools/emulator-host-layout/Set-AAOS-wide-controls.ps1",
       "size": 5985,
       "sha256": "656b1df811ca14b8ac55bd76f3e61caeca529ad97babab7d858ba7b475f053b4"
+    },
+    {
+      "path": "tools/install-and-root-state.test.cjs",
+      "size": 14301,
+      "sha256": "1df5384481b55e47f6653d666ec95de6c95b44cbb397725475eae5f5754ab005"
     }
   ],
   "warnings": [

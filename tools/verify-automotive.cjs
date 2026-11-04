@@ -3,7 +3,8 @@ const fs = require('node:fs');
 const path = require('node:path');
 const { spawnSync } = require('node:child_process');
 const ROOT = path.resolve(__dirname, '..');
-const TASKS = [':app:testAutomotiveDebugUnitTest', ':app:testAutomotiveReleaseUnitTest',
+const TASKS = [':app:assembleAutomotiveDebugAndroidTest', ':app:testAutomotiveDebugUnitTest', ':app:testAutomotiveReleaseUnitTest',
+  ':app:testPhoneDebugUnitTest', ':app:testPhoneReleaseUnitTest', ':app:lintPhoneRelease',
   ':app:lintAutomotiveRelease', ':app:bundleAutomotiveRelease',
   ':app:writeAutomotiveReleaseInventory'];
 const SIGNING = ['STREAMING_RADIO_KEYSTORE', 'STREAMING_RADIO_STORE_FILE', 'STREAMING_RADIO_STORE_PASSWORD',
@@ -54,7 +55,14 @@ function inspectPrerequisites(root = ROOT, env = process.env, options = {}) {
   if (result.error || result.status !== 0 || !version)
     throw new VerificationError('JAVA_VERSION_UNAVAILABLE');
   if (Number(version) !== 17) throw new VerificationError('JAVA_17_REQUIRED');
-  return { java, sdk, sdkManager, wrapper };
+  const powershell = platform === 'win32' ? 'pwsh.exe' : 'pwsh';
+  const ps = (options.runPowerShellVersion || (exe => spawnSync(exe,
+    ['-NoProfile', '-NonInteractive', '-Command', '$PSVersionTable.PSVersion.Major'],
+    { encoding: 'utf8', windowsHide: true, timeout: 10000, env: cleanChildEnv(env) })))(powershell);
+  const major = Number(ps.stdout?.trim());
+  if (ps.error || ps.status !== 0 || !Number.isInteger(major) || major < 7)
+    throw new VerificationError('POWERSHELL_7_REQUIRED');
+  return { java, sdk, sdkManager, wrapper, powershell };
 }
 function cleanChildEnv(env) {
   const child = { ...env };
@@ -71,7 +79,8 @@ function sourceCheck(root, env) {
 }
 function toolTests(root, env) {
   run(process.execPath, ['--test', ...['check-dependencies.test.cjs',
-    'check-source-tree.test.cjs', 'verify-automotive.test.cjs'].map(x => path.join(root, 'tools', x))],
+    'check-source-tree.test.cjs', 'verify-automotive.test.cjs',
+    'install-and-root-state.test.cjs'].map(x => path.join(root, 'tools', x))],
   root, env, 'TOOL_TESTS_FAILED');
 }
 function writeReceipt(root, data) {
@@ -87,7 +96,8 @@ function errorMessage(code) {
     ANDROID_BUILD_TOOLS_35_MISSING: 'Install Android build-tools 35.0.0 with sdkmanager.',
     GRADLE_WRAPPER_JAR_MISSING: 'Restore gradle/wrapper/gradle-wrapper.jar from the repository.',
     JAVA_VERSION_UNAVAILABLE: 'Install Java 17 or set JAVA_HOME to a Java 17 installation.',
-    JAVA_17_REQUIRED: 'Use Java 17; the detected Java version is unsupported.'
+    JAVA_17_REQUIRED: 'Use Java 17; the detected Java version is unsupported.',
+    POWERSHELL_7_REQUIRED: 'Install PowerShell 7 or newer and put pwsh on PATH for the isolated developer-script tests.'
   };
   return messages[code] || 'See the failed verification stage for details.';
 }

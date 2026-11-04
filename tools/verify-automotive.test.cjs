@@ -25,8 +25,19 @@ function fake() {
 }
 function check(root, sdk, version = '17.0.12') {
   return inspectPrerequisites(root, { ANDROID_SDK_ROOT: sdk }, { platform: process.platform,
+    runPowerShellVersion: () => ({ status: 0, stdout: '7' }),
     runJavaVersion: () => ({ status: 0, stdout: '', stderr: `openjdk version "${version}"` }) });
 }
+
+test('reports missing, failing or obsolete PowerShell before tool tests', () => {
+  const { root, sdk } = fake();
+  try {
+    for (const result of [{ status: null, error: new Error('ENOENT') }, { status: 1 }, { status: 0, stdout: '5' }, { status: 0, stdout: 'invalid' }])
+      assert.throws(() => inspectPrerequisites(root, { ANDROID_SDK_ROOT: sdk }, {
+        runJavaVersion: () => ({ status: 0, stderr: 'openjdk version "17.0.12"' }),
+        runPowerShellVersion: () => result }), e => e.code === 'POWERSHELL_7_REQUIRED');
+  } finally { fs.rmSync(root, { recursive: true, force: true }); }
+});
 test('reports missing sdkmanager before command-not-found exit 127', () => {
   const { root, sdk } = fake(); fs.rmSync(path.join(sdk, 'cmdline-tools'), { recursive: true });
   try { assert.throws(() => check(root, sdk), e => e.code === 'ANDROID_SDKMANAGER_MISSING'); }
