@@ -1,7 +1,7 @@
 {
   "formatVersion": 1,
   "project": "Twinsen Radio independent source candidate",
-  "gitHead": "9e85582419c889436c2980009b9ce3bba5d77890",
+  "gitHead": "d48e74dea558fb8a82815e97ef7be6aa10997520",
   "workingTree": "dirty",
   "hashAlgorithm": "SHA-256",
   "selfHashExcluded": true,
@@ -1294,6 +1294,16 @@
       "path": "app/src/test/java/net/mspanc/twinsenradio/playback/AudioWaitLabelTest.kt",
       "size": 2255,
       "sha256": "19f012cc4bd2bda23ffe3935b45c095186a01912df480fd7cce7b03e14bf4dce"
+    },
+    {
+      "path": "tools/emulator-host-layout/Set-AAOS-pinned-player.ps1",
+      "size": 3556,
+      "sha256": "4263a94ad20f840cd1940b7f0e418531a3059e3cf0820c1315d024443cce8ddc"
+    },
+    {
+      "path": "tools/emulator-host-layout/Set-AAOS-wide-controls.ps1",
+      "size": 5985,
+      "sha256": "656b1df811ca14b8ac55bd76f3e61caeca529ad97babab7d858ba7b475f053b4"
     }
   ],
   "warnings": [
