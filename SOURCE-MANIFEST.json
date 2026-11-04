@@ -1,7 +1,7 @@
 {
   "formatVersion": 1,
   "project": "Twinsen Radio independent source candidate",
-  "gitHead": "21454fbbfa4db923f11a1f1c893d122cab00a30c",
+  "gitHead": "d78baf7ec907da8024f70ba374874a117824f1bb",
   "workingTree": "dirty",
   "hashAlgorithm": "SHA-256",
   "selfHashExcluded": true,
@@ -183,7 +183,7 @@
     {
       "path": "app/src/main/assets/legal/privacy-policy.txt",
       "size": 2447,
-      "sha256": "f4a93841e4271c95b8d49bb2b08c1df8510040cd21411058e00d5db47b978269"
+      "sha256": "a8f1236235b6db95efba6f818d644c127ff7bd61a76ccaf6137a94da1fdcd0b7"
     },
     {
       "path": "app/src/main/assets/legal/runtime-dependency-notices.txt",
@@ -232,8 +232,8 @@
     },
     {
       "path": "app/src/main/java/net/mspanc/twinsenradio/data/Prefs.kt",
-      "size": 30692,
-      "sha256": "869a03bef40c6d9ced0fdb048cfc86052d9818cb849723d3606ab41b7e39500b"
+      "size": 30655,
+      "sha256": "483927891474b3e9586d50cf33af3f87ea321f11a6fb154a4b71fe4bf93355fd"
     },
     {
       "path": "app/src/main/java/net/mspanc/twinsenradio/data/Presentation.kt",
@@ -242,8 +242,8 @@
     },
     {
       "path": "app/src/main/java/net/mspanc/twinsenradio/data/RadioBrowser.kt",
-      "size": 11967,
-      "sha256": "191f42b5b9deba47895aed0ae64e50c156d24ba8ea930e5815aa7350a0ee3603"
+      "size": 11901,
+      "sha256": "c831cffad287a7806c3d32c078c8568920c60718d6b7b9b0d31cd23d024dfc06"
     },
     {
       "path": "app/src/main/java/net/mspanc/twinsenradio/data/Sorting.kt",
@@ -952,8 +952,8 @@
     },
     {
       "path": "docs/privacy.html",
-      "size": 2750,
-      "sha256": "f113654336e3926813d98008959ce1b0165cd45dda1169124a7bae1380176dff"
+      "size": 2777,
+      "sha256": "2d81c9e94bfc99e47c0cbfa8b6f71e5cebc562c7e7ed613e9df32e9c68118c86"
     },
     {
       "path": "gradle.properties",
@@ -1002,8 +1002,8 @@
     },
     {
       "path": "site/privacy.html",
-      "size": 2750,
-      "sha256": "f113654336e3926813d98008959ce1b0165cd45dda1169124a7bae1380176dff"
+      "size": 2734,
+      "sha256": "55ddb6002798ff195563a1a0777db3fa218cf3a2b082417e6b50580081aea38b"
     },
     {
       "path": "THIRD-PARTY-NOTICES.md",

@@ -17,7 +17,7 @@ put passwords or private tokens in public playlists. Release playlist/catalog
 and artwork requests use HTTPS. Some user-selected radio streams may use HTTP;
 HTTP playback is not encrypted. The app does not operate those stream hosts.
 
-Online artwork is optional. In the public release candidate it defaults off.
+Online artwork is enabled by default unless a saved preference turns it off.
 When enabled, station-name queries go to Radio Browser and artist/title queries
 may go to MusicBrainz and Cover Art Archive/image hosts. Each recipient sees
 your request and IP address and applies its own privacy policy. User-entered

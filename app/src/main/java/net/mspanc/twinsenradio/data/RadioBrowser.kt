@@ -146,7 +146,7 @@ object RadioBrowser {
                 .onFailure { Log.w(TAG, "$mirror nie odpowiedzial: ${it.message}") }
                 .getOrNull() ?: continue
             val parsed = runCatching { parse(body) }.getOrNull() ?: continue
-            Log.i(TAG, "'$q' -> ${parsed.size} wynikow z $mirror")
+
             return@withContext parsed
         }
         Log.w(TAG, "zaden serwer katalogu nie odpowiedzial")

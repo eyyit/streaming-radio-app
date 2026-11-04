@@ -19,7 +19,7 @@ class Prefs(context: Context) {
 
     /** Disables catalog lookup and publishing/downloading remote artwork, not just its display. */
     var onlineArtworkEnabled: Boolean
-        get() = sp.getBoolean("online_artwork_enabled", net.mspanc.twinsenradio.BuildConfig.DEBUG)
+        get() = sp.getBoolean("online_artwork_enabled", true)
         set(value) = sp.edit { putBoolean("online_artwork_enabled", value) }
 
     var artworkTransitionsEnabled: Boolean
