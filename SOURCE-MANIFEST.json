@@ -1,7 +1,7 @@
 {
   "formatVersion": 1,
   "project": "Twinsen Radio independent source candidate",
-  "gitHead": "56e6c489f0aca0c3833782bf3296c8cbe1cf3e1e",
+  "gitHead": "49a754c7b3f6a985426ab4bfcaf3e1b19065c7a6",
   "workingTree": "dirty",
   "hashAlgorithm": "SHA-256",
   "selfHashExcluded": true,
@@ -67,18 +67,18 @@
     },
     {
       "path": "app/src/automotive/java/net/mspanc/twinsenradio/automotive/ImpostorPlayerActivity.kt",
-      "size": 27713,
-      "sha256": "b39f7acc83acf22313514e0985a2bbbdc18d4be633cf5f118594de20bc0d9117"
+      "size": 28490,
+      "sha256": "ff0b6afc906c558218edf92b403f18bb6d48eb9040ba14100db81e261f2cb3c4"
     },
     {
       "path": "app/src/automotive/java/net/mspanc/twinsenradio/automotive/RadioManagement.kt",
-      "size": 24063,
-      "sha256": "b0a213a7e6dc4b7fa968f1a8657092929ab9b7b454775e826784de1d47d4286d"
+      "size": 24214,
+      "sha256": "0d32e10b4070aa62f514aa406b2241eed6915b81d658b49eb1b274ab33afea4a"
     },
     {
       "path": "app/src/automotive/java/net/mspanc/twinsenradio/automotive/StationImageDialog.kt",
-      "size": 25822,
-      "sha256": "0eb585e28d70989aeffbfda79c012d5920cd91596a96c6e666e9ed8c5b961161"
+      "size": 27528,
+      "sha256": "30793ed747754f8eed30d2f127cfb62a4a06c20491cdf5963507e697ed61e34e"
     },
     {
       "path": "app/src/automotive/java/net/mspanc/twinsenradio/automotive/ThemePicker.kt",
@@ -497,8 +497,8 @@
     },
     {
       "path": "app/src/main/java/net/mspanc/twinsenradio/ui/SettingsActivity.kt",
-      "size": 14004,
-      "sha256": "0f57df741288f7bb2f9b4ac1e95a03eea56eafeace50ea27670b8aeb4850f072"
+      "size": 14830,
+      "sha256": "2b2002fceb1a721fcf226925c26965d66cd182e05da647af754baa623f325117"
     },
     {
       "path": "app/src/main/java/net/mspanc/twinsenradio/ui/StationAdapter.kt",
@@ -507,8 +507,8 @@
     },
     {
       "path": "app/src/main/java/net/mspanc/twinsenradio/ui/StationInfoActivity.kt",
-      "size": 17990,
-      "sha256": "914a80672cbe12a4dfb381847719f9f2ffbcf759ebd02e8b89ed98ab1235f178"
+      "size": 19214,
+      "sha256": "dc311436b9cf77fecd0432a1c825d497a2cdef150c0b6866d53abc547c72c1b7"
     },
     {
       "path": "app/src/main/java/net/mspanc/twinsenradio/ui/StreamPicker.kt",

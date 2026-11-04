@@ -57,8 +57,8 @@ class RadioManagement(
  private fun column()=LinearLayout(activity).apply { orientation=LinearLayout.VERTICAL }
  private val screens=mutableListOf<Pair<Dialog,View>>()
  private val tasks=mutableMapOf<Dialog,MutableList<Job>>()
- fun handleBack():Boolean { if(ThemePicker.handleBack()) return true; val dialog=screens.lastOrNull()?.first ?: return false; dialog.dismiss(); return true }
- fun close() { ThemePicker.close(); while(screens.isNotEmpty()) screens.last().first.dismiss() }
+ fun handleBack():Boolean { if(StationImageDialog.handleBack(activity)) return true; if(ThemePicker.handleBack()) return true; val dialog=screens.lastOrNull()?.first ?: return false; dialog.dismiss(); return true }
+ fun close() { StationImageDialog.close(activity); ThemePicker.close(); while(screens.isNotEmpty()) screens.last().first.dismiss() }
  private fun task(dialog:Dialog,work:suspend ()->Unit) {
   tasks.getOrPut(dialog) { mutableListOf() } += scope.launch { work() }
  }
@@ -134,7 +134,6 @@ class RadioManagement(
    }
    toggle("Automatic track and station artwork",prefs.onlineArtworkEnabled) { prefs.onlineArtworkEnabled=it }
    toggle("Animate artwork changes",prefs.artworkTransitionsEnabled) { prefs.artworkTransitionsEnabled=it }
-   settingsAction("Station images") { chooseStationImage() }
    settingsAction("Refresh playlists") { refreshPlaylists() }
    settingsAction("Privacy policy") { legalDocument("Privacy policy",listOf("legal/privacy-policy.txt")) }
    settingsAction("Open-source licenses") { legalDocument("Open-source licenses",listOf("legal/open-source-notices.txt","legal/gpl-3.0.txt","legal/dependency-notices.txt","legal/runtime-dependency-notices.txt","legal/apache-2.0.txt","legal/lucide-isc.txt")) }
@@ -150,7 +149,7 @@ class RadioManagement(
   var dialog:Dialog?=null
   fun render() {
    dialog?.dismiss()
-   dialog=show("Manage playlists","Back") { body,_ ->
+   dialog=show("Manage playlists","Done") { body,_ ->
     body.addView(button("+ Add playlist",true) { editPlaylist(null) { render(); changed() } },LinearLayout.LayoutParams(-2,dp(52)).apply { topMargin=dp(8); bottomMargin=dp(12) })
     addAction(body,"Hidden and removed stations") { restoreStations() }
     addAction(body,"Refresh playlists",bottomMarginDp=12) { refreshPlaylists { render(); changed() } }
@@ -158,7 +157,7 @@ class RadioManagement(
     if(sources.isEmpty()) body.addView(text("No playlists yet. Add an M3U URL to load stations.",18f,muted))
     sources.forEach { source ->
      val row=LinearLayout(activity).apply { gravity=Gravity.CENTER_VERTICAL; background=rounded(AutomotiveDesign.CONTROL); setPadding(dp(12),dp(12),dp(12),dp(12)) }
-     val captions=column(); captions.addView(text(source.name,23f).apply { setTypeface(null,Typeface.BOLD); maxLines=1; ellipsize=android.text.TextUtils.TruncateAt.END }); captions.addView(text("${repo.sourceStations(source.id).size} stations"+(if(source.isLocal)" · Saved on device" else ""),16f,muted))
+     val captions=column(); captions.addView(text(source.name,23f).apply { setTypeface(null,Typeface.BOLD); maxLines=1; ellipsize=if(source.name==PlaylistNames.fromUrl(source.url,""))android.text.TextUtils.TruncateAt.MIDDLE else android.text.TextUtils.TruncateAt.END }); captions.addView(text("${repo.sourceStations(source.id).size} stations"+(if(source.isLocal)" · Saved on device" else ""),16f,muted))
      row.addView(captions,LinearLayout.LayoutParams(0,-2,1f))
      row.addView(button("Open") { openSource(source.id) { render(); changed() } },LinearLayout.LayoutParams(-2,dp(52)).apply { marginEnd=dp(12) })
      row.addView(button("Remove") { confirmRemove(source.id,source.name) { render(); changed() } },LinearLayout.LayoutParams(-2,dp(52)))
@@ -172,7 +171,7 @@ class RadioManagement(
  private fun openSource(id:String,onChanged:()->Unit) {
   val item=repo.playlists().firstOrNull { it.id==id } ?: return
   lateinit var dialog:Dialog
-  dialog=show(item.name,"Back",scroll=false) { body,screen ->
+  dialog=show(item.name,"Done",scroll=false) { body,screen ->
    val actions=LinearLayout(activity)
    actions.addView(button("Edit") { editPlaylist(id) { dialog.dismiss(); onChanged(); openSource(id,onChanged) } },LinearLayout.LayoutParams(-2,dp(52)).apply { marginEnd=dp(12) })
    actions.addView(button("Remove") { confirmRemove(id,item.name) { dialog.dismiss(); onChanged() } })
@@ -207,7 +206,7 @@ class RadioManagement(
     stationActions.addView(heart,LinearLayout.LayoutParams(dp(48),dp(48)))
     stationActions.addView(ImageButton(activity).apply {
      setImageResource(R.drawable.ic_station_image); background=rounded(Color.TRANSPARENT); setPadding(dp(15),dp(15),dp(15),dp(15)); contentDescription="Change ${station.name} station image"
-     setOnClickListener { StationImageDialog.show(activity,station,scope,changed=changed,onOpenSettings={ settings() }) }
+     setOnClickListener { StationImageDialog.show(activity,station,scope,changed=changed,onOpenSettings={ settings() },host=host) }
     },LinearLayout.LayoutParams(dp(48),dp(48)))
     captions.addView(button("Remove…") { stationAction(station) {
      stations=repo.sourceStations(id); notifyDataSetChanged(); changed()
@@ -294,7 +293,7 @@ class RadioManagement(
   var dialog:Dialog?=null
   fun render() {
    dialog?.dismiss()
-   dialog=show("Hidden and removed stations","Back") { body,screen ->
+   dialog=show("Hidden and removed stations","Done") { body,screen ->
     body.addView(text("Restore stations still present in a saved source. Favorites are not added automatically.",17f,muted))
     val rules=repo.restorableStations()
     if(rules.isEmpty()) body.addView(text("No hidden or removed stations.",20f,muted))
@@ -340,8 +339,8 @@ class RadioManagement(
  }
  private fun chooseStationImage() {
   if(!prefs.onlineArtworkEnabled) { StationImageDialog.showDisabled(activity) {}; return }
-  show("Station images","Back") { body,_ ->
-   (repo.all()+repo.favourites()).distinctBy { it.id }.forEach { station -> addAction(body,station.name) { StationImageDialog.show(activity,station,scope,changed) } }
+  show("Station images","Done") { body,_ ->
+   (repo.all()+repo.favourites()).distinctBy { it.id }.forEach { station -> addAction(body,station.name) { StationImageDialog.show(activity,station,scope,changed,host=host) } }
   }
  }
 }

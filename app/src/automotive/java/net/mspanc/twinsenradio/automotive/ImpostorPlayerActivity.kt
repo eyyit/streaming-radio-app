@@ -54,8 +54,10 @@ class ImpostorPlayerActivity : AppCompatActivity() {
  private lateinit var stationView: TextView
  private lateinit var metadataFooter: TextView
  private val footerHandler=Handler(Looper.getMainLooper())
+ private val audioWaitLabel=AudioWaitLabel()
+ private val footerDot by lazy { GradientDrawable().apply { shape=GradientDrawable.OVAL; setSize(dp(5),dp(5)) } }
  private val footerTick=object:Runnable {
-  override fun run() { renderMetadataFooter(); footerHandler.postDelayed(this,1000L) }
+  override fun run() { renderMetadataFooter(); footerHandler.postDelayed(this,250L) }
  }
  private lateinit var playPause: ImageButton
  private lateinit var heart: ImageButton
@@ -102,9 +104,9 @@ class ImpostorPlayerActivity : AppCompatActivity() {
   body=LinearLayout(this); content.addView(body,FrameLayout.LayoutParams(-1,-1).apply { bottomMargin=dp(28) })
   metadataFooter=label(14f,0xff89939d.toInt()).apply {
    gravity=Gravity.CENTER; visibility=View.INVISIBLE
-   setPadding(dp(12),0,dp(12),0)
+   setPadding(dp(12),0,dp(12),0); compoundDrawablePadding=dp(10)
   }
-  content.addView(metadataFooter,FrameLayout.LayoutParams(-1,dp(28),Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL))
+  content.addView(metadataFooter,FrameLayout.LayoutParams(-2,dp(28),Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL))
   managementHost=FrameLayout(this); content.addView(managementHost,FrameLayout.LayoutParams(-1,-1))
   management=RadioManagement(this,lifecycleScope,{ station,parent -> select(station,parent) },{ applyTheme(); refreshRows(); renderPlayer() },host=managementHost)
   onBackPressedDispatcher.addCallback(this,object:OnBackPressedCallback(true) {
@@ -121,8 +123,8 @@ class ImpostorPlayerActivity : AppCompatActivity() {
   buildTransport(root); applyTheme(); refreshRows(); buildBody()
   lifecycleScope.launch { repo.revisions.collect { refreshRows(); renderPlayer() } }
   lifecycleScope.launch { Prefs.favouritesFlow.collect { refreshRows(force=true); renderPlayer() } }
-  lifecycleScope.launch { StationArtworkStore.loading.collect { adapter.notifyDataSetChanged(); renderArtworkLoading() } }
-  lifecycleScope.launch { PlaybackStatusBus.trackArtworkLoading.collect { renderArtworkLoading() } }
+  lifecycleScope.launch { StationArtworkStore.loading.collect { adapter.notifyDataSetChanged(); renderPlayer() } }
+  lifecycleScope.launch { PlaybackStatusBus.trackArtworkLoading.collect { renderArtworkLoading(); renderMetadataFooter() } }
   lifecycleScope.launch { PlaybackStatusBus.status.collect { renderPlayer() } }
  }
  private fun buildTransport(root:LinearLayout) {
@@ -276,9 +278,9 @@ class ImpostorPlayerActivity : AppCompatActivity() {
   artistView.visibility=if(empty)View.GONE else View.VISIBLE
   stationView.visibility=if(empty)View.GONE else View.VISIBLE
   trackView.text=track.ifBlank { station?.name.orEmpty() }
-  val connection=c?.let { PlayerConnectionLabel.text(PlaybackStatusBus.status.value,it.playWhenReady,it.isPlaying) }
+
   val artist=if(track.isNotBlank())metadata?.artist?.toString().orEmpty() else ""
-  artistView.text=listOf(artist,connection.orEmpty()).filter { it.isNotBlank() }.joinToString(" · ")
+  artistView.text=artist
   renderMetadataFooter()
   stationView.text=listOfNotNull(station?.name,PlaybackStatusBus.quality.value?.compactLabel()?.takeIf { it.isNotBlank() }).joinToString("  ·  ")
   val playing=c?.playWhenReady==true
@@ -300,16 +302,25 @@ class ImpostorPlayerActivity : AppCompatActivity() {
   prefs.onlineArtworkEnabled && station.id in StationArtworkStore.loading.value
  private fun renderMetadataFooter() {
   if(!::metadataFooter.isInitialized) return
-  val message=PlaybackStatusBus.missingTrackInfoText(SystemClock.elapsedRealtime())
+  val c=controller; val now=SystemClock.elapsedRealtime()
+  val audio=audioWaitLabel.text(currentStation()?.id,c?.playWhenReady==true,c?.isPlaying==true,
+   c!=null && c.playbackSuppressionReason!=Player.PLAYBACK_SUPPRESSION_REASON_NONE,PlaybackStatusBus.status.value,now)
+  val albumLoading=trackArtworkLoading()
+  val message=audio ?: "Loading album art…".takeIf { albumLoading } ?: PlaybackStatusBus.missingTrackInfoText(now)
    .takeIf { controller?.isPlaying==true }
-  metadataFooter.text=message.orEmpty()
+  if(metadataFooter.text.toString()!=message.orEmpty()) metadataFooter.text=message.orEmpty()
+  footerDot.setColor(coral)
+  metadataFooter.setCompoundDrawablesWithIntrinsicBounds(if((audio!=null && audio!="Station unavailable") || (audio==null && albumLoading))footerDot else null,null,null,null)
   metadataFooter.visibility=if(message!=null)View.VISIBLE else View.INVISIBLE
  }
+ private fun trackArtworkLoading():Boolean =
+  !ui.getBoolean("hide_track_art",false) && prefs.onlineArtworkEnabled && PlaybackStatusBus.trackArtworkLoading.value &&
+   currentStation()?.id?.let { it==PlaybackStatusBus.stationId.value }==true
  private fun renderArtworkLoading() {
   if(!::artworkProgress.isInitialized) return
   val station=currentStation()
-  val trackLoading=!ui.getBoolean("hide_track_art",false) && prefs.onlineArtworkEnabled && PlaybackStatusBus.trackArtworkLoading.value &&
-   station?.id==PlaybackStatusBus.stationId.value
+  val trackLoading=trackArtworkLoading()
+
   val stationLoading=station?.let(::stationArtworkLoading)==true
   val busy=trackLoading || stationLoading
   artworkProgress.visibility=View.VISIBLE
@@ -348,7 +359,7 @@ class ImpostorPlayerActivity : AppCompatActivity() {
   } },MoreExecutors.directExecutor())
  }
  override fun onDestroy() { if(::management.isInitialized)management.close(); super.onDestroy() }
- override fun onStop() { footerHandler.removeCallbacks(footerTick); if(::artworkProgress.isInitialized) artworkProgress.stopForActivity(); generation++; controller?.release(); controller=null; super.onStop() }
+ override fun onStop() { StationImageDialog.close(this); footerHandler.removeCallbacks(footerTick); if(::artworkProgress.isInitialized) artworkProgress.stopForActivity(); generation++; controller?.release(); controller=null; super.onStop() }
  private inner class Stations:BaseAdapter() {
   override fun getCount()=rows.size
   override fun getItem(position:Int)=rows.getOrNull(position)
@@ -406,7 +417,7 @@ class ImpostorPlayerActivity : AppCompatActivity() {
    }
    (row.getChildAt(5) as ImageButton).apply {
     contentDescription="Change ${station.name} station image"
-    setOnClickListener { StationImageDialog.show(this@ImpostorPlayerActivity,station,lifecycleScope,changed={ adapter.notifyDataSetChanged(); renderPlayer() },onOpenSettings={ management.settings() }) }
+    setOnClickListener { StationImageDialog.show(this@ImpostorPlayerActivity,station,lifecycleScope,changed={ adapter.notifyDataSetChanged(); renderPlayer() },onOpenSettings={ management.settings() },host=managementHost) }
    }
    val rowArtwork=row.getChildAt(0) as FrameLayout
    rowArtwork.getChildAt(1).visibility=if(stationArtworkLoading(station))View.VISIBLE else View.GONE

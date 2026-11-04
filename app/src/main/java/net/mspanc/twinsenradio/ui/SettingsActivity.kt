@@ -101,7 +101,8 @@ class SettingsActivity : AppCompatActivity() {
             Prefs.NEWS_MINUTES_CHOICES.map { if (it == 0) "Nie rozpoznawaj serwisu" else "$it min" },
             Prefs.NEWS_MINUTES_CHOICES.indexOf(prefs.newsMinutes).coerceAtLeast(0)
         )
-        b.etM3u.setText(prefs.userM3uUrls.joinToString("\n"))
+        b.etM3u.setText(net.mspanc.twinsenradio.data.PlaylistLibrary.remoteSources(
+            StationRepository.get(this).playlists()).joinToString("\n") { it.url })
         renderHidden()
 
         b.btnSave.setOnClickListener { save() }
@@ -285,11 +286,23 @@ class SettingsActivity : AppCompatActivity() {
         prefs.bufferProfile = pick(b.ddBuffer)
         prefs.apiHoldSeconds = Prefs.API_HOLD_CHOICES[pick(b.ddApiHold)]
         prefs.newsMinutes = Prefs.NEWS_MINUTES_CHOICES[pick(b.ddNewsMinutes)]
-        prefs.userM3uUrls = b.etM3u.text?.toString().orEmpty().lines()
-
+        val urls = b.etM3u.text?.toString().orEmpty().lines()
+        b.btnSave.isEnabled = false
         lifecycleScope.launch {
-            StationRepository.get(this@SettingsActivity).refreshUserLists(force = true)
-            Toast.makeText(this@SettingsActivity, R.string.opt_saved, Toast.LENGTH_SHORT).show()
+            try {
+                val repo = StationRepository.get(this@SettingsActivity)
+                repo.replaceRemotePlaylists(urls)
+                repo.refreshUserLists(force = true)
+                val message = if (repo.lastRefreshFailureCount == 0) getString(R.string.opt_saved)
+                    else "Settings saved; ${repo.lastRefreshFailureCount} playlists could not refresh. Saved stations were retained."
+                Toast.makeText(this@SettingsActivity, message, Toast.LENGTH_LONG).show()
+            } catch (failure: Exception) {
+                if (failure is kotlinx.coroutines.CancellationException) throw failure
+                Toast.makeText(this@SettingsActivity,
+                    failure.message ?: "Could not save playlist changes", Toast.LENGTH_LONG).show()
+            } finally {
+                b.btnSave.isEnabled = true
+            }
         }
     }
 }

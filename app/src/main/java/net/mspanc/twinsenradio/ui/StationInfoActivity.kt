@@ -21,6 +21,9 @@ import net.mspanc.twinsenradio.data.StreamProbe
 import net.mspanc.twinsenradio.databinding.ActivityStationInfoBinding
 import net.mspanc.twinsenradio.playback.MetadataFactory
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import net.mspanc.twinsenradio.playback.ArtworkAccessPolicy
+import net.mspanc.twinsenradio.playback.ArtworkWorkScheduler
 
 /**
  * Details of a station found in the catalog, before it lands on the list.
@@ -184,50 +187,63 @@ class StationInfoActivity : AppCompatActivity() {
         androidx.activity.result.contract.ActivityResultContracts.GetContent()
     ) { uri ->
         if (uri == null) return@registerForActivityResult
-        val saved = runCatching {
-            val dir = java.io.File(filesDir, "logo-custom").apply { mkdirs() }
-            val file = java.io.File(dir, "${station.id}.png")
-            contentResolver.openInputStream(uri)?.use { input ->
-                val bitmap = android.graphics.BitmapFactory.decodeStream(input)
-                    ?: return@runCatching null
-                // 1024 px is the same size as our own logos - on the HDU
-                // the difference between a sharp and a blurry tile is visible.
-                val side = maxOf(bitmap.width, bitmap.height).coerceAtMost(1024)
-                val square = android.graphics.Bitmap.createBitmap(
-                    side, side, android.graphics.Bitmap.Config.ARGB_8888
-                )
-                android.graphics.Canvas(square).apply {
-                    drawColor(android.graphics.Color.WHITE)
-                    val scale = minOf(side.toFloat() / bitmap.width, side.toFloat() / bitmap.height)
-                    val w = bitmap.width * scale
-                    val h = bitmap.height * scale
-                    drawBitmap(
-                        bitmap,
-                        null,
-                        android.graphics.RectF(
-                            (side - w) / 2, (side - h) / 2, (side + w) / 2, (side + h) / 2
-                        ),
-                        null
-                    )
-                }
-                file.outputStream().use { out ->
-                    square.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, out)
-                }
-                file.absolutePath
+        val stationId = station.id
+        lifecycleScope.launch {
+            val saved = withContext(ArtworkWorkScheduler.dispatcher) {
+                runCatching {
+                    val bytes = contentResolver.openInputStream(uri)?.use {
+                        ArtworkAccessPolicy.readBounded(it)
+                    } ?: return@runCatching null
+                    val bitmap = ArtworkLoader.decodeBounded(bytes) ?: return@runCatching null
+                    try {
+                        // Keep the existing white, centered square at up to 1024 px.
+                        val side = maxOf(bitmap.width, bitmap.height)
+                        val square = android.graphics.Bitmap.createBitmap(
+                            side, side, android.graphics.Bitmap.Config.ARGB_8888
+                        )
+                        try {
+                            android.graphics.Canvas(square).apply {
+                                drawColor(android.graphics.Color.WHITE)
+                                val scale = minOf(side.toFloat() / bitmap.width, side.toFloat() / bitmap.height)
+                                val w = bitmap.width * scale
+                                val h = bitmap.height * scale
+                                drawBitmap(bitmap, null, android.graphics.RectF(
+                                    (side - w) / 2, (side - h) / 2, (side + w) / 2, (side + h) / 2
+                                ), null)
+                            }
+                            val dir = java.io.File(filesDir, "logo-custom").apply { mkdirs() }
+                            val file = java.io.File(dir, ArtworkAccessPolicy.key(stationId) + ".png")
+                            val atomic = android.util.AtomicFile(file)
+                            val output = atomic.startWrite()
+                            try {
+                                check(square.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, output))
+                                atomic.finishWrite(output)
+                            } catch (failure: Throwable) {
+                                atomic.failWrite(output)
+                                throw failure
+                            }
+                            file.absolutePath
+                        } finally { square.recycle() }
+                    } finally { bitmap.recycle() }
+                }.getOrNull()
             }
-        }.getOrNull()
 
-        if (saved != null) {
-            prefs.setCustomLogo(station.id, saved)
-            ArtworkLoader.into(
-                lifecycleScope,
-                null,
-                Uri.fromFile(java.io.File(saved)),
-                MetadataFactory(this, prefs).logoResId(station),
-                b.logo
-            )
-            Toast.makeText(this, R.string.info_logo_changed, Toast.LENGTH_SHORT).show()
-            setResult(RESULT_OK, Intent().putExtra(RESULT_CHANGED, true))
+            if (saved != null) {
+                prefs.setCustomLogo(stationId, saved)
+                ArtworkLoader.into(
+                    lifecycleScope,
+                    null,
+                    Uri.fromFile(java.io.File(saved)),
+                    MetadataFactory(this@StationInfoActivity, prefs).logoResId(station),
+                    b.logo
+                )
+                Toast.makeText(this@StationInfoActivity, R.string.info_logo_changed, Toast.LENGTH_SHORT).show()
+                setResult(RESULT_OK, Intent().putExtra(RESULT_CHANGED, true))
+            } else {
+                Toast.makeText(this@StationInfoActivity,
+                    "Could not save station image. Try an image smaller than 5 MB.",
+                    Toast.LENGTH_LONG).show()
+            }
         }
     }
 

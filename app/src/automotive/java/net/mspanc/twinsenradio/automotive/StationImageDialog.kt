@@ -6,6 +6,7 @@ import android.graphics.*
 import android.graphics.drawable.GradientDrawable
 import android.view.Gravity
 import android.view.View
+import android.view.ViewGroup
 import android.view.Window
 import android.view.WindowManager
 import android.widget.*
@@ -20,15 +21,24 @@ import net.mspanc.twinsenradio.data.Station
 import net.mspanc.twinsenradio.playback.ArtworkWorkScheduler
 import net.mspanc.twinsenradio.playback.StationArtworkStore
 
-/** Parked-only picker. A selection is committed only by Use this image. */
+/** Parked-only picker. A selection is committed only by Save image. */
 object StationImageDialog {
     private const val SURFACE = AutomotiveDesign.SURFACE
     private const val TEXT = AutomotiveDesign.TEXT
     private const val MUTED = AutomotiveDesign.MUTED
     private const val BORDER = AutomotiveDesign.BORDER
 
+    private class EditorHandle(val dismiss: () -> Unit) { var visible = true }
+    private val editors = mutableMapOf<Activity, EditorHandle>()
+    fun handleBack(activity: Activity): Boolean {
+        val editor = editors[activity] ?: return false
+        editor.dismiss(); return true
+    }
+    fun close(activity: Activity) { editors[activity]?.dismiss?.invoke() }
+
     fun show(activity: Activity, station: Station, scope: CoroutineScope,
-             changed: () -> Unit = {}, onOpenSettings: () -> Unit = {}) {
+             changed: () -> Unit = {}, onOpenSettings: () -> Unit = {},
+             host: ViewGroup? = null) {
         val prefs = Prefs(activity)
         val theme = AppearanceTheme.current(activity)
         if (!prefs.onlineArtworkEnabled) {
@@ -42,26 +52,19 @@ object StationImageDialog {
         var generation = 0
         var job: Job? = null
         var previewJob: Job? = null
+        close(activity)
         val dialog = Dialog(activity)
         dialog.requestWindowFeature(Window.FEATURE_NO_TITLE)
         val root = LinearLayout(activity).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(dp(26), dp(14), dp(30), dp(12))
+            setPadding(dp(28), dp(16), dp(28), dp(14))
         }
-        root.addView(label(activity, "Station image · ${station.name}", 25f, true).apply {
-            maxLines = 1; ellipsize = android.text.TextUtils.TruncateAt.END
-        }, LinearLayout.LayoutParams(-1, dp(36)))
-        root.addView(label(activity, "Station-directory logos · not Google Images", 15f).apply {
-            setTextColor(MUTED)
-        }, LinearLayout.LayoutParams(-1, dp(27)))
         val dialogWidth = minOf(dp(900), visibleBounds(activity).width() - dp(32)).coerceAtLeast(dp(280))
-        val wide = dialogWidth >= dp(760)
         val body = LinearLayout(activity).apply {
-            orientation = if (wide) LinearLayout.HORIZONTAL else LinearLayout.VERTICAL
+            orientation = LinearLayout.VERTICAL
             setPadding(0, dp(6), 0, 0)
         }
-        val left = LinearLayout(activity).apply { orientation = LinearLayout.VERTICAL }
-        val previewSize = if (wide) dp(310) else minOf(dp(310), dialogWidth - dp(56))
+        val previewSize = minOf(dp(340), dialogWidth - dp(56))
         val previewFrame = FrameLayout(activity).apply {
             background = rounded(0xff315b64.toInt(), 20); clipToOutline = true
         }
@@ -76,45 +79,36 @@ object StationImageDialog {
         previewFrame.addView(spinner, FrameLayout.LayoutParams(dp(19), dp(19), Gravity.END or Gravity.BOTTOM).apply {
             rightMargin = dp(10); bottomMargin = dp(10)
         })
-        left.addView(previewFrame, LinearLayout.LayoutParams(previewSize, previewSize))
         val previous = commandButton(activity, "Previous")
         val next = commandButton(activity, "Next")
         val cycle = LinearLayout(activity)
-        cycle.addView(previous, LinearLayout.LayoutParams(0, dp(44), 1f))
-        cycle.addView(next, LinearLayout.LayoutParams(0, dp(44), 1f).apply { leftMargin = dp(12) })
-        left.addView(cycle, LinearLayout.LayoutParams(previewSize, dp(44)).apply { topMargin = dp(14) })
-        body.addView(left, LinearLayout.LayoutParams(if (wide) previewSize else -1, -2))
-        if (!wide) left.gravity = Gravity.CENTER_HORIZONTAL
-        val right = LinearLayout(activity).apply { orientation = LinearLayout.VERTICAL }
-        right.addView(label(activity, "Search station names", 16f), LinearLayout.LayoutParams(-1, dp(33)))
+        cycle.addView(previous, LinearLayout.LayoutParams(0, dp(52), 1f))
+        cycle.addView(next, LinearLayout.LayoutParams(0, dp(52), 1f).apply { leftMargin = dp(12) })
         val query = EditText(activity).apply {
             setSingleLine(true); setText(station.name); setTextColor(TEXT)
             textSize = 21f; setPadding(dp(16), 0, dp(16), 0)
             background = rounded(AutomotiveDesign.FIELD, 14, BORDER)
             imeOptions = android.view.inputmethod.EditorInfo.IME_ACTION_SEARCH
+            contentDescription = "Search station names"
         }
         val search = commandButton(activity, "Find logos")
         val searchRow = LinearLayout(activity).apply { gravity = Gravity.CENTER_VERTICAL }
         searchRow.addView(query, LinearLayout.LayoutParams(0, dp(52), 1f))
-        searchRow.addView(search, LinearLayout.LayoutParams(dp(if (wide) 158 else 120), dp(44)).apply { leftMargin = dp(16) })
-        right.addView(searchRow)
+        searchRow.addView(search, LinearLayout.LayoutParams(dp(180), dp(52)).apply { leftMargin = dp(16) })
         val statusRow = LinearLayout(activity).apply { gravity = Gravity.CENTER_VERTICAL }
-        val status = label(activity, "Choose a station logo", 20f, true).apply {
-            maxWidth = dialogWidth - dp(if (wide) 426 else 88)
+        val status = label(activity, "Choose a station logo", 20f).apply {
             gravity = Gravity.CENTER_VERTICAL
         }
         val warning = WarningView(activity).apply { visibility = View.GONE }
-        statusRow.addView(status, LinearLayout.LayoutParams(-2, -2))
+        statusRow.addView(status, LinearLayout.LayoutParams(0, -1, 1f))
         statusRow.addView(warning, LinearLayout.LayoutParams(dp(24), dp(24)).apply { leftMargin = dp(8) })
-        right.addView(statusRow, LinearLayout.LayoutParams(-1, dp(24)).apply { topMargin = dp(25) })
-        val detail = label(activity, "Search the station directory, or use initials.\nThe saved image stays until you save a choice.", 16f).apply {
-            setTextColor(MUTED); setLineSpacing(dp(5).toFloat(), 1f)
-            minLines = 2; maxLines = 2
+        val detail = label(activity, "Search the station directory, or use initials.", 16f).apply {
+            setTextColor(MUTED)
+            maxLines = 1; gravity = Gravity.CENTER
         }
-        right.addView(detail, LinearLayout.LayoutParams(-1, dp(43)).apply { topMargin = dp(9) })
         val generic = LinearLayout(activity).apply {
             orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL
-            setPadding(dp(16), dp(12), dp(16), dp(12))
+            setPadding(dp(18), dp(6), dp(14), dp(6))
             background = rounded(0xff292f37.toInt(), 16, 0xff5c6875.toInt())
             isClickable = true; isFocusable = true
             contentDescription = "Use generic station image. Keep initials; stop automatic logo requests."
@@ -124,33 +118,86 @@ object StationImageDialog {
             buttonTintList = android.content.res.ColorStateList.valueOf(theme.accent)
             importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
         }
-        generic.addView(radio, LinearLayout.LayoutParams(dp(28), dp(32)))
         val genericLabels = LinearLayout(activity).apply { orientation = LinearLayout.VERTICAL }
-        genericLabels.addView(label(activity, "Use generic station image", 18f, true))
-        genericLabels.addView(label(activity, "Keep initials; stop automatic logo requests.", 15f).apply {
+        genericLabels.addView(label(activity, "Use generic image", 22f))
+        genericLabels.addView(label(activity, "Keep initials and stop automatic logo requests", 15f).apply {
             setTextColor(MUTED)
-        }, LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(8) })
-        generic.addView(genericLabels, LinearLayout.LayoutParams(0, -2, 1f).apply { leftMargin = dp(5) })
-        right.addView(generic, LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(40); if (wide) height = dp(85) })
-        val note = label(activity, "Saved image stays until you choose another", 15f).apply { setTextColor(MUTED); gravity = Gravity.CENTER_VERTICAL }
-        right.addView(note, LinearLayout.LayoutParams(-1, dp(44)).apply { topMargin = dp(14) })
-        body.addView(right, LinearLayout.LayoutParams(if (wide) 0 else -1, -2, if (wide) 1f else 0f).apply {
-            if (wide) leftMargin = dp(28) else topMargin = dp(20)
-        })
-        root.addView(body)
-        root.addView(View(activity).apply { setBackgroundColor(0xff47515d.toInt()) }, LinearLayout.LayoutParams(-1, dp(1)).apply { topMargin = dp(11) })
-        val footer = LinearLayout(activity).apply { gravity = Gravity.CENTER_VERTICAL }
-        if (wide) footer.addView(label(activity, "Parked only", 14f).apply { setTextColor(MUTED) }, LinearLayout.LayoutParams(0, -2, 1f))
-        else root.addView(label(activity, "Parked only", 14f).apply { setTextColor(MUTED) }, LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(12) })
+        }, LinearLayout.LayoutParams(-1, -2))
+        generic.addView(genericLabels, LinearLayout.LayoutParams(0, -2, 1f))
+        generic.addView(radio, LinearLayout.LayoutParams(dp(32), dp(48)))
+        // Header/search are fixed; only the body scrolls.
         val cancel = commandButton(activity, "Cancel")
-        val use = commandButton(activity, "Use this image", theme.accent, theme.onAccent)
-        footer.addView(cancel, LinearLayout.LayoutParams(if (wide) dp(122) else 0, dp(44), if (wide) 0f else 1f))
-        footer.addView(use, LinearLayout.LayoutParams(if (wide) dp(170) else 0, dp(44), if (wide) 0f else 1.4f).apply { leftMargin = dp(14) })
-        root.addView(footer, LinearLayout.LayoutParams(-1, dp(44)).apply { topMargin = dp(12) })
-        installDialog(activity, dialog, root, dialogWidth)
+        val use = commandButton(activity, "Save image", theme.accent, theme.onAccent)
+        listOf(cancel, use, search, previous, next).forEach {
+            it.textSize = AutomotiveDesign.BUTTON_TEXT_SP
+            it.typeface = Typeface.create("sans-serif-medium", Typeface.NORMAL)
+            it.maxLines = 1; it.ellipsize = android.text.TextUtils.TruncateAt.END
+        }
+        val header = LinearLayout(activity).apply { gravity = Gravity.CENTER_VERTICAL }
+        val heading = LinearLayout(activity).apply { orientation = LinearLayout.VERTICAL }
+        heading.addView(label(activity, station.name, 25f), LinearLayout.LayoutParams(-1, dp(30)))
+        heading.addView(label(activity, "Station image", 14f), LinearLayout.LayoutParams(-1, dp(20)))
+        header.addView(cancel, LinearLayout.LayoutParams(dp(102), dp(52)))
+        header.addView(heading, LinearLayout.LayoutParams(0, dp(52), 1f).apply { leftMargin = dp(24); rightMargin = dp(16) })
+        header.addView(use, LinearLayout.LayoutParams(dp(168), dp(52)))
+        root.addView(header, LinearLayout.LayoutParams(-1, dp(52)))
+        root.addView(searchRow, LinearLayout.LayoutParams(-1, dp(52)).apply { topMargin = dp(24) })
+        body.gravity = Gravity.CENTER_HORIZONTAL; body.setPadding(0, dp(30), 0, 0)
+        body.addView(previewFrame, LinearLayout.LayoutParams(previewSize, previewSize))
+        status.gravity = Gravity.CENTER
+        statusRow.gravity = Gravity.CENTER
+        body.addView(statusRow, LinearLayout.LayoutParams(-1, dp(28)).apply { topMargin = dp(10) })
+        body.addView(detail, LinearLayout.LayoutParams(-1, dp(26)))
+        body.addView(cycle, LinearLayout.LayoutParams(previewSize, dp(52)).apply { topMargin = dp(10) })
+        body.addView(generic, LinearLayout.LayoutParams(-1, dp(60)).apply { topMargin = dp(14) })
+        root.addView(ScrollView(activity).apply {
+            isFillViewport = false; addView(body, FrameLayout.LayoutParams(-1, -2))
+        }, LinearLayout.LayoutParams(-1, 0, 1f))
+        val previousViews = host?.let { parent ->
+            (0 until parent.childCount).map { parent.getChildAt(it) to parent.getChildAt(it).visibility }
+        }.orEmpty()
+        val hostVisibility = host?.visibility
+        val oldSoftInputMode = activity.window.attributes.softInputMode
+        val container = FrameLayout(activity).apply {
+            setPadding(dp(20), dp(16), dp(20), dp(16)); setBackgroundColor(AutomotiveDesign.CANVAS)
+            isClickable = true; isFocusableInTouchMode = true
+            addView(root, FrameLayout.LayoutParams(-1, -1))
+        }
+        root.background = rounded(SURFACE, 28); root.clipToOutline = true
+        lateinit var editor: EditorHandle
+        fun finish() {
+            if (!editor.visible) return
+            editor.visible = false; generation++; job?.cancel(); previewJob?.cancel()
+            (activity.getSystemService(Activity.INPUT_METHOD_SERVICE) as? android.view.inputmethod.InputMethodManager)
+                ?.hideSoftInputFromWindow(container.windowToken, 0)
+            container.clearFocus(); host?.removeView(container)
+            previousViews.forEach { (view, visibility) -> if (view.parent === host) view.visibility = visibility }
+            if (hostVisibility != null) host?.visibility = hostVisibility
+            activity.window.setSoftInputMode(oldSoftInputMode)
+            if (editors[activity] === editor) editors.remove(activity)
+            dialog.dismiss()
+        }
+        editor = EditorHandle { finish() }; editors[activity] = editor
+        if (host != null) {
+            previousViews.forEach { (view, _) -> view.visibility = View.GONE }
+            host.visibility = View.VISIBLE; host.addView(container, ViewGroup.LayoutParams(-1, -1))
+            activity.window.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_NOTHING)
+        } else {
+            val frame = stableWindowBounds(activity)
+            dialog.setContentView(container)
+            dialog.window?.apply {
+                setWindowAnimations(0); setBackgroundDrawableResource(android.R.color.transparent)
+                setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_NOTHING)
+                setGravity(Gravity.TOP or Gravity.CENTER_HORIZONTAL)
+            }
+            dialog.setOnDismissListener { finish() }; dialog.show()
+            dialog.window?.setLayout(dialogWidth, frame.height() - dp(32))
+        }
+        container.requestFocus()
 
         fun controls() {
             search.isEnabled = !working; query.isEnabled = !working; generic.isEnabled = !working
+            search.text = if (working && selected == -1 && !genericSelected) "Searching…" else "Find logos"
             generic.alpha = if (working) .36f else 1f
             previous.isEnabled = !working && candidates.size > 1 && !genericSelected
             next.isEnabled = previous.isEnabled
@@ -158,32 +205,36 @@ object StationImageDialog {
             listOf(search, previous, next, use).forEach { it.alpha = if (it.isEnabled) 1f else .36f }
             spinner.visibility = if (working) View.VISIBLE else View.GONE
             radio.isChecked = genericSelected
+            generic.contentDescription = "Use generic image. " +
+                (if (genericSelected) "Selected. " else "Not selected. ") +
+                "Keep initials and stop automatic logo requests. Save image to apply."
             generic.background = rounded(if (genericSelected) 0xff333f48.toInt() else 0xff292f37.toInt(), 16,
                 if (genericSelected) theme.accent else 0xff5c6875.toInt())
         }
         fun state(title: String, lines: String, failed: Boolean = false) {
-            status.text = title; detail.text = lines; warning.visibility = if (failed) View.VISIBLE else View.GONE
+            status.text = title; detail.text = lines.replace("\n", " ")
+            detail.contentDescription = lines
+            warning.visibility = if (failed) View.VISIBLE else View.GONE
         }
         fun showBitmap(bytes: ByteArray?) {
             previewJob?.cancel()
             previewJob = scope.launch {
                 val bitmap = withContext(ArtworkWorkScheduler.dispatcher) { bytes?.let { decodeSized(it, 384) } }
-                if (dialog.isShowing && !genericSelected) preview.setImageBitmap(bitmap) else bitmap?.recycle()
+                if (editor.visible && !genericSelected) preview.setImageBitmap(bitmap) else bitmap?.recycle()
             }
         }
         fun renderCandidate(index: Int) {
             if (index !in candidates.indices || working) return
             selected = index; genericSelected = false; showBitmap(candidates[index].bytes)
             state("${index + 1} of ${candidates.size} · ${candidates[index].name}",
-                if (candidates.size == 1) "The directory supplied one usable image.\nUse this image, search again, or choose generic."
-                else "Preview only · browse with Previous and Next.\nUse this image saves your choice on this device.")
-            note.text = "Saved image stays until you choose another"; controls()
+                "Preview only — tap Save image to apply")
+            controls()
         }
         generic.setOnClickListener {
             if (working) return@setOnClickListener
             genericSelected = true; previewJob?.cancel(); preview.setImageDrawable(null)
             state("Generic image selected", "No automatic logo searches for this station.\nSearch again whenever you want a logo.")
-            note.text = "Preview only · choose Use this image to save"; controls()
+            controls()
         }
         previous.setOnClickListener { if (candidates.isNotEmpty()) renderCandidate((selected - 1).mod(candidates.size)) }
         next.setOnClickListener { if (candidates.isNotEmpty()) renderCandidate((selected + 1).mod(candidates.size)) }
@@ -199,19 +250,19 @@ object StationImageDialog {
                 try {
                     val result = StationArtworkStore.searchCandidates(activity, station, term, onDownloading = {
                         scope.launch {
-                            if (dialog.isShowing && request == generation && working)
+                            if (editor.visible && request == generation && working)
                                 state("Loading image previews…", "Logo links found · downloading previews.\nYour saved image stays until results are ready.")
                         }
                     })
-                    if (!dialog.isShowing || request != generation) return@launch
+                    if (!editor.visible || request != generation) return@launch
                     working = false
                     when (result) {
                         is StationArtworkStore.CandidateSearch.Found -> {
                             candidates.addAll(result.images)
                             if (candidates.isNotEmpty()) renderCandidate(0)
-                            else state("No directory logos for “$term”", "Try a broader station name.\nGoogle Images is not searched here.")
+                            else state("No directory logos found", "Saved image unchanged. Try another search.")
                         }
-                        StationArtworkStore.CandidateSearch.NoResults -> state("No directory logos for “$term”", "Try a broader station name.\nGoogle Images is not searched here.")
+                        StationArtworkStore.CandidateSearch.NoResults -> state("No directory logos found", "Saved image unchanged. Try another search.")
                         StationArtworkStore.CandidateSearch.DirectoryFailed -> state("Station directory unavailable", "Check your connection, then try Find logos.\nSaved image unchanged · this is not “no results”.")
                         StationArtworkStore.CandidateSearch.DownloadFailed -> state("Logo links found, but images failed to load", "No usable previews downloaded.\nTry again or choose a generic station image.")
                         StationArtworkStore.CandidateSearch.LowQuality -> {
@@ -222,45 +273,44 @@ object StationImageDialog {
                     }
                 } catch (cancelled: CancellationException) { throw cancelled }
                 catch (_: Exception) {
-                    if (dialog.isShowing && request == generation) state("Station directory unavailable", "Check your connection, then try Find logos.\nYour saved image is unchanged.")
+                    if (editor.visible && request == generation) state("Station directory unavailable", "Check your connection, then try Find logos.\nYour saved image is unchanged.")
                 } finally {
-                    if (dialog.isShowing && request == generation) { working = false; controls() }
+                    if (editor.visible && request == generation) { working = false; controls() }
                 }
             }
         }
         query.setOnEditorActionListener { _, action, _ ->
             if (action == android.view.inputmethod.EditorInfo.IME_ACTION_SEARCH) { search.performClick(); true } else false
         }
-        cancel.setOnClickListener { dialog.dismiss() }
+        cancel.setOnClickListener { finish() }
         use.setOnClickListener {
             if (working || (!genericSelected && selected !in candidates.indices)) return@setOnClickListener
             val chosenGeneric = genericSelected
             val candidate = candidates.getOrNull(selected)
             val request = ++generation
             working = true; controls()
-            state("Saving this station image…", "Keeping your choice on this device.\nThe dialog closes after a successful save.")
+            state("Saving this station image…", "Keeping your choice on this device.\nThe editor closes after a successful save.")
             job = scope.launch {
                 val saved = try {
                     if (chosenGeneric) StationArtworkStore.useGeneric(activity, station)
                     else candidate != null && StationArtworkStore.useCandidate(activity, station, candidate)
                 } catch (cancelled: CancellationException) { throw cancelled }
                 catch (_: Exception) { false }
-                if (!dialog.isShowing || request != generation) return@launch
+                if (!editor.visible || request != generation) return@launch
                 working = false
                 if (saved) {
                     withContext(ArtworkWorkScheduler.dispatcher) {
                         activity.getSharedPreferences("twinsen_radio", 0).edit()
                             .putLong("station_artwork_revision", System.currentTimeMillis()).commit()
                     }
-                    changed(); dialog.dismiss()
+                    changed(); finish()
                 } else {
-                    state("Could not save this station image", "Your current saved image is unchanged.\nChoose Use this image to retry, or Cancel.", true)
+                    state("Could not save this station image", "Your current saved image is unchanged.\nChoose Save image to retry, or Cancel.", true)
                     controls()
                 }
             }
         }
-        dialog.setOnDismissListener { generation++; job?.cancel(); previewJob?.cancel() }
-        dialog.show(); controls()
+        controls()
         if (genericSelected) state("Generic image selected", "No automatic logo searches for this station.\nSearch again whenever you want a logo.")
         job = scope.launch {
             val bytes = withContext(ArtworkWorkScheduler.dispatcher) {
@@ -269,7 +319,7 @@ object StationImageDialog {
                         ?: activity.contentResolver.openInputStream(StationArtworkStore.uri(activity, station))?.use { it.readBytes() }
                 }.getOrNull()
             }
-            if (dialog.isShowing && selected == -1 && !genericSelected) showBitmap(bytes)
+            if (editor.visible && selected == -1 && !genericSelected) showBitmap(bytes)
         }
     }
 
