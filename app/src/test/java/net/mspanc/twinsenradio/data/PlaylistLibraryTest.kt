@@ -45,6 +45,39 @@ class PlaylistLibraryTest {
         assertEquals(listOf("c", "b"), favorites)
     }
 
+    @Test
+    fun bulkEditorReconcilesRemoteOrderAndRetainsLocalAndCustomIdentity() {
+        val a = PlaylistSource("a", "https://a/list.m3u", "My A", 7)
+        val local = PlaylistSource("saved", PlaylistLibrary.LOCAL_SNAPSHOT_URL, "My saved", 4)
+        val b = PlaylistSource("b", "https://b/list.m3u", "My B", 9)
+        val result = PlaylistLibrary.reconcileRemoteUrls(listOf(a, local, b), listOf(
+            "  https://b/list.m3u  ", "", "https://b/list.m3u", "https://new/list.m3u"
+        ))
+        assertEquals(b, result[0])
+        assertEquals(local, result[1])
+        assertEquals("https://new/list.m3u", result[2].url)
+        assertEquals("new / list.m3u", result[2].name)
+        assertEquals(3, result.map { it.id }.distinct().size)
+        assertEquals(listOf(b), result.filter { it.id == "b" })
+        assertEquals(listOf(local), PlaylistLibrary.reconcileRemoteUrls(listOf(a, local, b), emptyList()))
+    }
+
+    @Test
+    fun bulkEditorRejectsInvalidUrlsAndCountsRetainedLocalSourcesBeforeReturning() {
+        val local = PlaylistSource("saved", PlaylistLibrary.LOCAL_SNAPSHOT_URL, "Saved")
+        listOf("http://radio/list", "file:///tmp/list", "local:saved-stations",
+            "https://user:pass@example.com/list", "https://", "https://radio/" + "x".repeat(CatalogLimits.MAX_URL))
+            .forEach { url ->
+                org.junit.Assert.assertThrows(IllegalArgumentException::class.java) {
+                    PlaylistLibrary.reconcileRemoteUrls(listOf(local), listOf(url))
+                }
+            }
+        org.junit.Assert.assertThrows(IllegalArgumentException::class.java) {
+            PlaylistLibrary.reconcileRemoteUrls(listOf(local),
+                (1..CatalogLimits.MAX_SOURCES).map { "https://radio/$it.m3u" })
+        }
+    }
+
     private fun station(id: String, stream: String) = Station(
         id = id, name = id, genre = "Test", stream = stream,
         source = Station.Source.USER_M3U

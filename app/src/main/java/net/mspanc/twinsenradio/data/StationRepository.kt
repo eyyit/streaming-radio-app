@@ -40,7 +40,7 @@ class StationRepository private constructor(private val appContext: Context) {
         if (saved == null) {
             val migrated = prefs.userM3uUrls.mapIndexed { index, url ->
                 PlaylistSource("pl_${M3uParser.stableKey(url).take(20)}", url,
-                    defaultPlaylistName(url, index))
+                    PlaylistNames.fromUrl(url, "Playlist ${index + 1}"))
             }
             if (runCatching { CatalogLimits.sources(migrated) }.isFailure) return@synchronized emptyList()
             writeSources(migrated)
@@ -156,7 +156,7 @@ class StationRepository private constructor(private val appContext: Context) {
         val existingIndex = id?.let { key -> currentSources.indexOfFirst { it.id == key } } ?: -1
         val existing = currentSources.getOrNull(existingIndex)
         val source = PlaylistSource(existing?.id ?: "pl_${java.util.UUID.randomUUID()}",
-            normalized, name.trim().ifBlank { defaultPlaylistName(normalized, 0) },
+            normalized, name.trim().ifBlank { PlaylistNames.fromUrl(normalized, "Playlist 1") },
             validation.size)
         refreshLock.withLock { withContext(Dispatchers.IO) {
         val file = playlistFile(normalized)
@@ -205,6 +205,19 @@ class StationRepository private constructor(private val appContext: Context) {
         true
     }
 
+    /** Reconcile the legacy bulk editor with the canonical source registry. */
+    suspend fun replaceRemotePlaylists(urls: List<String>) = withContext(Dispatchers.IO) {
+        refreshLock.withLock {
+            synchronized(sourceLock) {
+                val sources = PlaylistLibrary.reconcileRemoteUrls(playlists(), urls)
+                snapshotFavorites(allIncludingHidden())
+                writeSources(sources, synchronous = true)
+                prefs.userM3uUrls = PlaylistLibrary.remoteSources(sources).map { it.url }
+                reloadPlaylistCache(sources)
+            }
+        }
+    }
+
     suspend fun refreshPlaylists(force: Boolean = false) = refreshUserLists(force)
 
     /** All playlist stations, deduplicated by exact stream URL in source order. */
@@ -216,16 +229,25 @@ class StationRepository private constructor(private val appContext: Context) {
         val array = JSONArray(raw)
         require(array.length() <= CatalogLimits.MAX_SOURCES) { "Too many saved playlists" }
         (0 until array.length()).map { i -> array.getJSONObject(i).let {
-            PlaylistSource(it.getString("id"), it.getString("url"), it.getString("name"), it.optInt("count"))
+            val url = it.getString("url")
+            val fallback = if (PlaylistLibrary.isLocalSnapshot(url)) {
+                "Saved stations"
+            } else {
+                "Playlist ${i + 1}"
+            }
+            val name = PlaylistNames.normalizeStoredName(it.getString("name"), url, fallback)
+            PlaylistSource(it.getString("id"), url, name, it.optInt("count"))
         } }.also(CatalogLimits::sources)
     }.getOrDefault(emptyList())
 
-    private fun writeSources(sources: List<PlaylistSource>) {
+    private fun writeSources(sources: List<PlaylistSource>, synchronous: Boolean = false) {
         CatalogLimits.sources(sources)
         val array = JSONArray()
         sources.forEach { array.put(JSONObject().put("id", it.id).put("url", it.url)
             .put("name", it.name).put("count", it.stationCount)) }
-        playlistPrefs.edit().putString("sources", array.toString()).apply()
+        val editor = playlistPrefs.edit().putString("sources", array.toString())
+        if (synchronous) check(editor.commit()) { "Could not persist playlist changes" }
+        else editor.apply()
     }
 
     private fun reloadPlaylistCache(sources: List<PlaylistSource>) {
@@ -319,9 +341,6 @@ class StationRepository private constructor(private val appContext: Context) {
         if (order != saved) playlistPrefs.edit().putString(key, order.joinToString("\n")).apply()
         return order.mapNotNull(byId::get)
     }
-    private fun defaultPlaylistName(url: String, index: Int): String =
-        runCatching { URL(url).host }.getOrDefault("").ifBlank { "Playlist ${index + 1}" }
-
     @Volatile
     private var cache: List<Station> = emptyList()
     // Resolve the current session after source removal without adding it to All.
@@ -468,7 +487,9 @@ class StationRepository private constructor(private val appContext: Context) {
         val sources = playlists()
         val urls = sources.map { it.url }
         var accepted = activeCatalogs.filterKeys { it in urls }
-        val failures = mutableSetOf<String>()
+        val failures = failedSources.toMutableSet()
+        // Cancellation still publishes each source whose atomic cache write completed.
+        try {
         PlaylistLibrary.remoteSources(sources).forEach { source ->
             currentCoroutineContext().ensureActive()
             val url = source.url
@@ -499,7 +520,7 @@ class StationRepository private constructor(private val appContext: Context) {
                     }
                     synchronized(sourceLock) { parsedCatalogs[url] = stations }
                     next
-                }.onSuccess { accepted = it }
+                }.onSuccess { accepted = it; failures -= url }
                     .onFailure {
                         if (it is kotlinx.coroutines.CancellationException) throw it
                         failures += url
@@ -507,6 +528,7 @@ class StationRepository private constructor(private val appContext: Context) {
                     }
             }
         }
+        } finally {
         synchronized(sourceLock) {
             snapshotFavorites(allIncludingHidden())
             val currentSources = playlists()
@@ -523,6 +545,7 @@ class StationRepository private constructor(private val appContext: Context) {
             }
             userLoadedFor = currentUrls
             failedSources = failures.intersect(currentUrls.toSet())
+        }
         }
       }
     }

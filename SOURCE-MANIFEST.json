@@ -1,7 +1,7 @@
 {
   "formatVersion": 1,
   "project": "Twinsen Radio independent source candidate",
-  "gitHead": "3aa53c82859c7a74fe8dd8a9fe24045227b550f5",
+  "gitHead": "4e4b6e090b30a7328ac5fa4a83abc9a446b4bfb2",
   "workingTree": "dirty",
   "hashAlgorithm": "SHA-256",
   "selfHashExcluded": true,
@@ -227,8 +227,8 @@
     },
     {
       "path": "app/src/main/java/net/mspanc/twinsenradio/data/PlaylistLibrary.kt",
-      "size": 5710,
-      "sha256": "55df090aee8f459aceaab52165d67fd0aa2334a0b957b196aedbf26dca573a3d"
+      "size": 6961,
+      "sha256": "73a905ab9bfb3717308169c42be07e028b3da2dd6bc9cae8c0366a5225f33322"
     },
     {
       "path": "app/src/main/java/net/mspanc/twinsenradio/data/Prefs.kt",
@@ -262,8 +262,8 @@
     },
     {
       "path": "app/src/main/java/net/mspanc/twinsenradio/data/StationRepository.kt",
-      "size": 29252,
-      "sha256": "aaf42972c60802a18db24cf8b12585f84b963f567fadc1d445bf116628393bbb"
+      "size": 30333,
+      "sha256": "76d7385282ff421a4267c05cc74cbd43e69322fdb153f2f0e34d43d7e14ccb08"
     },
     {
       "path": "app/src/main/java/net/mspanc/twinsenradio/data/StationText.kt",
@@ -762,8 +762,8 @@
     },
     {
       "path": "app/src/test/java/net/mspanc/twinsenradio/data/PlaylistLibraryTest.kt",
-      "size": 3903,
-      "sha256": "c7416f2e5ac3b0bf96db3b186a45a36ed511d7f6bf5bc6f791c2686b09b29e40"
+      "size": 5685,
+      "sha256": "8c7aabf680d99698294cf0ed3eab8ce9e5488f84a8d37957b0c0762683865d8e"
     },
     {
       "path": "app/src/test/java/net/mspanc/twinsenradio/data/RadioBrowserArtworkTest.kt",
@@ -1244,6 +1244,21 @@
       "path": "tools/run-dhu.ps1",
       "size": 1143,
       "sha256": "ffa2eb9c36684c6592d529996090652bf901cfa4c6ec01ff39bc60663fce2ca5"
+    },
+    {
+      "path": "app/src/main/java/net/mspanc/twinsenradio/data/PlaylistNames.kt",
+      "size": 2776,
+      "sha256": "42d9331ba1ba26fc093c12ec3ffa4fb56adb156d39819be8e3ce6285c137f901"
+    },
+    {
+      "path": "app/src/test/java/net/mspanc/twinsenradio/data/PlaylistNamesTest.kt",
+      "size": 3509,
+      "sha256": "e10dee9b35d876c53bed1f21849d34c8c1d588348e9a69412db65e237e7aa71c"
+    },
+    {
+      "path": "app/src/test/java/net/mspanc/twinsenradio/data/PlaylistUrlCaseTest.kt",
+      "size": 747,
+      "sha256": "8851596a008cbcee82b26d58263f4bd809977eb6be2a061daec9e586f9aff07e"
     }
   ],
   "warnings": [

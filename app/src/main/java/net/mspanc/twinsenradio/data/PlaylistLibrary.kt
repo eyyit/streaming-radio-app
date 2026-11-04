@@ -70,6 +70,31 @@ object PlaylistLibrary {
     fun remoteSources(sources: List<PlaylistSource>): List<PlaylistSource> =
         sources.filterNot { it.isLocal }
 
+    /** URL-only editor: exact survivors keep identity; local snapshots are untouched. */
+    fun reconcileRemoteUrls(current: List<PlaylistSource>, input: List<String>): List<PlaylistSource> {
+        val urls = input.map(String::trim).filter { it.isNotEmpty() && !it.startsWith("#") }.distinct()
+        urls.forEach {
+            CatalogLimits.field(it, CatalogLimits.MAX_URL, "Playlist URL")
+            requireRemoteUrl(it)
+        }
+        require(urls.size + current.count { it.isLocal } <= CatalogLimits.MAX_SOURCES) {
+            "At most ${CatalogLimits.MAX_SOURCES} playlists are supported"
+        }
+        val existing = remoteSources(current).associateBy { it.url }
+        val remote = urls.mapIndexed { index, url ->
+            existing[url] ?: PlaylistSource("pl_${java.util.UUID.randomUUID()}", url,
+                PlaylistNames.fromUrl(url, "Playlist ${index + 1}"))
+        }.iterator()
+        val result = buildList {
+            current.forEach { source ->
+                if (source.isLocal) add(source) else if (remote.hasNext()) add(remote.next())
+            }
+            while (remote.hasNext()) add(remote.next())
+        }
+        CatalogLimits.sources(result)
+        return result
+    }
+
     fun parseCachedPlaylist(body: String, source: String): List<Station> {
         CatalogLimits.sources(listOf(PlaylistSource("cached", source, "Cached")))
         require(!body.contains("#EXT-X-", ignoreCase = true)) { "Saved playlist is HLS" }
@@ -81,7 +106,7 @@ object PlaylistLibrary {
     /** User-entered URLs stay HTTPS-only, including in local debug builds. */
     fun requireRemoteUrl(url: String) {
         val uri = runCatching { java.net.URI(url) }.getOrNull()
-        require(uri?.scheme == "https" && !uri.host.isNullOrBlank() && uri.userInfo == null) {
+        require(uri?.scheme.equals("https", ignoreCase = true) && !uri?.host.isNullOrBlank() && uri?.userInfo == null) {
             "Enter a valid HTTPS playlist URL, then try again."
         }
     }
