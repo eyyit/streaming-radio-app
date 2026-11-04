@@ -9,9 +9,9 @@ Streaming Radio by **Impostor Labs** brings hosted M3U playlists, favorites, and
 ## What it does
 
 - **Bring your own playlist:** add hosted M3U URLs, preserve source order, refresh stations, and retain the last good copy if a refresh fails.
-- **Make it yours:** combine playlists, reorder stations and favorites, hide unwanted stations, and shuffle station navigation.
+- **Make it yours:** combine playlists, reorder stations and favorites, and hide unwanted stations.
 - **See what's playing:** station names stay distinct from artist/title metadata; bitrate and codec appear when available. Some streams do not send track metadata.
-- **Keep playback close:** a persistent transport bar supports the player and playlist views. App-owned controls and management screens are parked-only; the car's native media host handles driving playback.
+- **Keep playback close:** the car's native media host provides playback controls and browsing. Playlist management and other app-owned configuration screens are parked-only.
 - **Choose the look:** blue by default, with a range of accent themes and optional artwork lookup. Online artwork is enabled by default unless turned off in Settings.
 
 No station catalog is bundled. Screenshots and personal test libraries do not imply broadcaster affiliation or redistribution permission.
@@ -27,14 +27,14 @@ No station catalog is bundled. Screenshots and personal test libraries do not im
   <img src="docs/images/station-image-editor-mock.png" width="350" alt="Approved design mock: station image editor with fixed Save image action; not a current app screenshot">
 </p>
 
-**Emulator captures and an approved design mock, not Volvo photographs.** The pictured custom player is a parked app screen; Volvo controls its separate native media-player layout. The player, station-list and Settings images are actual app-content renders from an Android 13 / API33 emulator. The fourth image is the approved station-image editor mock, not a capture of the current app build. The emulator's system bars and bottom dock are excluded; real vehicle system UI and available app area vary. No Volvo system interface has been simulated or composited into the images.
+**Emulator captures and an approved design mock, not Volvo photographs.** The pictured custom player is a debug-only prototype excluded from retail release builds; Volvo controls the retail native media-player layout. These prototype captures do not promise that layout or controls on a production vehicle. The player, station-list and Settings images are actual app-content renders from an Android 13 / API33 emulator. The fourth image is the approved station-image editor mock, not a capture of the current app build. The emulator's system bars and bottom dock are excluded; real vehicle system UI and available app area vary. No Volvo system interface has been simulated or composited into the images.
 
 The six demo stations, icons, artist **Paper Satellites**, track **Midnight Colors**, album art and quiet synthetic audio are screenshot fixtures, not a bundled radio catalog or commercial recording. Online artwork is enabled for this demo and by default in release builds unless turned off in Settings. The [Favorites capture](docs/images/favorites.png) also shows the up/down ordering controls. A disabled up arrow on the first row prevents moving past the beginning of the list.
 
 ## Getting started
 
 1. Install through an available Android Automotive OS testing track. There is no public production release yet.
-2. While parked, select **Add a playlist** and enter a direct HTTPS URL to an M3U file. It should return playlist text, not a web page requiring sign-in.
+2. While parked, open **Settings → Manage playlists → Add playlist** and enter a direct HTTPS URL to an M3U file. It should return playlist text, not a web page requiring sign-in.
 3. Select a station, add favorites, and customize the theme if desired.
 
 Keep passwords and private tokens out of public playlist URLs. This app plays streams from their original hosts; access, regional availability, and content rights remain subject to those hosts and rights holders.

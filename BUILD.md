@@ -1,3 +1,10 @@
+## Linux Docker builds (preferred)
+
+Use [the Docker build guide](docs/DOCKER-BUILD.md) for a containerized Linux
+build with JDK17, SDK36, build-tools35.0.0, Node and PowerShell installed inside
+the image. Signing passwords can be supplied through private read-only files;
+no Windows SDK or repeated password prompt is needed after one-time setup.
+The existing Windows workflow remains available below.
 # Build the source candidate
 
 This is a reproducible-source starting point, not a signed or distribution-ready release. The checked-in Gradle wrapper declares Gradle 8.14.3. The project uses Android Gradle Plugin 8.13.2, Kotlin 2.2.21, JDK 17, and Android SDK platform 36. The wrapper downloads Gradle and dependencies, so building requires network access.
@@ -27,12 +34,6 @@ unsigned inspection. Do not put their values into shell history, source,
 build logs or the source archive. No production signing key is included.
 
 Shared verification (`node tools/verify-automotive.cjs`) additionally requires Node.js 24 and PowerShell 7 or newer (`pwsh` on PATH). Its developer-script tests use isolated fake ADB/Gradle processes; they do not contact a device.
-
-## Emulator-only install helper
-
-On Windows, `tools/install.ps1 -Automotive -Serial emulator-5580` uses the developer toolchain paths declared in the script. It refuses physical devices and requires the selected emulator to have Driver user10 current. Installation and launch explicitly target that serial and user10.
-
-Optional `tools/emulator-host-layout` helpers require an explicit `-AdbPath`. Wide-controls also requires an external `-OverlayApkPath` when installing its local resource overlay; that APK is not bundled here. These helpers are not required to build the app and do not represent the Volvo native player.
 
 ## Exported source bundle
 

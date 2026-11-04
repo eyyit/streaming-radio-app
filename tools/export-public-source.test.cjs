@@ -13,6 +13,9 @@ test('standalone source export has working privacy/docs links and can export its
   }
   run(path.resolve(__dirname,'..'),first);
   assert.ok(fs.existsSync(path.join(first,'docs/privacy.html')),'exported privacy page must exist');
+  for(const file of ['app/src/automotiveRelease/AndroidManifest.xml', 'docker/Dockerfile',
+    'docker/entrypoint.sh', 'tools/docker-build.sh', 'docs/DOCKER-BUILD.md'])
+    assert.ok(fs.existsSync(path.join(first,file)), `missing Docker/release input: ${file}`);
   const readme=fs.readFileSync(path.join(first,'README.md'),'utf8');
   const refs=[...readme.matchAll(/\[[^\]]*\]\(([^)]+)\)/g)].map(x=>x[1]);
   for(const ref of refs){

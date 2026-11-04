@@ -1,3 +1,22 @@
+# Current release candidate: version 7 / 0.3.0-rc5
+
+Native Settings now fills the available app area, with readable 26sp labels,
+equal minimum 80dp rows, scrolling and lifecycle cleanup. Retail release builds
+exclude the prototype player; playback and browsing use the vehicle media host.
+Artwork placement and control placement remain controlled by that host. Native
+shuffle is not implemented. System-wide startup audio distortion is unresolved.
+
+Linux Docker builds are documented in BUILD.md and docs/DOCKER-BUILD.md.
+Run tools/docker-build.sh verify for the shared local/CI checks, or signed-bundle
+for a signed candidate after private signing setup. Build helpers do not publish.
+Signing and Play credentials must remain outside the repository and image.
+
+Before this publication, all 68 tool tests, four JVM test variants, release lint,
+source inventory and dependency checks passed. Ten fresh Settings reviewers
+reported zero actionable issues. GitHub Actions must be checked on the uploaded
+commit; a local pass is not a hosted CI result. Internal testing is separate from
+production acceptance. Older notes below are historical where they conflict.
+
 # Candidate v6 publication preparation - 3 November 2026
 
 Current app sources match the 0.3.0-rc4/versionCode6 candidate. Online artwork now defaults on when no choice is saved; existing explicit opt-outs and hidden-track-art choices remain authoritative. All four JVM variants pass279 tests; release lint has0errors (134 automotive/110 phonewarnings). API33 native favorite action advertises a heart; artwork catalog selection/retry/caching and approved playlist/image-editor fixes are included. The custom parked UI does not replace the OEM native media host. Real-car system-wide audio distortion remains unresolved; public-release acceptance is blocked. No speculative audio-pipeline fix was made.

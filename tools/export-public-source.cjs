@@ -13,7 +13,7 @@ function addFile(rel,dest=rel){const src=inside(root,path.join(root,rel)),st=fs.
 function addTree(rel){const base=inside(root,path.join(root,rel));if(!fs.statSync(base).isDirectory())fail('missing allowed tree: '+rel);function walk(d){for(const e of fs.readdirSync(d,{withFileTypes:true}).sort((a,b)=>a.name.localeCompare(b.name))){const p=inside(root,path.join(d,e.name)),s=fs.lstatSync(p);if(s.isSymbolicLink())fail('symlink in allowed tree: '+path.relative(root,p));if(s.isDirectory())walk(p);else if(s.isFile())included.set(path.relative(root,p).replace(/\\/g,'/'),{source:p});else fail('unsupported file type in allowed tree')}}walk(base)}
 for(const f of ['.gitignore','LICENSE','THIRD-PARTY-NOTICES.md','gradlew','gradlew.bat','gradle.properties','settings.gradle.kts','build.gradle.kts','app/build.gradle.kts','gradle/wrapper/gradle-wrapper.jar','gradle/wrapper/gradle-wrapper.properties','tools/aaos-fixture-server.cjs'])addFile(f);
 for(const d of ['main','automotive','debug','test','androidTest'])addTree('app/src/'+d);
-if(fs.existsSync(path.join(root,'app/src/automotiveDebug')))addTree('app/src/automotiveDebug');
+for(const variant of ['automotiveDebug','automotiveRelease'])if(fs.existsSync(path.join(root,'app/src/'+variant)))addTree('app/src/'+variant);
 for(const f of ['README.md','BUILD.md','SECURITY.md','CHANGELOG.md']){addFile('docs/public/'+f,f);addFile('docs/public/'+f);}
 addFile('tools/export-public-source.cjs');
 addFile('AGENTS.md');
@@ -22,7 +22,7 @@ for(const f of ['tools/install-and-root-state.test.cjs','tools/install.ps1','too
 for(const f of ['tools/check-source-tree.test.cjs','tools/verify-automotive.cjs','tools/verify-automotive.test.cjs'])addFile(f);
 addFile('docs/DESIGN-SYSTEM.md');
 addFile('docs/privacy.html');
-addFile('tools/export-public-source.test.cjs');
+for(const f of ['docker/Dockerfile','docker/entrypoint.sh','docker/.dockerignore','tools/docker-build.sh','docs/DOCKER-BUILD.md','tools/export-public-source.test.cjs','tools/docker-build.test.cjs'])addFile(f);
 addFile('.cursor/rules/streaming-radio-design.mdc');
 for(const f of ['tools/check-dependencies.cjs','tools/check-dependencies.test.cjs','.github/workflows/android-ci.yml','.github/dependabot.yml'])addFile(f);
 const gh=spawnSync('git',['-C',root,'rev-parse','HEAD'],{encoding:'utf8',windowsHide:true});
@@ -61,5 +61,5 @@ if(found.length){for(const f of found)console.error('Potential '+f.name+' at '+f
 warnings.push('Secret-pattern scan is limited and is not a comprehensive secret, privacy, license, or security audit.');
 if(fs.existsSync(output)){const s=fs.lstatSync(output);if(s.isSymbolicLink()||!s.isDirectory())fail('destination is not a regular directory');if(fs.readdirSync(output).length)fail('destination is nonempty; move it aside manually before export')}else{let p=path.dirname(output);while(p!==path.dirname(p)&&!fs.existsSync(p))p=path.dirname(p);if(fs.existsSync(p)&&fs.realpathSync(p)!==p)fail('destination parent resolves through a symlink');fs.mkdirSync(output,{recursive:true})}
 const real=fs.realpathSync(output);if(real!==output)fail('destination resolves through symlink');const records=[];
-for(const [dest,item] of [...included].sort((a,b)=>a[0].localeCompare(b[0]))){const target=inside(real,path.join(real,dest));fs.mkdirSync(path.dirname(target),{recursive:true});const b=item.generated||fs.readFileSync(item.source);fs.writeFileSync(target,b,{flag:'wx'});if(dest==='gradlew')fs.chmodSync(target,0o755);records.push({path:dest,size:b.length,sha256:crypto.createHash('sha256').update(b).digest('hex')})}
+for(const [dest,item] of [...included].sort((a,b)=>a[0].localeCompare(b[0]))){const target=inside(real,path.join(real,dest));fs.mkdirSync(path.dirname(target),{recursive:true});const b=item.generated||fs.readFileSync(item.source);fs.writeFileSync(target,b,{flag:'wx'});if(['gradlew','tools/docker-build.sh','docker/entrypoint.sh'].includes(dest))fs.chmodSync(target,0o755);records.push({path:dest,size:b.length,sha256:crypto.createHash('sha256').update(b).digest('hex')})}
 const manifest={formatVersion:1,project:'Twinsen Radio independent source candidate',gitHead,workingTree,hashAlgorithm:'SHA-256',selfHashExcluded:true,manifestFilesExcludedFromIncludedFiles:['SOURCE-MANIFEST.json','SOURCE-MANIFEST.sha256'],includedFiles:records,warnings};const mb=Buffer.from(JSON.stringify(manifest,null,2)+'\n','utf8');fs.writeFileSync(path.join(real,'SOURCE-MANIFEST.json'),mb,{flag:'wx'});const mh=crypto.createHash('sha256').update(mb).digest('hex');fs.writeFileSync(path.join(real,'SOURCE-MANIFEST.sha256'),mh+'  SOURCE-MANIFEST.json\n',{flag:'wx'});console.log('Exported '+records.length+' allowlisted files. Manifest SHA-256: '+mh);for(const w of warnings)console.log('Warning: '+w);

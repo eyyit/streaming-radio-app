@@ -8,7 +8,8 @@ const TASKS = [':app:assembleAutomotiveDebugAndroidTest', ':app:testAutomotiveDe
   ':app:lintAutomotiveRelease', ':app:bundleAutomotiveRelease',
   ':app:writeAutomotiveReleaseInventory'];
 const SIGNING = ['STREAMING_RADIO_KEYSTORE', 'STREAMING_RADIO_STORE_FILE', 'STREAMING_RADIO_STORE_PASSWORD',
-  'STREAMING_RADIO_KEY_ALIAS', 'STREAMING_RADIO_KEY_PASSWORD'];
+  'STREAMING_RADIO_KEY_ALIAS', 'STREAMING_RADIO_KEY_PASSWORD',
+  'STREAMING_RADIO_STORE_PASSWORD_FILE', 'STREAMING_RADIO_KEY_PASSWORD_FILE'];
 class VerificationError extends Error { constructor(code) { super(code); this.code = code; } }
 function locateSdkManager(sdk, platform, env = process.env) {
   if (env.SDKMANAGER && fs.existsSync(env.SDKMANAGER)) return env.SDKMANAGER;
@@ -80,7 +81,7 @@ function sourceCheck(root, env) {
 function toolTests(root, env) {
   run(process.execPath, ['--test', ...['check-dependencies.test.cjs',
     'check-source-tree.test.cjs', 'verify-automotive.test.cjs',
-    'install-and-root-state.test.cjs', 'export-public-source.test.cjs'].map(x => path.join(root, 'tools', x))],
+    'install-and-root-state.test.cjs', 'export-public-source.test.cjs', 'docker-build.test.cjs'].map(x => path.join(root, 'tools', x))],
   root, env, 'TOOL_TESTS_FAILED');
 }
 function writeReceipt(root, data) {

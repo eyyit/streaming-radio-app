@@ -74,7 +74,9 @@ test('accepts complete SDK fixtures with Java 17', () => {
 test('strips only signing values from copied child environment', () => {
   const parent = { PATH: '/tools', JAVA_HOME: '/jdk', STREAMING_RADIO_KEYSTORE: '/key', STREAMING_RADIO_STORE_FILE: '/legacy-key',
     STREAMING_RADIO_STORE_PASSWORD: 'secret', STREAMING_RADIO_KEY_ALIAS: 'alias',
-    STREAMING_RADIO_KEY_PASSWORD: 'secret' }, child = cleanChildEnv(parent);
+    STREAMING_RADIO_KEY_PASSWORD: 'secret',
+    STREAMING_RADIO_STORE_PASSWORD_FILE: '/run/secrets/store-password',
+    STREAMING_RADIO_KEY_PASSWORD_FILE: '/run/secrets/key-password' }, child = cleanChildEnv(parent);
   assert.equal(child.PATH, '/tools'); assert.equal(child.JAVA_HOME, '/jdk');
   for (const key of Object.keys(parent).filter(x => x.startsWith('STREAMING_RADIO_')))
     assert.equal(key in child, false);
