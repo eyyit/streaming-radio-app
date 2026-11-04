@@ -1,7 +1,7 @@
 {
   "formatVersion": 1,
   "project": "Streaming Radio repository source inventory",
-  "gitHead": "9ed80853240bb76e1dbc0aea6e5dd24516ceda76",
+  "gitHead": "a7d9557643dbd4ecb77803a90bfef48952a9c896",
   "workingTree": "dirty",
   "hashAlgorithm": "SHA-256",
   "selfHashExcluded": true,
@@ -34,6 +34,41 @@
       "path": "AGENTS.md",
       "size": 3545,
       "sha256": "2ac7434e2982bfa531b0f9747fd1d283c09b0f2b7da085c170e5f80b00cab31c"
+    },
+    {
+      "path": "BUILD.md",
+      "size": 3176,
+      "sha256": "a3a3fb27cfdd0f46db7dedbd0591149153abdae439670c22106d468378adac2b"
+    },
+    {
+      "path": "CHANGELOG.md",
+      "size": 2306,
+      "sha256": "c2281a7d2799195c0bddffcfc9a01d1a011ea54d5bb3b7032d9e80027931dbd9"
+    },
+    {
+      "path": "LICENSE",
+      "size": 35149,
+      "sha256": "3972dc9744f6499f0f9b2dbf76696f2ae7ad8af9b23dde66d6af86c9dfb36986"
+    },
+    {
+      "path": "README.md",
+      "size": 7787,
+      "sha256": "297283723bfeb3338df20477483e13175855ae2c74daef9783f28cdaad964f1d"
+    },
+    {
+      "path": "SECURITY.md",
+      "size": 2440,
+      "sha256": "e04e5485f1c34360bde331b2ce2c8a4f5f3386bc3cd0b45a93f3ae308b137c3d"
+    },
+    {
+      "path": "THIRD-PARTY-NOTICES.md",
+      "size": 2789,
+      "sha256": "09dff8502117b64e36181cedf709cc3c585c47a34ae5f41e7219275081c63929"
+    },
+    {
+      "path": "UPSTREAM-README.md",
+      "size": 10980,
+      "sha256": "49a068ea5bfbaeadccb60cec50bf1b945b94e19a80740e6717b933ae078ca93c"
     },
     {
       "path": "app/build.gradle.kts",
@@ -241,6 +276,11 @@
       "sha256": "844c99b47c2a7368562abb0842153947a47bc2431ac9f66aa80342bef390f919"
     },
     {
+      "path": "app/src/main/java/net/mspanc/twinsenradio/ParkedUxPolicy.kt",
+      "size": 706,
+      "sha256": "2cc8e242ef7c5cc2119119f8b1e63262e238496f274cbfeadd3082a0abd3ff29"
+    },
+    {
       "path": "app/src/main/java/net/mspanc/twinsenradio/data/AppearanceTheme.kt",
       "size": 1356,
       "sha256": "4a81eca2bb7d86870eb364c836b09da4a9ad090963b49b323899bc87e727e6dc"
@@ -321,11 +361,6 @@
       "sha256": "deac45366f167bb38de3433b387465f7a31ba95774719f9760ab0c3b7fcd5268"
     },
     {
-      "path": "app/src/main/java/net/mspanc/twinsenradio/ParkedUxPolicy.kt",
-      "size": 706,
-      "sha256": "2cc8e242ef7c5cc2119119f8b1e63262e238496f274cbfeadd3082a0abd3ff29"
-    },
-    {
       "path": "app/src/main/java/net/mspanc/twinsenradio/playback/AlbumNames.kt",
       "size": 2720,
       "sha256": "db9355b076c5824a8c3a66fd3e640dfaa9e3d62fed870356b668cef8b04e4bc2"
@@ -372,8 +407,8 @@
     },
     {
       "path": "app/src/main/java/net/mspanc/twinsenradio/playback/CoverArtLookup.kt",
-      "size": 28890,
-      "sha256": "b061ac040315b930be4eca9388cc1705a447c86fce48b47732be74069b0ae562"
+      "size": 35785,
+      "sha256": "2cf6fd5295d8485453de51b81e3cacaf043712602a68b57ae3d7ab2165f4e034"
     },
     {
       "path": "app/src/main/java/net/mspanc/twinsenradio/playback/DiagnosticFields.kt",
@@ -661,24 +696,24 @@
       "sha256": "c756e651919c84a2432ceae0bb23a741b1e4458b6e73938399e8ef989d8596cc"
     },
     {
-      "path": "app/src/main/res/drawable/ic_star_filled_aa.xml",
-      "size": 420,
-      "sha256": "1763743533f91ace759c4713ea64afe0287d158212682dd2204ff8c72bd5bda7"
-    },
-    {
       "path": "app/src/main/res/drawable/ic_star_filled.xml",
       "size": 453,
       "sha256": "e53035df4aaa70a9e749e69c37ee98b22d47347f4389518c785e817106f35132"
     },
     {
-      "path": "app/src/main/res/drawable/ic_star_outline_aa.xml",
-      "size": 612,
-      "sha256": "2fcc6f46d3fc3abdc4080040c3ea9ea11cb5e0b1fca05f1bfa73ab66cff2f145"
+      "path": "app/src/main/res/drawable/ic_star_filled_aa.xml",
+      "size": 420,
+      "sha256": "1763743533f91ace759c4713ea64afe0287d158212682dd2204ff8c72bd5bda7"
     },
     {
       "path": "app/src/main/res/drawable/ic_star_outline.xml",
       "size": 635,
       "sha256": "4c46d17de8cfa95fed46e79c172c26aa23ce2ebe42cc9d90610bbc3f4b953584"
+    },
+    {
+      "path": "app/src/main/res/drawable/ic_star_outline_aa.xml",
+      "size": 612,
+      "sha256": "2fcc6f46d3fc3abdc4080040c3ea9ea11cb5e0b1fca05f1bfa73ab66cff2f145"
     },
     {
       "path": "app/src/main/res/drawable/ic_transport_next.xml",
@@ -776,6 +811,11 @@
       "sha256": "0b6e23c337b983034ff69d8823b0c26a4ccd10665889e36ab33c581cfbf772ad"
     },
     {
+      "path": "app/src/test/java/net/mspanc/twinsenradio/ParkedUxPolicyTest.kt",
+      "size": 2423,
+      "sha256": "ac8cc360c7542dab3a604a764c1fdb9a937aefe2aa7e7a1bb2c00386a87e4975"
+    },
+    {
       "path": "app/src/test/java/net/mspanc/twinsenradio/data/AppearanceThemeTest.kt",
       "size": 1439,
       "sha256": "4fb657e2f56cc20bcb1cb712ff3c755970e41550bebb6c584e9c622ee8046c4f"
@@ -841,11 +881,6 @@
       "sha256": "35229b60a83b51f5c598b2d007a65c18c5070ff6107a80e8a047e4eeb853df7e"
     },
     {
-      "path": "app/src/test/java/net/mspanc/twinsenradio/ParkedUxPolicyTest.kt",
-      "size": 2423,
-      "sha256": "ac8cc360c7542dab3a604a764c1fdb9a937aefe2aa7e7a1bb2c00386a87e4975"
-    },
-    {
       "path": "app/src/test/java/net/mspanc/twinsenradio/playback/AlbumNamesTest.kt",
       "size": 2568,
       "sha256": "a5e5c50f359854c96d54ab11b2c15499d2d76bebe95527e1a1e1ff9a28d3f9da"
@@ -882,8 +917,8 @@
     },
     {
       "path": "app/src/test/java/net/mspanc/twinsenradio/playback/CoverArtLookupAlternativeTest.kt",
-      "size": 13468,
-      "sha256": "8f462d1588f58c57dbfe558a6c75f9bfbb92e56a9dd85d9258f9f3a1cecb9e1c"
+      "size": 18499,
+      "sha256": "6280ea5818ed630baebc4913092c05cca39769329c77822fc9231f78f70ed0d7"
     },
     {
       "path": "app/src/test/java/net/mspanc/twinsenradio/playback/DiagnosticUrlsTest.kt",
@@ -986,16 +1021,6 @@
       "sha256": "5b59a737f79aff3069b158e3716c6c89df8d01d1f43a9b369058d20e564f4dce"
     },
     {
-      "path": "BUILD.md",
-      "size": 3176,
-      "sha256": "a3a3fb27cfdd0f46db7dedbd0591149153abdae439670c22106d468378adac2b"
-    },
-    {
-      "path": "CHANGELOG.md",
-      "size": 2306,
-      "sha256": "c2281a7d2799195c0bddffcfc9a01d1a011ea54d5bb3b7032d9e80027931dbd9"
-    },
-    {
       "path": "docker/.dockerignore",
       "size": 29,
       "sha256": "6b3387fe13e4fc8f566093049083faaae894ccc6cc207874fb82e50e5822cebb"
@@ -1071,29 +1096,9 @@
       "sha256": "94102713eb8fb22d032397924c0f38ab2da783ba60d07054339f1190a0c4e2cd"
     },
     {
-      "path": "LICENSE",
-      "size": 35149,
-      "sha256": "3972dc9744f6499f0f9b2dbf76696f2ae7ad8af9b23dde66d6af86c9dfb36986"
-    },
-    {
-      "path": "README.md",
-      "size": 7787,
-      "sha256": "297283723bfeb3338df20477483e13175855ae2c74daef9783f28cdaad964f1d"
-    },
-    {
-      "path": "SECURITY.md",
-      "size": 2440,
-      "sha256": "e04e5485f1c34360bde331b2ce2c8a4f5f3386bc3cd0b45a93f3ae308b137c3d"
-    },
-    {
       "path": "settings.gradle.kts",
       "size": 332,
       "sha256": "72e5c48872f0b6599006f797f93db6175c6e449ccd6645031df18868fca42ced"
-    },
-    {
-      "path": "THIRD-PARTY-NOTICES.md",
-      "size": 2789,
-      "sha256": "09dff8502117b64e36181cedf709cc3c585c47a34ae5f41e7219275081c63929"
     },
     {
       "path": "tools/aaos-fixture-server.cjs",
@@ -1169,14 +1174,9 @@
       "path": "tools/verify-automotive.test.cjs",
       "size": 6088,
       "sha256": "1f17d556430e7daf83a61248fedf567d4326f7179d633beccb7969664fa9f74a"
-    },
-    {
-      "path": "UPSTREAM-README.md",
-      "size": 10980,
-      "sha256": "49a068ea5bfbaeadccb60cec50bf1b945b94e19a80740e6717b933ae078ca93c"
     }
   ],
   "warnings": [
-    "Working tree is dirty; Git HEAD does not identify these file contents. Inventory hashes describe repository files; exported archives generate their own manifest."
+    "Inventory hashes describe staged candidate contents; HEAD identifies its parent. Exported archives generate their own manifest."
   ]
 }

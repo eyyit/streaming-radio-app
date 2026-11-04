@@ -287,4 +287,121 @@ class CoverArtLookupAlternativeTest {
         assertSame(candidate, CoverArtLookup.matchingAlternative(
             "POKER FACE", "LADY GAGA", candidate, emptySet()))
     }
+
+    @Test fun featuredArtistQuerySplitsCreditsAndKeepsTheExactTitle() {
+        assertEquals(listOf(
+            "artist:\"DR DRE Ft. SNOOP DOGG\" AND recording:\"Still D.r.e.\"",
+            "artist:\"DR DRE\" AND artist:\"SNOOP DOGG\" AND recording:\"Still D.r.e.\""
+        ), CatalogSearchTerms.musicBrainzQueries(
+            "DR DRE Ft. SNOOP DOGG", "Still D.r.e."
+        ))
+
+        val body = """{"recordings":[
+            {"title":"Still D.R.E.","artist-credit":[
+                {"name":"Dr. Dre","joinphrase":" feat. "},
+                {"name":"Snoop Dogg"}],"releases":[
+                {"id":"c5a0d02c-8bd9-46a5-8292-4c693a176207",
+                 "title":"Grammy Rap Nominees 2000"}]},
+            {"title":"Still D.R.E.","artist-credit":[
+                {"name":"Dr. Dre","joinphrase":" feat. "},
+                {"name":"Snoop Dogg"}],"releases":[
+                {"id":"53b7310c-2bf8-41b5-bdb4-0806e0c91bc6",
+                 "title":"2009-10-24: DJ Spinbad Live in Japan"}]}]}"""
+        val checked = mutableListOf<String>()
+        val result = ReleaseCatalog.select(
+            body, "DR DRE Ft. SNOOP DOGG", "Still D.r.e.", hasArtwork = {
+                checked += it
+                false
+            }
+        )
+        assertEquals(ReleaseCatalog.Result.NotFound, result)
+        assertEquals(listOf(ReleaseCatalog.releaseUrl(
+            "c5a0d02c-8bd9-46a5-8292-4c693a176207"
+        )), checked)
+    }
+
+    @Test fun featuredArtistStillRequiresEveryCreditedArtist() {
+        val body = """{"recordings":[{"title":"Still D.R.E.",
+            "artist-credit":[{"name":"Dr. Dre","joinphrase":" feat. "},
+            {"name":"Eminem"}],"releases":[{"id":"wrong"}]}]}"""
+        val checked = mutableListOf<String>()
+        assertEquals(ReleaseCatalog.Result.NotFound,
+            ReleaseCatalog.select(body, "DR DRE Ft. SNOOP DOGG", "Still D.r.e.") {
+                checked += it
+                true
+            })
+        assertTrue(checked.isEmpty())
+    }
+
+    @Test fun allClassicalComposerAndMovementVariantNormalizesWithoutClaimingArt() {
+        val artist = "Wagner, Richard"
+        val title = "The Flying Dutchman (Der Fliegende Hollander): Overture"
+        assertEquals(listOf(
+            "artist:\"Wagner, Richard\" AND recording:\"$title\"",
+            "artist:\"Richard Wagner\" AND recording:\"The Flying Dutchman: Overture\""
+        ), CatalogSearchTerms.musicBrainzQueries(artist, title))
+        assertTrue(CatalogSearchTerms.sameRecordingTitle(
+            title, "The Flying Dutchman Overture"
+        ))
+
+        val body = """{"recordings":[{"title":"The Flying Dutchman Overture",
+            "artist-credit":[{"name":"Richard Wagner"}],"releases":[
+            {"id":"b9332581-8716-4cff-8dfe-5b788b33ab72",
+             "title":"Aspects of Wagner"}]}]}"""
+        val checked = mutableListOf<String>()
+        assertEquals(ReleaseCatalog.Result.NotFound,
+            ReleaseCatalog.select(body, artist, title) {
+                checked += it
+                false
+            })
+        assertEquals(listOf(ReleaseCatalog.releaseUrl(
+            "b9332581-8716-4cff-8dfe-5b788b33ab72"
+        )), checked)
+    }
+
+    @Test fun twoSearchesShareTheEightArtworkProbeLimit() {
+        val recordings = (1..4).joinToString(",") { index ->
+            """{"title":"Bohemian Rhapsody","artist-credit":[{"name":"Queen"}],
+                "releases":[{"id":"r$index","release-group":{"id":"g$index"}}]}"""
+        }
+        val body = """{"recordings":[$recordings]}"""
+        val budget = ReleaseCatalog.ArtworkProbeBudget()
+        val checked = mutableListOf<String>()
+        repeat(2) {
+            assertEquals(ReleaseCatalog.Result.NotFound,
+                ReleaseCatalog.select(body, "Queen", "Bohemian Rhapsody",
+                    probeBudget = budget) {
+                    checked += it
+                    false
+                })
+        }
+        assertEquals(ReleaseCatalog.MAX_ARTWORK_PROBES, checked.size)
+    }
+
+    @Test fun matchingAlternativeAcceptsTheNormalizedAllClassicalRecording() {
+        val candidate = CoverArtLookup.TrackInfo(
+            artworkUrl = "https://art.example/wagner.jpg",
+            album = "Aspects of Wagner",
+            year = 1991,
+            isSingle = false,
+            durationMs = 635_600,
+            trackName = "The Flying Dutchman Overture",
+            artistName = "Richard Wagner"
+        )
+        val artist = "Wagner, Richard"
+        val title = "The Flying Dutchman (Der Fliegende Hollander): Overture"
+
+        assertSame(candidate, CoverArtLookup.matchingAlternative(
+            artist, title, candidate, emptySet()
+        ))
+        assertNull(CoverArtLookup.matchingAlternative(
+            artist, title, candidate.copy(artistName = "Carl Maria von Weber"), emptySet()
+        ))
+        assertNull(CoverArtLookup.matchingAlternative(
+            artist,
+            title,
+            candidate.copy(trackName = "The Flying Dutchman (Live): Overture"),
+            emptySet()
+        ))
+    }
 }

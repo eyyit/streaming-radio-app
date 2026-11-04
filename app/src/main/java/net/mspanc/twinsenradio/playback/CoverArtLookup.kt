@@ -59,24 +59,38 @@ internal object ReleaseCatalog {
         val artist: String?
     )
 
+    class ArtworkProbeBudget(maxProbes: Int = MAX_ARTWORK_PROBES) {
+        private val limit = maxProbes.coerceIn(0, MAX_ARTWORK_PROBES)
+        private var used = 0
+
+        @Synchronized
+        fun take(): Boolean {
+            if (used >= limit) return false
+            used++
+            return true
+        }
+
+        @Synchronized
+        fun exhausted(): Boolean = used >= limit
+    }
+
     fun select(
         body: String,
         artist: String,
         title: String,
         excluded: Set<String> = emptySet(),
+        probeBudget: ArtworkProbeBudget = ArtworkProbeBudget(),
         hasArtwork: (String) -> Boolean
     ): Result {
         val candidates = parse(body, artist, title)
         if (candidates.isEmpty()) return Result.NotFound
         var temporary = false
         var retryAfter: Long? = null
-        var probes = 0
 
         for (release in candidates) {
-            if (probes >= MAX_ARTWORK_PROBES) break
             val url = releaseUrl(release.id)
             if (url in excluded) continue
-            probes++
+            if (!probeBudget.take()) break
             try {
                 if (hasArtwork(url)) return Result.Found(release.toCandidate(url))
             } catch (error: java.util.concurrent.CancellationException) {
@@ -95,11 +109,10 @@ internal object ReleaseCatalog {
 
         val groups = candidates.mapNotNull { it.groupId }.distinct()
         for (group in groups) {
-            if (probes >= MAX_ARTWORK_PROBES) break
             val release = candidates.first { it.groupId == group }
             val url = groupUrl(group)
             if (url in excluded) continue
-            probes++
+            if (!probeBudget.take()) break
             try {
                 if (hasArtwork(url)) return Result.Found(release.toCandidate(url))
             } catch (error: java.util.concurrent.CancellationException) {
@@ -127,27 +140,39 @@ internal object ReleaseCatalog {
         for (index in 0 until minOf(recordings.length(), MAX_RECORDINGS)) {
             val recording = recordings.getJSONObject(index)
             val track = recording.optString("title").ifBlank { null }
-            val artistName = recording.optJSONArray("artist-credit")
-                ?.optJSONObject(0)?.optString("name")?.ifBlank { null }
+            val artistCredit = recording.optJSONArray("artist-credit")
+            val credits = (0 until (artistCredit?.length() ?: 0)).mapNotNull {
+                artistCredit?.optJSONObject(it)?.optString("name")?.ifBlank { null }
+            }
+            val artistName = credits.firstOrNull()
             val directArtist = TrackMatch.plausible(null, artist, null, artistName)
+            val sortedArtist = CatalogSearchTerms.sameArtist(artist, artistName) &&
+                CatalogSearchTerms.sameRecordingTitle(title, track)
             val swapped = TrackMatch.plausible(null, title, null, artistName) &&
                 TrackMatch.plausible(null, artist, null, track)
-            if ((!directArtist && !swapped) ||
-                !TrackMatch.plausible(artist, title, artistName, track)) continue
+            val featuredMatch = CatalogSearchTerms.matchesFeaturedRecording(
+                artist, title, credits, track
+            )
+            if ((!directArtist && !sortedArtist && !swapped && !featuredMatch) ||
+                (!TrackMatch.plausible(artist, title, artistName, track) &&
+                    !sortedArtist && !featuredMatch)) continue
             val releases = recording.optJSONArray("releases") ?: continue
             val candidates = mutableListOf<Release>()
             for (releaseIndex in 0 until minOf(releases.length(), MAX_RELEASE_CANDIDATES)) {
                 val release = releases.getJSONObject(releaseIndex)
                 val id = release.optString("id").ifBlank { null } ?: continue
+                val album = release.optString("title").ifBlank { null }
+                if (CatalogSearchTerms.hasFeaturedArtist(artist) &&
+                    CatalogSearchTerms.isLiveRelease(album)) continue
                 val group = release.optJSONObject("release-group")
                     ?.optString("id")?.ifBlank { null }
                 if (candidates.none { it.id == id }) candidates += Release(
                     id = id,
                     groupId = group,
-                    album = release.optString("title").ifBlank { null },
+                    album = album,
                     year = release.optString("date").take(4).toIntOrNull(),
                     track = track,
-                    artist = artistName
+                    artist = if (featuredMatch) credits.joinToString(" feat. ") else artistName
                 )
             }
             byRecording += candidates
@@ -172,6 +197,115 @@ internal object ReleaseCatalog {
         artistName = artist,
         artworkUrl = url
     )
+}
+
+/** Query and verify explicit featured credits without broadening TrackMatch. */
+internal object CatalogSearchTerms {
+    private val featuredMarker = Regex("""(?i)\b(?:feat(?:uring)?|ft)\.?\s""")
+    private val featuredSeparator = Regex(
+        """(?i)\s*\b(?:feat(?:uring)?|ft)\.?\s*"""
+    )
+    private val trailingFeaturedCredit = Regex(
+        """(?i)\s*(?:\(\s*|\[\s*)?(?:feat(?:uring)?|ft)\.?\s+[^)\]]*[)\]]?\s*$"""
+    )
+    private val translatedAliasBeforeMovement = Regex("""\s*\([^()]*\)(?=\s*:)""")
+    private val versionQualifier = Regex(
+        """(?i)\b(live|remaster(?:ed)?|radio edit|instrumental|mono|stereo|demo|alternate|mix|edit)\b"""
+    )
+    private val liveRelease = Regex("""(?i)\b(live|concert|tour|unplugged)\b""")
+    private val combiningMarks = Regex("""\p{Mn}""")
+    private val nonAlphanumeric = Regex("""[^a-z0-9]""")
+
+    fun musicBrainzQueries(artist: String, title: String): List<String> {
+        val primary = query(artist, title)
+        if (hasFeaturedArtist(artist)) {
+            val credits = splitFeaturedArtists(artist)
+            if (credits.size > 1) {
+                val artistTerms = credits.joinToString(" AND ") {
+                    "artist:\"${escapeLucene(it)}\""
+                }
+                return listOf(primary, "$artistTerms AND recording:\"${escapeLucene(title)}\"")
+            }
+        }
+
+        val reordered = reorderedCommaName(artist) ?: return listOf(primary)
+        if (normalize(reordered) == normalize(artist)) return listOf(primary)
+        val normalizedTitle = withoutTranslatedAlias(title)
+        val fallback = query(reordered, normalizedTitle)
+        return listOf(primary, fallback)
+    }
+
+    fun hasFeaturedArtist(value: String): Boolean = featuredMarker.containsMatchIn(value)
+
+    fun matchesFeaturedRecording(
+        queryArtist: String,
+        queryTitle: String,
+        creditedArtists: List<String>,
+        catalogTitle: String?
+    ): Boolean {
+        if (!hasFeaturedArtist(queryArtist) || creditedArtists.isEmpty()) return false
+        val queryCredits = splitFeaturedArtists(queryArtist).map(::normalize)
+        val catalogCredits = creditedArtists.map(::normalize)
+        return queryCredits.size > 1 && queryCredits.all { it in catalogCredits } &&
+            sameRecordingTitle(queryTitle, catalogTitle)
+    }
+
+    fun sameArtist(query: String?, catalog: String?): Boolean {
+        if (query.isNullOrBlank() || catalog.isNullOrBlank()) return false
+        val queryKey = normalize(query)
+        val catalogKey = normalize(catalog)
+        if (queryKey == catalogKey) return true
+        val reordered = reorderedCommaName(query) ?: return false
+        return normalize(reordered) == catalogKey
+    }
+
+    fun sameRecordingTitle(query: String?, catalog: String?): Boolean {
+        if (query.isNullOrBlank() || catalog.isNullOrBlank()) return false
+        val withoutFeature = trailingFeaturedCredit.replace(catalog, "").trim()
+        val queryVariants = titleVariants(query).map(::normalize)
+        val catalogVariants = titleVariants(withoutFeature).map(::normalize)
+        return queryVariants.any { it in catalogVariants }
+    }
+
+    fun isLiveRelease(title: String?): Boolean =
+        !title.isNullOrBlank() && liveRelease.containsMatchIn(title)
+
+    private fun splitFeaturedArtists(value: String): List<String> =
+        value.split(featuredSeparator).map(String::trim).filter(String::isNotEmpty)
+
+    private fun reorderedCommaName(value: String): String? {
+        val comma = value.indexOf(',')
+        if (comma <= 0 || comma != value.lastIndexOf(',')) return null
+        val family = value.substring(0, comma).trim()
+        val given = value.substring(comma + 1).trim()
+        if (family.isEmpty() || given.isEmpty()) return null
+        return "$given $family"
+    }
+
+    private fun titleVariants(value: String): List<String> = listOf(
+        value,
+        withoutTranslatedAlias(value)
+    ).distinct()
+
+    private fun withoutTranslatedAlias(value: String): String {
+        val match = translatedAliasBeforeMovement.find(value) ?: return value
+        if (versionQualifier.containsMatchIn(match.value)) return value
+        return value.removeRange(match.range).trim()
+    }
+
+    private fun query(artist: String, title: String): String =
+        "artist:\"${escapeLucene(artist)}\" AND recording:\"${escapeLucene(title)}\""
+
+    private fun normalize(value: String): String {
+        val flattened = value.lowercase(java.util.Locale.ROOT).replace('ł', 'l')
+        return java.text.Normalizer.normalize(flattened, java.text.Normalizer.Form.NFD)
+            .replace(combiningMarks, "")
+            .replace(nonAlphanumeric, "")
+    }
+
+    private fun escapeLucene(value: String): String = value
+        .replace("\\", "\\\\")
+        .replace("\"", "\\\"")
 }
 
 object CoverArtLookup {
@@ -460,7 +594,7 @@ object CoverArtLookup {
         found: TrackInfo,
         source: String
     ): TrackInfo? {
-        if (TrackMatch.plausible(artist, title, found.artistName, found.trackName)) return found
+        if (matchesCatalogTrack(artist, title, found.artistName, found.trackName)) return found
         if (net.mspanc.twinsenradio.BuildConfig.DEBUG) Log.i(TAG, "$source odpowiedzial o czym innym: '$artist - $title' -> '${found.artistName} - ${found.trackName}'")
         Trace.write("katalog-odrzucony") {
             put("zrodlo", source)
@@ -472,6 +606,15 @@ object CoverArtLookup {
         }
         return null
     }
+
+    private fun matchesCatalogTrack(
+        artist: String?,
+        title: String?,
+        catalogArtist: String?,
+        catalogTitle: String?
+    ): Boolean = TrackMatch.plausible(artist, title, catalogArtist, catalogTitle) ||
+        (CatalogSearchTerms.sameArtist(artist, catalogArtist) &&
+            CatalogSearchTerms.sameRecordingTitle(title, catalogTitle))
 
     /**
      * Fallback for tracks not found in iTunes. MusicBrainz is an open
@@ -508,7 +651,23 @@ object CoverArtLookup {
         title: String,
         excluded: Set<String> = emptySet()
     ): CatalogLookupResult {
-        val query = "artist:\"${escapeLucene(artist)}\" AND recording:\"${escapeLucene(title)}\""
+        val probeBudget = ReleaseCatalog.ArtworkProbeBudget()
+        for (query in CatalogSearchTerms.musicBrainzQueries(artist, title)) {
+            val result = queryMusicBrainzOnce(query, artist, title, excluded, probeBudget)
+            if (result !is CatalogLookupResult.NotFound || probeBudget.exhausted()) {
+                return result
+            }
+        }
+        return CatalogLookupResult.NotFound
+    }
+
+    private suspend fun queryMusicBrainzOnce(
+        query: String,
+        artist: String,
+        title: String,
+        excluded: Set<String>,
+        probeBudget: ReleaseCatalog.ArtworkProbeBudget
+    ): CatalogLookupResult {
         val url = "$MUSICBRAINZ?query=${URLEncoder.encode(query, "UTF-8")}&fmt=json&limit=${ReleaseCatalog.MAX_RECORDINGS}"
         if (!MusicBrainzGate.beforeRequest()) {
             return CatalogLookupResult.TemporaryFailure(
@@ -531,7 +690,7 @@ object CoverArtLookup {
         }
         MusicBrainzGate.succeeded()
         val selected = try {
-            ReleaseCatalog.select(body, artist, title, excluded) { imageUrl ->
+            ReleaseCatalog.select(body, artist, title, excluded, probeBudget) { imageUrl ->
                 net.mspanc.twinsenradio.net.SafeHttp.headExists(
                     imageUrl, MUSICBRAINZ_AGENT, 6_000
                 )
@@ -613,7 +772,7 @@ object CoverArtLookup {
         artist: String?, title: String?, found: TrackInfo, excluded: Set<String>
     ): TrackInfo? = found.takeIf {
         !it.artworkUrl.isNullOrBlank() && it.artworkUrl !in excluded &&
-            TrackMatch.plausible(artist, title, it.artistName, it.trackName)
+            matchesCatalogTrack(artist, title, it.artistName, it.trackName)
     }
 
     private suspend fun query(term: String, artist: String? = null, title: String? = null, excluded: Set<String> = emptySet()): TrackInfo? {
