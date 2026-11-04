@@ -1,8 +1,8 @@
 {
   "formatVersion": 1,
   "project": "Twinsen Radio independent source candidate",
-  "gitHead": null,
-  "workingTree": "unknown",
+  "gitHead": "89e7fb8c416efdfc3f3ada62881171db68e669d1",
+  "workingTree": "dirty",
   "hashAlgorithm": "SHA-256",
   "selfHashExcluded": true,
   "manifestFilesExcludedFromIncludedFiles": [
@@ -1144,6 +1144,106 @@
       "path": "docs/images/station-image-editor-mock.png",
       "size": 112231,
       "sha256": "bf6fc3e1382de07a150f2f8c0d753d026d72368390dba5229f577d2c33fd9442"
+    },
+    {
+      "path": ".claude/skills/driving-the-phone/SKILL.md",
+      "size": 6945,
+      "sha256": "ea3de8f5a0fde2ee8c0be382413198dccaaaa889becf8d258cb9991a1bb84216"
+    },
+    {
+      "path": "ARCHITECTURE.md",
+      "size": 18382,
+      "sha256": "e5eeeabeaa0c255b3bb84926943ab08a4e8319874f8798e9c2b4d6fbe4025541"
+    },
+    {
+      "path": "CLAUDE.md",
+      "size": 9871,
+      "sha256": "03d1cb637a18585fc1326ab04f6abcc40d82ad0f7f3a9c6b6b8e206d2fb28205"
+    },
+    {
+      "path": "FINDINGS.md",
+      "size": 40537,
+      "sha256": "d225212bd4913c815f187e97772b4d26bad54e5350a158db36d87e3883d0d5ec"
+    },
+    {
+      "path": "docs/screenshots/aid-artist-title.png",
+      "size": 599406,
+      "sha256": "8de44bb80445e293fff5033e94b415f5246e4e89df4d45e2476132bd2f6d66f5"
+    },
+    {
+      "path": "docs/screenshots/aid-clock-face.png",
+      "size": 433161,
+      "sha256": "7334ff0766e21fcc877a6ea0532d4db27db87ec7c3434e39cfc9199f8552dd9e"
+    },
+    {
+      "path": "docs/screenshots/aid-rmf-cover-art.png",
+      "size": 76697,
+      "sha256": "3b160a0214c61237c6de6256c88b3bd765980926fbd94081aa495b92cf602400"
+    },
+    {
+      "path": "tools/check-dp.ps1",
+      "size": 1398,
+      "sha256": "484af46ee25f6dcb988a90d3f5dd1324edf0e9bf6d8f4b501d1d524aaced5fd0"
+    },
+    {
+      "path": "tools/dhu-720p.ini",
+      "size": 715,
+      "sha256": "9e5777f9a34e0003127c6f3bc4c28d927e4058b1dccfa572bbcd394968cb044d"
+    },
+    {
+      "path": "tools/dhu-passat-composition.ini",
+      "size": 526,
+      "sha256": "83f957638a21e09f9eaff2fa05104bf83a039c51cb43495bcbd701aad43e6fcb"
+    },
+    {
+      "path": "tools/dhu-passat-discover-pro.ini",
+      "size": 2360,
+      "sha256": "31c185712a96ffa1c8e49103daf9089b101ac211bd8681c5acf1709f46d12f55"
+    },
+    {
+      "path": "tools/dhu-shot.ps1",
+      "size": 4111,
+      "sha256": "8f74b86e35d0e9e8d607d431164e7f10f0a874ef096f2350def542c5dc84d0e3"
+    },
+    {
+      "path": "tools/dhu.bat",
+      "size": 5148,
+      "sha256": "c9d2a32c5866dc4a1b25a5c95f32e01965e235a360ac0e39c846b1e31a29215d"
+    },
+    {
+      "path": "tools/install.ps1",
+      "size": 1629,
+      "sha256": "9d83f393cd527c01352c5f63479dbf1221c2b8c6445e2b95041d3e8979614db5"
+    },
+    {
+      "path": "tools/meta-log.bat",
+      "size": 744,
+      "sha256": "b431869c947463548400d05745244142e6cc0d6f2c352afbcfe001ae58ab5293"
+    },
+    {
+      "path": "tools/meta-watch.ps1",
+      "size": 5155,
+      "sha256": "99e328663fdb321d9c059daaa98c8b66db8018fee471b750fd1f977ba5bcfe69"
+    },
+    {
+      "path": "tools/phone.ps1",
+      "size": 2249,
+      "sha256": "1a7fa8c47fe47d741cbcc4ba51b51c664485ba7880d09b197e8985cc7f620762"
+    },
+    {
+      "path": "tools/pull-log.ps1",
+      "size": 1934,
+      "sha256": "781a44de0bfa1d7cde34699828ec62ac1ec77ea810895c79c44b0d2ca845c06f"
+    },
+    {
+      "path": "tools/pull-trace.ps1",
+      "size": 2030,
+      "sha256": "8b9bfa699a2ee701f8bac7fa2e3aac75771a26d372913a3cd81aff9a3d42ab03"
+    },
+    {
+      "path": "tools/run-dhu.ps1",
+      "size": 1143,
+      "sha256": "ffa2eb9c36684c6592d529996090652bf901cfa4c6ec01ff39bc60663fce2ca5"
     }
   ],
   "warnings": [
