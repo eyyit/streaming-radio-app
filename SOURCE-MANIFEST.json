@@ -1,7 +1,7 @@
 {
   "formatVersion": 1,
   "project": "Twinsen Radio independent source candidate",
-  "gitHead": "b20cc9a7873d6f7970340c100592bf9f0241fb7a",
+  "gitHead": "c44b0da2864ddfac311528bbe6166c1f70091058",
   "workingTree": "dirty",
   "hashAlgorithm": "SHA-256",
   "selfHashExcluded": true,
@@ -947,8 +947,8 @@
     },
     {
       "path": "docs/INTERNAL-TEST-CHECKS.md",
-      "size": 4162,
-      "sha256": "804cbb993384964ea39b443eabaeb8a5d8a04e6ca57473b50ece2fc5aeef8f24"
+      "size": 4172,
+      "sha256": "d3dca9faa87ea6b3aa0d34011d2957391a224fd258512213dd62c4d34f431aef"
     },
     {
       "path": "docs/privacy.html",
@@ -1042,8 +1042,8 @@
     },
     {
       "path": "docs/SCREENSHOTS.md",
-      "size": 1457,
-      "sha256": "e00b90b6a7fbf878529bd1c1d93f4ca622db153357587f0d6176248c3e43cd97"
+      "size": 1489,
+      "sha256": "9e715039171b28eee398e66fa44686157c4fb42e792de4978ab79f00fe76e2dc"
     },
     {
       "path": "tools/screenshot-fixtures/Make-Demo-Art.ps1",
