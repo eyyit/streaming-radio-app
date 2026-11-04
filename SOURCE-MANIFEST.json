@@ -1,7 +1,7 @@
 {
   "formatVersion": 1,
   "project": "Twinsen Radio independent source candidate",
-  "gitHead": "49a754c7b3f6a985426ab4bfcaf3e1b19065c7a6",
+  "gitHead": "9e85582419c889436c2980009b9ce3bba5d77890",
   "workingTree": "dirty",
   "hashAlgorithm": "SHA-256",
   "selfHashExcluded": true,
@@ -37,8 +37,8 @@
     },
     {
       "path": "app/src/androidTest/java/net/mspanc/twinsenradio/automotive/PrototypeSmokeInstrumentation.kt",
-      "size": 38224,
-      "sha256": "e80959db6c94b426c42f8778d54e09e93b185c16d9a5c680557898ef77e04ccd"
+      "size": 44070,
+      "sha256": "e91824f4cdc58d74fa7393dd3c72e45078485f58615e822e2204b68c77b7000b"
     },
     {
       "path": "app/src/automotive/AndroidManifest.xml",
@@ -1244,6 +1244,31 @@
       "path": "tools/run-dhu.ps1",
       "size": 1143,
       "sha256": "ffa2eb9c36684c6592d529996090652bf901cfa4c6ec01ff39bc60663fce2ca5"
+    },
+    {
+      "path": "app/src/androidTest/java/net/mspanc/twinsenradio/data/PlaylistRefreshCancellationRegression.kt",
+      "size": 5991,
+      "sha256": "727cc0ae09c1e3a6853be8c738b5cf216f25c73f24b634a1dc2f716d8d3ee2fa"
+    },
+    {
+      "path": "app/src/androidTest/java/net/mspanc/twinsenradio/playback/ArtworkFallbackRegression.kt",
+      "size": 2800,
+      "sha256": "26457236e478358962cbb24b09c2897a64bfb6b33e5902696f2db2f426e26b52"
+    },
+    {
+      "path": "app/src/androidTest/java/net/mspanc/twinsenradio/playback/BoundedArtworkRegression.kt",
+      "size": 1062,
+      "sha256": "3f173a6e1bc4741be65ca3ffaf1a3136bbefdf93fe832bfa5569dd34cb984a65"
+    },
+    {
+      "path": "app/src/androidTest/java/net/mspanc/twinsenradio/playback/NativeFavoriteIconRegression.kt",
+      "size": 2244,
+      "sha256": "728391a9bab5368641186f29c58ef58dc02d9fb868c8a7f807cd72e6f5721917"
+    },
+    {
+      "path": "app/src/androidTest/java/net/mspanc/twinsenradio/playback/ReconnectPauseRegression.kt",
+      "size": 2494,
+      "sha256": "1723b28e9eed950ed62df34933bdad9e144cfd0e930274d4e85ce7bfe753bcba"
     },
     {
       "path": "app/src/main/java/net/mspanc/twinsenradio/data/PlaylistNames.kt",

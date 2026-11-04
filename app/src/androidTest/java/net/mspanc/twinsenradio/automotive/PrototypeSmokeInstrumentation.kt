@@ -80,6 +80,35 @@ class PrototypeSmokeInstrumentation : Instrumentation() {
         URL("http://10.0.2.2:18765/stats").readText()).getInt("openedStreams")
 
     override fun onStart() {
+        if (mode == "native-favorite-icon") {
+            val result = runCatching { net.mspanc.twinsenradio.playback.NativeFavoriteIconRegression.run(this) }
+            finish(if (result.isSuccess) ActivityResult.OK else ActivityResult.FAIL, Bundle().apply {
+                putString("stream", result.exceptionOrNull()?.let(android.util.Log::getStackTraceString)
+                    ?: "PASS: Native favorite custom action advertises a heart")
+            })
+            return
+        }
+        if (mode == "artwork-fallback") {
+            val result = runCatching { net.mspanc.twinsenradio.playback.ArtworkFallbackRegression.run(this) }
+            finish(if (result.isSuccess) ActivityResult.OK else ActivityResult.FAIL, Bundle().apply {
+                putString("stream", result.exceptionOrNull()?.let(android.util.Log::getStackTraceString)
+                    ?: "PASS: Missing track art falls back to content station logo")
+            })
+            return
+        }
+        if (mode == "refresh-cancellation") {
+            val result = runCatching {
+                main { net.mspanc.twinsenradio.playback.ReconnectPauseRegression.run(targetContext) }
+                net.mspanc.twinsenradio.playback.BoundedArtworkRegression.run()
+                runBlocking { net.mspanc.twinsenradio.data.PlaylistRefreshCancellationRegression.run(targetContext) }
+            }
+            finish(if (result.isSuccess) ActivityResult.OK else ActivityResult.FAIL, Bundle().apply {
+                putString("stream", result.exceptionOrNull()?.let(android.util.Log::getStackTraceString)
+                    ?: "PASS: Isolated playlist refresh cancellation and retry regression")
+            })
+            return
+        }
+        main { net.mspanc.twinsenradio.playback.ReconnectPauseRegression.run(targetContext) }
         val prefs = Prefs(targetContext)
         val oldUrls = prefs.userM3uUrls
         val oldPresets = prefs.favourites
@@ -88,7 +117,22 @@ class PrototypeSmokeInstrumentation : Instrumentation() {
         val oldArtwork = prefs.onlineArtworkEnabled
         val repo = StationRepository.get(targetContext)
         val libraryPrefs = targetContext.getSharedPreferences("playlist_library", android.content.Context.MODE_PRIVATE)
-        val oldFavoriteOrder = libraryPrefs.getString("favorite_order", null)
+        val oldLibrary = libraryPrefs.all.toMap()
+        fun restoreLibrary() {
+            check(libraryPrefs.edit().clear().apply {
+                oldLibrary.forEach { (key, value) ->
+                    when (value) {
+                        is String -> putString(key, value)
+                        is Boolean -> putBoolean(key, value)
+                        is Int -> putInt(key, value)
+                        is Long -> putLong(key, value)
+                        is Float -> putFloat(key, value)
+                        is Set<*> -> putStringSet(key, value.filterIsInstance<String>().toSet())
+                        else -> error("Unsupported saved library preference: $key")
+                    }
+                }
+            }.commit()) { "Could not restore original playlist library" }
+        }
         val uiPrefs = targetContext.getSharedPreferences("streaming_radio_ui", android.content.Context.MODE_PRIVATE)
         val oldUiBrowse = uiPrefs.getString("browse", null)
         val oldUiMode = if (uiPrefs.contains("mode")) uiPrefs.getInt("mode", 0) else null
@@ -137,9 +181,10 @@ class PrototypeSmokeInstrumentation : Instrumentation() {
                     fun labels(view: android.view.View): List<android.widget.TextView> =
                         (if (view is android.widget.TextView) listOf(view) else emptyList()) +
                         (if (view is android.view.ViewGroup) (0 until view.childCount).flatMap { labels(view.getChildAt(it)) } else emptyList())
-                    val captions = setOf("Theme", "Manage playlists", "Automatic track and station artwork", "Animate artwork changes", "Station images", "Refresh playlists", "Privacy policy", "Open-source licenses")
+                    val captions = setOf("Theme", "Manage playlists", "Automatic track and station artwork", "Animate artwork changes", "Refresh playlists", "Privacy policy", "Open-source licenses")
                     val found = labels(content).filter { it.text.toString() in captions }
-                    checkThat("all eight Settings captions are present", found.size == 8)
+                    checkThat("all seven Settings captions are present", found.size == 7)
+                    checkThat("Settings omits station images entry", labels(content).none { it.text.toString() == "Station images" })
                     checkThat("all Settings captions retain 22sp typography", found.all { kotlin.math.abs(it.textSize / targetContext.resources.displayMetrics.scaledDensity - 22f) < 0.1f })
                     checkThat("all Settings captions use regular font weight", found.all { it.typeface.weight == 400 })
                     checkThat("all Settings rows remain 56dp high", found.all { kotlin.math.abs(it.height / targetContext.resources.displayMetrics.density - 56f) < 0.1f })
@@ -168,6 +213,24 @@ class PrototypeSmokeInstrumentation : Instrumentation() {
                         val folder = java.io.File(targetContext.filesDir, "screenshots").apply { mkdirs() }
                         java.io.FileOutputStream(java.io.File(folder, "settings-corrected.png")).use { check(bitmap.compress(Bitmap.CompressFormat.PNG, 100, it)) }
                     } finally { bitmap.recycle() }
+                }
+                main {
+                    val manager = ImpostorPlayerActivity::class.java.getDeclaredField("management")
+                        .apply { isAccessible = true }.get(testActivity) as RadioManagement
+                    manager.playlists()
+                }
+                waitForIdleSync()
+                main {
+                    val content = testActivity!!.findViewById<android.view.View>(android.R.id.content)
+                    fun visibleLabels(view: android.view.View): List<android.widget.TextView> =
+                        (if (view is android.widget.TextView && view.isShown) listOf(view) else emptyList()) +
+                        (if (view is android.view.ViewGroup) (0 until view.childCount).flatMap { visibleLabels(view.getChildAt(it)) } else emptyList())
+                    val labels = visibleLabels(content)
+                    checkThat("Manage playlists uses Done instead of Back", labels.any { it.text.toString() == "Done" } && labels.none { it.text.toString() == "Back" })
+                    val done = labels.single { it.text.toString() == "Done" }
+                    val theme = net.mspanc.twinsenradio.data.AppearanceTheme.current(targetContext)
+                    val surface = (done.background as android.graphics.drawable.RippleDrawable).getDrawable(0) as android.graphics.drawable.GradientDrawable
+                    checkThat("Manage playlists Done uses theme accent and on-accent text", surface.color?.defaultColor == theme.accent && done.currentTextColor == theme.onAccent)
                 }
             } else if (mode == "screenshots") {
                 val playlistUrl = "https://screenshots.example/playlist.m3u"
@@ -405,7 +468,8 @@ class PrototypeSmokeInstrumentation : Instrumentation() {
                     .buildAsync()
             }
             browser = future.get(30, TimeUnit.SECONDS)
-            checkThat("native root has four browse folders", children(RadioService.NODE_ROOT).size == 4)
+            val rootCount = if (net.mspanc.twinsenradio.BuildConfig.IS_AUTOMOTIVE) 3 else 4
+            checkThat("native root has $rootCount browse folders", children(RadioService.NODE_ROOT).size == rootCount)
             val hosted = children(RadioService.NODE_ALL, count = expectedCount)
             checkThat("native browse exposes all saved stations", hosted.size == expectedCount)
             checkThat("pagination preserves hosted order", children(RadioService.NODE_ALL, 1, 5).map { it.mediaId } == hosted.drop(5).take(5).map { it.mediaId })
@@ -422,8 +486,15 @@ class PrototypeSmokeInstrumentation : Instrumentation() {
             main { browser.pause() }
 
             control("normal")
-            prefs.userM3uUrls = listOf("http://10.0.2.2:18765/list.m3u")
-            if (mode != "offline") runBlocking { repo.refreshUserLists(force = true) }
+            // Test-only canonical fixture injection; the public URL editor remains HTTPS-only.
+            check(net.mspanc.twinsenradio.BuildConfig.DEBUG) { "HTTP fixture requires a debug build" }
+            val fixtureUrl = "http://10.0.2.2:18765/list.m3u"
+            val fixtureSources = org.json.JSONArray().put(org.json.JSONObject()
+                .put("id", "instrumentation-fixture").put("url", fixtureUrl)
+                .put("name", "Fixture").put("count", 0))
+            check(libraryPrefs.edit().putString("sources", fixtureSources.toString())
+                .remove("all_order").remove("favorite_order").commit())
+            runBlocking { repo.refreshUserLists(force = true) }
             val first = repo.all()
             checkThat("section headings and explicit groups parsed", first.map { it.genre } == listOf("Jazz", "Jazz", "World"))
             prefs.favourites = setOf(first[0].id, first[2].id)
@@ -513,7 +584,7 @@ class PrototypeSmokeInstrumentation : Instrumentation() {
                 if (fixtureMode || mode == "artwork-audio") browser.pause()
                 browser.release()
             }
-            if (changesPreferences) {
+            if (changesPreferences) try {
             prefs.userM3uUrls = oldUrls
             prefs.favourites = oldPresets
             prefs.presetOrder = oldOrder
@@ -525,14 +596,30 @@ class PrototypeSmokeInstrumentation : Instrumentation() {
                 .edit().putString("user_m3u", oldUrls.joinToString("\n")).commit()) {
                 "Could not persist restored playlist configuration"
             }
-            check(libraryPrefs.edit().apply {
-                if (oldFavoriteOrder == null) remove("favorite_order") else putString("favorite_order", oldFavoriteOrder)
-            }.commit()) { "Could not persist restored Favorites order" }
+            restoreLibrary()
             check(uiPrefs.edit().apply {
                 if (oldUiBrowse == null) remove("browse") else putString("browse", oldUiBrowse)
                 if (oldUiMode == null) remove("mode") else putInt("mode", oldUiMode)
             }.commit()) { "Could not persist restored player view" }
-            if (fixtureMode) runBlocking { repo.refreshUserLists(force = true) }
+            // Reload the original sources, then restore the exact registry and order bytes
+            // again: repository refresh may update IDs, snapshots, or order metadata.
+            try {
+                if (fixtureMode) runBlocking { repo.refreshUserLists(force = true) }
+            } finally {
+                restoreLibrary()
+            }
+            check(libraryPrefs.all == oldLibrary) { "Original playlist registry and orders were not restored" }
+            check(prefs.userM3uUrls == oldUrls && prefs.favourites == oldPresets &&
+                prefs.presetOrder == oldOrder && prefs.activeBrowseParent == oldParent &&
+                prefs.onlineArtworkEnabled == oldArtwork) { "Original radio preferences were not restored" }
+            check(uiPrefs.getString("browse", null) == oldUiBrowse &&
+                (if (uiPrefs.contains("mode")) uiPrefs.getInt("mode", 0) else null) == oldUiMode) {
+                "Original player view was not restored"
+            }
+            resultText += "PASS: Original playlist and player preferences restored\n"
+            } catch (failure: Throwable) {
+                outcome = ActivityResult.FAIL
+                resultText += "\nFAIL: Preference restoration: " + android.util.Log.getStackTraceString(failure)
             }
         }
         finish(outcome, Bundle().apply { putString("stream", resultText) })
