@@ -1,3 +1,39 @@
+# Version 8 candidate - approved UI; verification/publication in progress
+
+User approved S8 revision 2 / P8 revision 3 and authorized rebuild, GitHub push,
+and AAOS internal publication ONLY after hosted Actions passes. Production and
+physical vehicle operations are not authorized. Source version is8/0.3.0-rc6.
+The new native Settings sizing and right-centered larger row actions are now
+implemented, alongside the local metadata/artwork/session fixes below. New
+layout has not yet been verified installed. Final independent review and CI
+are pending; do not claim release completion from this preparation note.
+
+# Local follow-up fixes - UI approval and publication review pending
+
+Released GitHub and Play version 7 are unchanged. New working source is local
+and uncommitted: two native browse tabs, native shuffle/artwork actions, trusted
+artwork capability with untrusted denial, single technical metadata line, bounded
+MusicBrainz normalization and shared final match guards. Full Docker verification
+passed all four JVM variants, release lints, inventory/dependencies and 68 tool
+tests. Classical matching and metadata regressions have failing-before evidence.
+No guaranteed catalog artwork or physical vehicle acceptance is claimed.
+
+S8 revision 2 and P8 revision 3 are approval mocks only: larger Settings text,
+wide blue/white toggle, and larger right-side station actions centered vertically.
+The user's latest answer is SHOW MOCKS FIRST. No visual layout code was changed.
+Do not treat the earlier 'looks good' as approval of these final revised mocks.
+
+The image picker must NOT gain a URL input. M3U tvg-logo is already parsed and
+used among logo candidates. Keep directory search free; no paid/Google image API.
+The 512px station-logo minimum was discussed but not changed. Draft playlist
+instructions/template are in docs/PLAYLIST-GUIDE.md and docs/examples/.
+An in-app guide entry is proposed, not implemented. Template links are placeholders,
+not playable stations or a bundled catalog.
+
+Working versionCode remains 7: bump for a future upload. Fresh full independent
+review is still required after UI scope settles, before another publication.
+Older notes below are historical where they conflict.
+
 # Current release candidate: version 7 / 0.3.0-rc5
 
 Native Settings now fills the available app area, with readable 26sp labels,

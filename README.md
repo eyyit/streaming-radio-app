@@ -9,7 +9,7 @@ Streaming Radio by **Impostor Labs** brings hosted M3U playlists, favorites, and
 ## What it does
 
 - **Bring your own playlist:** add hosted M3U URLs, preserve source order, refresh stations, and retain the last good copy if a refresh fails.
-- **Make it yours:** combine playlists, reorder stations and favorites, and hide unwanted stations.
+- **Make it yours:** combine playlists, reorder stations and favorites, hide unwanted stations, and shuffle station navigation through the native player's available actions.
 - **See what's playing:** station names stay distinct from artist/title metadata; bitrate and codec appear when available. Some streams do not send track metadata.
 - **Keep playback close:** the car's native media host provides playback controls and browsing. Playlist management and other app-owned configuration screens are parked-only.
 - **Choose the look:** blue by default, with a range of accent themes and optional artwork lookup. Online artwork is enabled by default unless turned off in Settings.
@@ -27,11 +27,13 @@ No station catalog is bundled. Screenshots and personal test libraries do not im
   <img src="docs/images/station-image-editor-mock.png" width="350" alt="Approved design mock: station image editor with fixed Save image action; not a current app screenshot">
 </p>
 
-**Emulator captures and an approved design mock, not Volvo photographs.** The pictured custom player is a debug-only prototype excluded from retail release builds; Volvo controls the retail native media-player layout. These prototype captures do not promise that layout or controls on a production vehicle. The player, station-list and Settings images are actual app-content renders from an Android 13 / API33 emulator. The fourth image is the approved station-image editor mock, not a capture of the current app build. The emulator's system bars and bottom dock are excluded; real vehicle system UI and available app area vary. No Volvo system interface has been simulated or composited into the images.
+**Emulator captures and an approved design mock, not Volvo photographs.** The pictured custom player is a debug-only prototype excluded from retail release builds; Volvo controls the retail native media-player layout. These prototype captures do not promise that layout or controls on a production vehicle. The player, station-list and Settings images are earlier app-content renders from an Android 13 / API33 emulator; the current release has larger native Settings controls. The fourth image is the approved station-image editor mock, not a capture of the current app build. The emulator's system bars and bottom dock are excluded; real vehicle system UI and available app area vary. No Volvo system interface has been simulated or composited into the images.
 
 The six demo stations, icons, artist **Paper Satellites**, track **Midnight Colors**, album art and quiet synthetic audio are screenshot fixtures, not a bundled radio catalog or commercial recording. Online artwork is enabled for this demo and by default in release builds unless turned off in Settings. The [Favorites capture](docs/images/favorites.png) also shows the up/down ordering controls. A disabled up arrow on the first row prevents moving past the beginning of the list.
 
 ## Getting started
+
+New to M3U files? See the [playlist guide](docs/PLAYLIST-GUIDE.md) and its downloadable template.
 
 1. Install through an available Android Automotive OS testing track. There is no public production release yet.
 2. While parked, open **Settings → Manage playlists → Add playlist** and enter a direct HTTPS URL to an M3U file. It should return playlist text, not a web page requiring sign-in.
@@ -74,7 +76,7 @@ Evidence is saved at `app/build/reports/verification/verification.json`, includi
 
 ## Testing and release status
 
-Current source candidate: **0.3.0-rc4**, version code **6**, package `com.impostorlabs.streamingradio`. Native media favorite actions now advertise hearts; playlist naming, management and station-image editing use the approved UX. Artwork lookup checks bounded matching releases, distinguishes unavailable services from missing covers, and respects retry delays. Android 13 / API 33 is the development vehicle OS level. System-wide audio distortion was reported during real-car testing and remains under investigation; this candidate does not claim to fix it. Public-release acceptance remains blocked. Passing tests is not vehicle certification or Play approval.
+Current source candidate: **0.3.0-rc6**, version code **8**, package `com.impostorlabs.streamingradio`. Native media favorite actions now advertise hearts; playlist naming, management and station-image editing use the approved UX. Artwork lookup checks bounded matching releases, distinguishes unavailable services from missing covers, and respects retry delays. Android 13 / API 33 is the development vehicle OS level. System-wide audio distortion was reported during real-car testing and remains under investigation; this candidate does not claim to fix it. Public-release acceptance remains blocked. Passing tests is not vehicle certification or Play approval.
 
 GitHub Actions builds unsigned candidates, runs unit tests and lint, and checks the resolved dependency inventory against OSV. Dependabot proposes dependency updates; updates and releases still need review. No automatic Play deployment or automatic merging is configured.
 

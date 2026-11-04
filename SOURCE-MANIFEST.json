@@ -1,7 +1,7 @@
 {
   "formatVersion": 1,
   "project": "Streaming Radio repository source inventory",
-  "gitHead": "e4a60fbb53e98562772b5314b4543fcc50dca6d6",
+  "gitHead": "3c57676dacd177978d748cc26d3359fa865b8963",
   "workingTree": "dirty",
   "hashAlgorithm": "SHA-256",
   "selfHashExcluded": true,
@@ -32,8 +32,8 @@
     },
     {
       "path": "AGENTS.md",
-      "size": 3545,
-      "sha256": "2ac7434e2982bfa531b0f9747fd1d283c09b0f2b7da085c170e5f80b00cab31c"
+      "size": 3901,
+      "sha256": "f36d409534859ef724dafc66eefa425de1a80accff16215af14512bea6e33b55"
     },
     {
       "path": "BUILD.md",
@@ -52,8 +52,8 @@
     },
     {
       "path": "README.md",
-      "size": 7787,
-      "sha256": "297283723bfeb3338df20477483e13175855ae2c74daef9783f28cdaad964f1d"
+      "size": 8018,
+      "sha256": "e95199131ccf64d0a723815bed0bdfbf639b490324418417b0f3b1702a54b6d4"
     },
     {
       "path": "SECURITY.md",
@@ -73,7 +73,7 @@
     {
       "path": "app/build.gradle.kts",
       "size": 6236,
-      "sha256": "a26c71bd6d434319dbf6be10a9c0e99291733de9b3b8c06015dc57d0f229bd44"
+      "sha256": "0266c59a2895cf0d6a0e72ba4d1f41fc7e644214c84f8f9a268a56a8f6b4bad6"
     },
     {
       "path": "app/src/androidTest/java/net/mspanc/twinsenradio/automotive/PrototypeSmokeInstrumentation.kt",
@@ -137,8 +137,8 @@
     },
     {
       "path": "app/src/automotive/java/net/mspanc/twinsenradio/automotive/RadioManagement.kt",
-      "size": 27982,
-      "sha256": "a21012ae7dd387a633659fd3acb6b52029adb5f5bc45fdd0d42f968bef59cd41"
+      "size": 29273,
+      "sha256": "d5a52ebae18e692126c98b7f5b6668d1babd861bbcd59586785bd146e77e2c50"
     },
     {
       "path": "app/src/automotive/java/net/mspanc/twinsenradio/automotive/StationImageDialog.kt",
@@ -1057,13 +1057,23 @@
     },
     {
       "path": "docs/DESIGN-SYSTEM.md",
-      "size": 12388,
-      "sha256": "361e6695e10035a6c01329ef2260ba2ed691f43595c01ba4be0dbfe7526f9102"
+      "size": 13376,
+      "sha256": "87eb81e6a007c4209e353238012b50dcc0a4f1b326e820c714f960f7d474a56d"
     },
     {
       "path": "docs/DOCKER-BUILD.md",
       "size": 4130,
       "sha256": "2a4f201ee2b10807966f6c626da7cc05d029b462a442ecfe1ed1f195227a637e"
+    },
+    {
+      "path": "docs/PLAYLIST-GUIDE.md",
+      "size": 3040,
+      "sha256": "d13e42169d3453cade904a621cc8d44947f702a9c339e5959a8d97540c4a235a"
+    },
+    {
+      "path": "docs/examples/playlist-template.m3u",
+      "size": 250,
+      "sha256": "7fe87d6621ed1ab7a7642ede17539788b70e1b1160b80130e551adf7582267ca"
     },
     {
       "path": "docs/privacy.html",

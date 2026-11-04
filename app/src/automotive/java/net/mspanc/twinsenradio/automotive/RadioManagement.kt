@@ -41,7 +41,7 @@ class RadioManagement(
  private fun settingsRowHeightDp(fullArea:Boolean):Int {
   if(!fullArea) return AutomotiveDesign.SETTINGS_ROW_HEIGHT_DP
   val fontScale=activity.resources.configuration.fontScale
-  return ceil(80f*fontScale).toInt().coerceAtLeast(80)
+  return ceil(112f*fontScale).toInt().coerceAtLeast(112)
  }
  private fun rounded(color:Int,radius:Int=18)=GradientDrawable().apply { setColor(color); cornerRadius=dp(radius).toFloat() }
  private fun text(value:String,size:Float=18f,color:Int=AutomotiveDesign.TEXT)=TextView(activity).apply {
@@ -101,8 +101,10 @@ class RadioManagement(
   }
   root.addView(panel,LinearLayout.LayoutParams(-1,-1))
   val header=LinearLayout(activity).apply { gravity=Gravity.CENTER_VERTICAL }
-  header.addView(text(title,30f).apply { setTypeface(null,Typeface.BOLD); maxLines=1; ellipsize=android.text.TextUtils.TruncateAt.END },LinearLayout.LayoutParams(0,dp(60),1f))
-  header.addView(button(done) { dialog.dismiss() },LinearLayout.LayoutParams(-2,dp(52)))
+  header.addView(text(title,if(settingsLayout)36f else 30f).apply { setTypeface(null,Typeface.BOLD); maxLines=1; ellipsize=android.text.TextUtils.TruncateAt.END },LinearLayout.LayoutParams(0,dp(if(settingsLayout)80 else 60),1f))
+  header.addView(button(done) { dialog.dismiss() }.apply {
+   if(settingsLayout) { textSize=28f; minHeight=dp(72); setPadding(dp(24),dp(8),dp(24),dp(8)) }
+  },LinearLayout.LayoutParams(-2,dp(if(settingsLayout)72 else 52)))
   panel.addView(header)
   val body=column()
   val content:View=if(scroll) ScrollView(activity).apply { isFillViewport=settingsLayout; clipToPadding=false; addView(body) } else body
@@ -137,7 +139,7 @@ class RadioManagement(
     }
     val row=TextView(activity).apply {
      text=caption
-     textSize=26f
+     textSize=36f
      setTextColor(AutomotiveDesign.TEXT)
      typeface=Typeface.create(AutomotiveDesign.SETTINGS_FONT_FAMILY,Typeface.NORMAL)
      gravity=Gravity.CENTER_VERTICAL
@@ -167,22 +169,44 @@ class RadioManagement(
       setPadding(dp(12),0,dp(16),0)
      }
     }
-    row.addView(text(caption,if(fullArea)26f else AutomotiveDesign.SETTINGS_LABEL_SP).apply {
+    row.addView(text(caption,if(fullArea)36f else AutomotiveDesign.SETTINGS_LABEL_SP).apply {
      gravity=Gravity.CENTER_VERTICAL
      typeface=Typeface.create(AutomotiveDesign.SETTINGS_FONT_FAMILY,Typeface.NORMAL)
      maxLines=if(fullArea)2 else 1
     },LinearLayout.LayoutParams(0,dp(settingsRowHeightDp(fullArea)),1f).apply {
      if(fullArea) marginStart=dp(12)
     })
-    row.addView(Switch(activity).apply {
+    val toggle=Switch(activity).apply {
      contentDescription=caption
      isChecked=value
-     val states=arrayOf(intArrayOf(android.R.attr.state_checked),intArrayOf())
-     thumbTintList=if(fullArea) ColorStateList(states,intArrayOf(Color.WHITE,AutomotiveDesign.MUTED)) else ColorStateList.valueOf(coral)
-     if(fullArea) trackTintList=ColorStateList(states,intArrayOf(coral,AutomotiveDesign.BORDER))
-     minHeight=dp(AutomotiveDesign.SETTINGS_SWITCH_HEIGHT_DP)
+     if(fullArea) {
+      val thumbShape=GradientDrawable().apply {
+       shape=GradientDrawable.OVAL
+       setColor(Color.WHITE)
+       setSize(dp(44),dp(44))
+      }
+      thumbDrawable=android.graphics.drawable.InsetDrawable(thumbShape,dp(5))
+      thumbTintList=ColorStateList.valueOf(Color.WHITE)
+      val trackShape=GradientDrawable().apply {
+       cornerRadius=dp(27).toFloat()
+       setColor(Color.WHITE)
+       setSize(dp(108),dp(54))
+      }
+      trackDrawable=trackShape
+      val states=arrayOf(intArrayOf(android.R.attr.state_checked),intArrayOf())
+      trackTintList=ColorStateList(states,intArrayOf(coral,AutomotiveDesign.CONTROL))
+      switchMinWidth=dp(108)
+      gravity=Gravity.CENTER_VERTICAL
+      minHeight=dp(72)
+      showText=false
+      splitTrack=false
+     } else {
+      thumbTintList=ColorStateList.valueOf(coral)
+      minHeight=dp(AutomotiveDesign.SETTINGS_SWITCH_HEIGHT_DP)
+     }
      setOnCheckedChangeListener { _,enabled -> action(enabled); changed() }
-    },LinearLayout.LayoutParams(-2,dp(AutomotiveDesign.SETTINGS_SWITCH_HEIGHT_DP)).apply {
+    }
+    row.addView(toggle,LinearLayout.LayoutParams(if(fullArea)dp(108) else -2,dp(if(fullArea)72 else AutomotiveDesign.SETTINGS_SWITCH_HEIGHT_DP)).apply {
      if(fullArea) { marginStart=dp(8); marginEnd=dp(8) }
     })
     if(fullArea) addSettingsRow(parent,row,settingsRowHeightDp(fullArea))
@@ -275,29 +299,37 @@ class RadioManagement(
     val row=LinearLayout(activity).apply { gravity=Gravity.CENTER_VERTICAL; background=rounded(AutomotiveDesign.CONTROL); setPadding(dp(8),dp(8),dp(8),dp(8)) }
     val logo=stationLogo(station,screen)
     row.addView(logo,LinearLayout.LayoutParams(dp(112),dp(112)).apply { marginEnd=dp(12) })
-    val details=FrameLayout(activity)
+    val details=LinearLayout(activity).apply { gravity=Gravity.CENTER_VERTICAL }
     row.addView(details,LinearLayout.LayoutParams(0,dp(112),1f))
     val captions=column()
-    details.addView(captions,FrameLayout.LayoutParams(-1,-1))
-    val stationName=text(station.name,23f).apply { setTypeface(null,Typeface.BOLD); maxLines=1; ellipsize=android.text.TextUtils.TruncateAt.END; setPadding(dp(8),0,dp(112),0) }
+    details.addView(captions,LinearLayout.LayoutParams(0,-1,1f))
+    val stationName=text(station.name,23f).apply { setTypeface(null,Typeface.BOLD); maxLines=1; ellipsize=android.text.TextUtils.TruncateAt.END; setPadding(dp(8),0,dp(8),0) }
     if(play!=null) stationName.setOnClickListener { play.invoke(station,"/playlist/$id") }
     captions.addView(stationName,LinearLayout.LayoutParams(-1,dp(32)))
     captions.addView(text(StationText.subtitle(station),16f,muted).apply { maxLines=1; ellipsize=android.text.TextUtils.TruncateAt.END; setPadding(dp(8),0,dp(8),0) },LinearLayout.LayoutParams(-1,dp(28)))
     val stationActions=LinearLayout(activity).apply { gravity=Gravity.CENTER_VERTICAL }
-    details.addView(stationActions,FrameLayout.LayoutParams(-2,dp(48),Gravity.TOP or Gravity.END))
+    details.addView(stationActions,LinearLayout.LayoutParams(dp(176),dp(80)))
     val heart=ImageButton(activity).apply {
      fun update() { setImageResource(if(station.id in prefs.favourites)R.drawable.ic_star_filled else R.drawable.ic_star_outline); setColorFilter(if(station.id in prefs.favourites)coral else Color.WHITE) }
-     update(); contentDescription="Toggle ${station.name} favorite"; background=rounded(Color.TRANSPARENT); setPadding(dp(15),dp(15),dp(15),dp(15))
+     update(); contentDescription="Toggle ${station.name} favorite"; background=rounded(Color.TRANSPARENT); setPadding(dp(12),dp(12),dp(12),dp(12)); scaleType=ImageView.ScaleType.FIT_CENTER
      setOnClickListener { prefs.toggleFavourite(station.id); repo.favourites(); update(); changed() }
     }
-    stationActions.addView(heart,LinearLayout.LayoutParams(dp(48),dp(48)))
+    stationActions.addView(heart,LinearLayout.LayoutParams(dp(80),dp(80)))
     stationActions.addView(ImageButton(activity).apply {
-     setImageResource(R.drawable.ic_station_image); background=rounded(Color.TRANSPARENT); setPadding(dp(15),dp(15),dp(15),dp(15)); contentDescription="Change ${station.name} station image"
+     setImageResource(R.drawable.ic_station_image); background=rounded(Color.TRANSPARENT); setPadding(dp(12),dp(12),dp(12),dp(12)); contentDescription="Change ${station.name} station image"; scaleType=ImageView.ScaleType.FIT_CENTER
      setOnClickListener { StationImageDialog.show(activity,station,scope,changed=changed,onOpenSettings={ settings() },host=host) }
-    },LinearLayout.LayoutParams(dp(48),dp(48)))
-    captions.addView(button("Remove…") { stationAction(station) {
+    },LinearLayout.LayoutParams(dp(80),dp(80)).apply { marginStart=dp(16) })
+    val remove=button("Remove…") { stationAction(station) {
      stations=repo.sourceStations(id); notifyDataSetChanged(); changed()
-    } }.apply { minHeight=0; background=RippleDrawable(ColorStateList.valueOf(0x30ffffff),rounded(AutomotiveDesign.SURFACE,16),null) },LinearLayout.LayoutParams(dp(246),dp(48)).apply { marginStart=dp(8); topMargin=dp(4) })
+    } }.apply { minHeight=0; background=RippleDrawable(ColorStateList.valueOf(0x30ffffff),rounded(AutomotiveDesign.SURFACE,16),null) }
+    captions.addView(remove,LinearLayout.LayoutParams(dp(246),dp(48)).apply { marginStart=dp(8); topMargin=dp(4) })
+    captions.addOnLayoutChangeListener { _,left,_,right,_,_,_,_,_ ->
+     val available=(right-left-dp(8)).coerceAtLeast(0)
+     val width=minOf(dp(246),available)
+     if(remove.layoutParams.width!=width) {
+      remove.layoutParams=LinearLayout.LayoutParams(width,dp(48)).apply { marginStart=dp(8); topMargin=dp(4) }
+     }
+    }
     row.layoutParams=AbsListView.LayoutParams(-1,dp(128))
     return row
     }

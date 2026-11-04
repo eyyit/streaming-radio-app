@@ -1,3 +1,19 @@
+## Approved retail sizing - S8 revision 2 / P8 revision 3
+
+Approved 4 November 2026. Native full-area Settings uses 36sp row labels,
+equal minimum 112dp rows scaled for system font size, a 36sp/80dp heading,
+and a themed 28sp/72dp Done control. The artwork switch is a 108x54dp themed
+pill with a 44dp white circular thumb; it retains a minimum 72dp touch height.
+Content scrolls when it exceeds the available app area. These are Settings
+sizes, not a reason to change unrelated typography or image-picker geometry.
+
+Playlist station rows retain 128dp height, 112dp artwork, existing text labels
+and typography. Their heart/image actions use 80dp targets with 56dp glyphs,
+centered vertically on the right. Caption and Remove-action widths must exclude
+that action column, including on narrower windows. All Done controls retain
+the current accent/onAccent colors. The media host still owns playback layout.
+Mocks define app-owned geometry; exact physical vehicle scaling needs testing.
+
 # Streaming Radio official design system
 
 Effective2026-11-02. Applies to every app-owned screen, dialog, state, icon, mock and future feature. The latest explicitly approved mock/user instruction wins if a conflict arises. This codifies the established UI; the full-screen Settings/management flows and latest PL04/PL06 linked station actions were approved for implementation on 2 November 2026.

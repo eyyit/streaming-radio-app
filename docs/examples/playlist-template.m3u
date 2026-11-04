@@ -1,0 +1,5 @@
+#EXTM3U
+# Replace these example addresses before use; this template is not playable.
+# Remove tvg-logo="..." if you do not have a station-logo URL.
+#EXTINF:-1 tvg-logo="https://example.com/station-logo.png",My station
+https://example.com/live-stream
