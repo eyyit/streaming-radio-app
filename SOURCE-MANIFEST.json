@@ -1,7 +1,7 @@
 {
   "formatVersion": 1,
   "project": "Twinsen Radio independent source candidate",
-  "gitHead": "4e4b6e090b30a7328ac5fa4a83abc9a446b4bfb2",
+  "gitHead": "e223fa33c671ff92db07416e9eced58aa6249604",
   "workingTree": "dirty",
   "hashAlgorithm": "SHA-256",
   "selfHashExcluded": true,
@@ -327,8 +327,8 @@
     },
     {
       "path": "app/src/main/java/net/mspanc/twinsenradio/playback/CoverArtLookup.kt",
-      "size": 16985,
-      "sha256": "b8268c0ef7e29c38c51b7375a87bac687be8fdef282e26f594190224b3d3bddd"
+      "size": 28890,
+      "sha256": "b061ac040315b930be4eca9388cc1705a447c86fce48b47732be74069b0ae562"
     },
     {
       "path": "app/src/main/java/net/mspanc/twinsenradio/playback/DiagnosticFields.kt",

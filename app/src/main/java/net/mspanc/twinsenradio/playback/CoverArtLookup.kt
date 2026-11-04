@@ -29,6 +29,151 @@ import java.net.URLEncoder
  * Fallbacks in case hits are poor: MusicBrainz + Cover Art Archive (free,
  * slower), Deezer API (free), Last.fm and Spotify (require a key).
  */
+internal object ReleaseCatalog {
+    const val MAX_RECORDINGS = 5
+    const val MAX_RELEASE_CANDIDATES = 4
+    const val MAX_ARTWORK_PROBES = 8
+
+    data class Candidate(
+        val releaseId: String,
+        val releaseGroupId: String?,
+        val album: String?,
+        val year: Int?,
+        val trackName: String?,
+        val artistName: String?,
+        val artworkUrl: String?
+    )
+
+    sealed interface Result {
+        data class Found(val candidate: Candidate) : Result
+        data object NotFound : Result
+        data class TemporaryFailure(val retryAfterSeconds: Long? = null) : Result
+    }
+
+    private data class Release(
+        val id: String,
+        val groupId: String?,
+        val album: String?,
+        val year: Int?,
+        val track: String?,
+        val artist: String?
+    )
+
+    fun select(
+        body: String,
+        artist: String,
+        title: String,
+        excluded: Set<String> = emptySet(),
+        hasArtwork: (String) -> Boolean
+    ): Result {
+        val candidates = parse(body, artist, title)
+        if (candidates.isEmpty()) return Result.NotFound
+        var temporary = false
+        var retryAfter: Long? = null
+        var probes = 0
+
+        for (release in candidates) {
+            if (probes >= MAX_ARTWORK_PROBES) break
+            val url = releaseUrl(release.id)
+            if (url in excluded) continue
+            probes++
+            try {
+                if (hasArtwork(url)) return Result.Found(release.toCandidate(url))
+            } catch (error: java.util.concurrent.CancellationException) {
+                throw error
+            } catch (error: net.mspanc.twinsenradio.net.SafeHttp.HttpStatusException) {
+                if (error.statusCode == 429 || error.statusCode == 503 ||
+                    error.retryAfterSeconds != null) {
+                    return Result.TemporaryFailure(error.retryAfterSeconds)
+                }
+                temporary = true
+                retryAfter = maxOf(retryAfter ?: 0L, error.retryAfterSeconds ?: 0L)
+            } catch (_: java.io.IOException) {
+                temporary = true
+            }
+        }
+
+        val groups = candidates.mapNotNull { it.groupId }.distinct()
+        for (group in groups) {
+            if (probes >= MAX_ARTWORK_PROBES) break
+            val release = candidates.first { it.groupId == group }
+            val url = groupUrl(group)
+            if (url in excluded) continue
+            probes++
+            try {
+                if (hasArtwork(url)) return Result.Found(release.toCandidate(url))
+            } catch (error: java.util.concurrent.CancellationException) {
+                throw error
+            } catch (error: net.mspanc.twinsenradio.net.SafeHttp.HttpStatusException) {
+                if (error.statusCode == 429 || error.statusCode == 503 ||
+                    error.retryAfterSeconds != null) {
+                    return Result.TemporaryFailure(error.retryAfterSeconds)
+                }
+                temporary = true
+                retryAfter = maxOf(retryAfter ?: 0L, error.retryAfterSeconds ?: 0L)
+            } catch (_: java.io.IOException) {
+                temporary = true
+            }
+        }
+        return if (temporary) Result.TemporaryFailure(retryAfter) else Result.NotFound
+    }
+
+    fun releaseUrl(id: String) = "https://coverartarchive.org/release/$id/front-500"
+    fun groupUrl(id: String) = "https://coverartarchive.org/release-group/$id/front-500"
+
+    private fun parse(body: String, artist: String, title: String): List<Release> {
+        val recordings = JSONObject(body).optJSONArray("recordings") ?: return emptyList()
+        val byRecording = mutableListOf<List<Release>>()
+        for (index in 0 until minOf(recordings.length(), MAX_RECORDINGS)) {
+            val recording = recordings.getJSONObject(index)
+            val track = recording.optString("title").ifBlank { null }
+            val artistName = recording.optJSONArray("artist-credit")
+                ?.optJSONObject(0)?.optString("name")?.ifBlank { null }
+            val directArtist = TrackMatch.plausible(null, artist, null, artistName)
+            val swapped = TrackMatch.plausible(null, title, null, artistName) &&
+                TrackMatch.plausible(null, artist, null, track)
+            if ((!directArtist && !swapped) ||
+                !TrackMatch.plausible(artist, title, artistName, track)) continue
+            val releases = recording.optJSONArray("releases") ?: continue
+            val candidates = mutableListOf<Release>()
+            for (releaseIndex in 0 until minOf(releases.length(), MAX_RELEASE_CANDIDATES)) {
+                val release = releases.getJSONObject(releaseIndex)
+                val id = release.optString("id").ifBlank { null } ?: continue
+                val group = release.optJSONObject("release-group")
+                    ?.optString("id")?.ifBlank { null }
+                if (candidates.none { it.id == id }) candidates += Release(
+                    id = id,
+                    groupId = group,
+                    album = release.optString("title").ifBlank { null },
+                    year = release.optString("date").take(4).toIntOrNull(),
+                    track = track,
+                    artist = artistName
+                )
+            }
+            byRecording += candidates
+        }
+        val result = mutableListOf<Release>()
+        for (slot in 0 until MAX_RELEASE_CANDIDATES) {
+            for (candidates in byRecording) {
+                val candidate = candidates.getOrNull(slot) ?: continue
+                if (result.none { it.id == candidate.id }) result += candidate
+                if (result.size == MAX_RELEASE_CANDIDATES) return result
+            }
+        }
+        return result
+    }
+
+    private fun Release.toCandidate(url: String) = Candidate(
+        releaseId = id,
+        releaseGroupId = groupId,
+        album = album,
+        year = year,
+        trackName = track,
+        artistName = artist,
+        artworkUrl = url
+    )
+}
+
 object CoverArtLookup {
     /** Diagnostic counter used to verify the opt-out prevents even cached catalog lookups. */
     val lookupCalls = java.util.concurrent.atomic.AtomicInteger()
@@ -180,42 +325,125 @@ object CoverArtLookup {
             size > CACHE_LIMIT
     }
 
-    /**
-     * @return track data, or null if nothing was found. Null is cached too,
-     *   so we don't keep re-querying for tracks that aren't in the catalogue
-     *   (and there are plenty of those among Polish stations).
-     */
-    suspend fun find(artist: String?, title: String?): TrackInfo? = withContext(ArtworkWorkScheduler.trackDispatcher) {
-        lookupCalls.incrementAndGet()
-        val a = artist?.trim().orEmpty()
-        val t = title?.trim().orEmpty()
-        if (t.isEmpty()) return@withContext null
+    sealed interface CatalogLookupResult {
+        data class Found(val info: TrackInfo) : CatalogLookupResult
+        data object NotFound : CatalogLookupResult
+        data class TemporaryFailure(val retryAfterSeconds: Long? = null) : CatalogLookupResult
+    }
 
-        val key = "$a|$t".lowercase()
-        synchronized(cache) { if (cache.containsKey(key)) return@withContext cache[key] }
-
-        var result = (if(net.mspanc.twinsenradio.BuildConfig.ENABLE_ITUNES_ARTWORK) runCatching { query("$a $t".trim()) }
-            .onFailure { Log.w(TAG, "iTunes nie odpowiedzial: ${it.message}") }
-            .getOrNull()
-            ?.let { ourTrackOrNull(a, t, it, "iTunes") } else null)
-
-        // iTunes has poor coverage of older Polish repertoire - "Czesław
-        // Niemen - Lipowa łyżka" isn't there at all, while MusicBrainz knows
-        // both the track and the release. We only query it when Apple
-        // doesn't know the track.
-        if (result == null && a.isNotEmpty()) {
-            currentCoroutineContext().ensureActive()
-            result = runCatching { queryMusicBrainz(a, t) }
-                .onFailure { Log.w(TAG, "MusicBrainz nie odpowiedzial: ${it.message}") }
-                .getOrNull()
-                ?.let { ourTrackOrNull(a, t, it, "MusicBrainz") }
+    internal class MusicBrainzRequestGate(
+        private val nowNanos: () -> Long = System::nanoTime,
+        private val wait: suspend (Long) -> Unit = { kotlinx.coroutines.delay(it) }
+    ) {
+        private companion object {
+            const val MIN_INTERVAL_MS = 1_000L
+            const val MAX_BACKOFF_MS = 30_000L
         }
 
-        currentCoroutineContext().ensureActive()
-        synchronized(cache) { cache[key] = result }
-        if (net.mspanc.twinsenradio.BuildConfig.DEBUG) Log.i(TAG, "'$a - $t' -> okladka=${result?.artworkUrl != null} album='${result?.albumLabel()}'")
-        result
+        private var lastRequestNanos = 0L
+        private var hasRequested = false
+        private var blockedUntilNanos = 0L
+        private var failures = 0
+
+        suspend fun beforeRequest(): Boolean {
+            while (true) {
+                val pause = synchronized(this) {
+                    val now = nowNanos()
+                    if (now < blockedUntilNanos) return false
+                    val spacing = if (!hasRequested) 0L else
+                        (lastRequestNanos + MIN_INTERVAL_MS * 1_000_000L - now)
+                            .coerceAtLeast(0L)
+                    if (spacing == 0L) {
+                        lastRequestNanos = now
+                        hasRequested = true
+                        return true
+                    }
+                    (spacing + 999_999L) / 1_000_000L
+                }
+                wait(pause)
+            }
+        }
+
+        @Synchronized fun succeeded() {
+            failures = 0
+            blockedUntilNanos = 0L
+        }
+
+        @Synchronized fun failed(retryAfterSeconds: Long? = null) {
+            failures = (failures + 1).coerceAtMost(30)
+            val backoffNanos = (1_000L shl (failures - 1))
+                .coerceAtMost(MAX_BACKOFF_MS) * 1_000_000L
+            val serverNanos = retryAfterSeconds?.coerceAtLeast(0L)?.let {
+                if (it > Long.MAX_VALUE / 1_000_000_000L) Long.MAX_VALUE
+                else it * 1_000_000_000L
+            } ?: 0L
+            val delay = maxOf(backoffNanos, serverNanos)
+            val now = nowNanos()
+            blockedUntilNanos = if (delay > Long.MAX_VALUE - now) {
+                Long.MAX_VALUE
+            } else now + delay
+        }
+
+        @Synchronized fun retryAfterSeconds(): Long {
+            val remaining = (blockedUntilNanos - nowNanos()).coerceAtLeast(0L)
+            return if (remaining > Long.MAX_VALUE - 999_999_999L) {
+                Long.MAX_VALUE / 1_000_000_000L
+            } else (remaining + 999_999_999L) / 1_000_000_000L
+        }
     }
+
+    private val MusicBrainzGate = MusicBrainzRequestGate()
+
+    /** A transient catalog failure is returned to callers and never cached as a miss. */
+    suspend fun find(artist: String?, title: String?): TrackInfo? =
+        when (val result = findDetailed(artist, title)) {
+            is CatalogLookupResult.Found -> result.info
+            CatalogLookupResult.NotFound, is CatalogLookupResult.TemporaryFailure -> null
+        }
+
+    suspend fun findDetailed(artist: String?, title: String?): CatalogLookupResult =
+        withContext(ArtworkWorkScheduler.trackDispatcher) {
+            lookupCalls.incrementAndGet()
+            val a = artist?.trim().orEmpty()
+            val t = title?.trim().orEmpty()
+            if (t.isEmpty()) return@withContext CatalogLookupResult.NotFound
+            val key = "$a|$t".lowercase()
+            cachedLookup(key) {
+            var result: CatalogLookupResult? = null
+            var appleFailed = false
+            if (net.mspanc.twinsenradio.BuildConfig.ENABLE_ITUNES_ARTWORK) {
+                try {
+                    val apple = query("$a $t".trim())
+                    if (apple != null) result = ourTrackOrNull(a, t, apple, "iTunes")
+                        ?.let(CatalogLookupResult::Found)
+                } catch (error: java.util.concurrent.CancellationException) {
+                    throw error
+                } catch (error: Exception) {
+                    appleFailed = true
+                    Log.w(TAG, "iTunes nie odpowiedzial: ${error.message}")
+                }
+            }
+            if (result == null && a.isNotEmpty()) {
+                currentCoroutineContext().ensureActive()
+                result = queryMusicBrainz(a, t).let { lookup ->
+                    if (lookup is CatalogLookupResult.Found) {
+                        ourTrackOrNull(a, t, lookup.info, "MusicBrainz")
+                            ?.let(CatalogLookupResult::Found) ?: CatalogLookupResult.NotFound
+                    } else lookup
+                }
+            }
+            currentCoroutineContext().ensureActive()
+            val final = if (appleFailed && (result == null || result == CatalogLookupResult.NotFound)) {
+                CatalogLookupResult.TemporaryFailure()
+            } else result ?: CatalogLookupResult.NotFound
+            if (net.mspanc.twinsenradio.BuildConfig.DEBUG) {
+                val found = (final as? CatalogLookupResult.Found)?.info
+                Log.i(TAG, "'$a - $t' -> okladka=${found?.artworkUrl != null} album='${found?.albumLabel()}'")
+            }
+            final
+            }
+        }
+
 
     /**
      * The answer, if it is about the question - see [TrackMatch].
@@ -250,66 +478,134 @@ object CoverArtLookup {
      * database with much better coverage of Polish and older music; artwork
      * is taken from the linked Cover Art Archive.
      */
-    private fun queryMusicBrainz(artist: String, title: String): TrackInfo? {
-        val query = "artist:\"$artist\" AND recording:\"$title\""
-        val url = "$MUSICBRAINZ?query=${URLEncoder.encode(query, "UTF-8")}&fmt=json&limit=1"
-        val body = httpGet(url) ?: return null
+    internal fun shouldCache(result: CatalogLookupResult): Boolean =
+        result !is CatalogLookupResult.TemporaryFailure
 
-        val recordings = JSONObject(body).optJSONArray("recordings") ?: return null
-        if (recordings.length() == 0) return null
-        val recording = recordings.getJSONObject(0)
-        // Spelling according to the database - useful when a station shouts in all caps
-        val catalogueTitle = recording.optString("title").ifBlank { null }
-        val catalogueArtist = recording.optJSONArray("artist-credit")
-            ?.optJSONObject(0)?.optString("name")?.ifBlank { null }
-        val releases = recording.optJSONArray("releases") ?: return null
-        if (releases.length() == 0) return null
-        val release = releases.getJSONObject(0)
-
-        val album = release.optString("title").ifBlank { null }
-        val year = release.optString("date").take(4).toIntOrNull()
-        val mbid = release.optString("id").ifBlank { null }
-
-        // Cover Art Archive doesn't have artwork for everything, so we check
-        // whether the address returns anything at all - otherwise we'd be
-        // sending a dead link to the car.
-        val art = mbid?.let { id ->
-            val candidate = "$COVER_ART/release/$id/front-500"
-            if (headOk(candidate)) candidate else null
+    internal suspend fun cachedLookup(
+        key: String,
+        lookup: suspend () -> CatalogLookupResult
+    ): CatalogLookupResult {
+        synchronized(cache) {
+            if (cache.containsKey(key)) {
+                return cache[key]?.let(CatalogLookupResult::Found)
+                    ?: CatalogLookupResult.NotFound
+            }
         }
+        val result = lookup()
+        currentCoroutineContext().ensureActive()
+        if (shouldCache(result)) synchronized(cache) {
+            cache[key] = (result as? CatalogLookupResult.Found)?.info
+        }
+        return result
+    }
 
-        if (album == null && art == null) return null
-        return TrackInfo(
-            artworkUrl = art,
-            album = album,
-            year = year,
-            isSingle = false,
-            durationMs = 0,
-            trackName = catalogueTitle,
-            artistName = catalogueArtist
-        )
+    private fun escapeLucene(value: String): String = value
+        .replace("\\", "\\\\")
+        .replace("\"", "\\\"")
+
+    private suspend fun queryMusicBrainz(
+        artist: String,
+        title: String,
+        excluded: Set<String> = emptySet()
+    ): CatalogLookupResult {
+        val query = "artist:\"${escapeLucene(artist)}\" AND recording:\"${escapeLucene(title)}\""
+        val url = "$MUSICBRAINZ?query=${URLEncoder.encode(query, "UTF-8")}&fmt=json&limit=${ReleaseCatalog.MAX_RECORDINGS}"
+        if (!MusicBrainzGate.beforeRequest()) {
+            return CatalogLookupResult.TemporaryFailure(
+                MusicBrainzGate.retryAfterSeconds()
+            )
+        }
+        currentCoroutineContext().ensureActive()
+        val body = try {
+            net.mspanc.twinsenradio.net.SafeHttp.getText(
+                url, 2 * 1024 * 1024, MUSICBRAINZ_AGENT
+            )
+        } catch (error: java.util.concurrent.CancellationException) {
+            throw error
+        } catch (error: net.mspanc.twinsenradio.net.SafeHttp.HttpStatusException) {
+            MusicBrainzGate.failed(error.retryAfterSeconds)
+            return CatalogLookupResult.TemporaryFailure(error.retryAfterSeconds)
+        } catch (_: java.io.IOException) {
+            MusicBrainzGate.failed()
+            return CatalogLookupResult.TemporaryFailure()
+        }
+        MusicBrainzGate.succeeded()
+        val selected = try {
+            ReleaseCatalog.select(body, artist, title, excluded) { imageUrl ->
+                net.mspanc.twinsenradio.net.SafeHttp.headExists(
+                    imageUrl, MUSICBRAINZ_AGENT, 6_000
+                )
+            }
+        } catch (error: java.util.concurrent.CancellationException) {
+            throw error
+        } catch (error: Exception) {
+            MusicBrainzGate.failed(
+                (error as? net.mspanc.twinsenradio.net.SafeHttp.HttpStatusException)
+                    ?.retryAfterSeconds
+            )
+            return CatalogLookupResult.TemporaryFailure(
+                (error as? net.mspanc.twinsenradio.net.SafeHttp.HttpStatusException)
+                    ?.retryAfterSeconds
+            )
+        }
+        currentCoroutineContext().ensureActive()
+        return when (selected) {
+            is ReleaseCatalog.Result.Found -> {
+                val item = selected.candidate
+                CatalogLookupResult.Found(TrackInfo(
+                    artworkUrl = item.artworkUrl,
+                    album = item.album,
+                    year = item.year,
+                    isSingle = false,
+                    durationMs = 0,
+                    trackName = item.trackName,
+                    artistName = item.artistName
+                ))
+            }
+            ReleaseCatalog.Result.NotFound -> CatalogLookupResult.NotFound
+            is ReleaseCatalog.Result.TemporaryFailure -> {
+                MusicBrainzGate.failed(selected.retryAfterSeconds)
+                CatalogLookupResult.TemporaryFailure(selected.retryAfterSeconds)
+            }
+        }
     }
 
     private fun httpGet(url: String): String? {
-        return runCatching { net.mspanc.twinsenradio.net.SafeHttp.getText(url,2*1024*1024,MUSICBRAINZ_AGENT) }.getOrNull()
+        return net.mspanc.twinsenradio.net.SafeHttp.getText(url,2*1024*1024,MUSICBRAINZ_AGENT)
     }
 
     private fun headOk(url: String): Boolean = net.mspanc.twinsenradio.net.SafeHttp.headOk(url,MUSICBRAINZ_AGENT,6_000)
 
     /** Explicit user refresh: only accept another matching artist/title image. */
-    suspend fun findAlternative(artist: String?, title: String?, excluded: Set<String>): TrackInfo? = withContext(ArtworkWorkScheduler.trackDispatcher) {
+    suspend fun findAlternative(
+        artist: String?, title: String?, excluded: Set<String>
+    ): TrackInfo? = when (val result = findAlternativeDetailed(artist, title, excluded)) {
+        is CatalogLookupResult.Found -> result.info
+        CatalogLookupResult.NotFound, is CatalogLookupResult.TemporaryFailure -> null
+    }
+
+    suspend fun findAlternativeDetailed(
+        artist: String?, title: String?, excluded: Set<String>
+    ): CatalogLookupResult = withContext(ArtworkWorkScheduler.trackDispatcher) {
         lookupCalls.incrementAndGet()
         val a = artist?.trim().orEmpty()
         val t = title?.trim().orEmpty()
-        if (t.isBlank()) return@withContext null
-        val next = if (net.mspanc.twinsenradio.BuildConfig.ENABLE_ITUNES_ARTWORK) {
-            runCatching { query("$a $t".trim(), a, t, excluded) }.getOrNull()
-        } else if (a.isNotBlank()) {
-            runCatching { queryMusicBrainz(a, t) }.getOrNull()
-                ?.let { matchingAlternative(a, t, it, excluded) }
-        } else null
+        if (t.isBlank() || a.isBlank()) return@withContext CatalogLookupResult.NotFound
+        if (net.mspanc.twinsenradio.BuildConfig.ENABLE_ITUNES_ARTWORK) {
+            val apple = try {
+                query("$a $t".trim(), a, t, excluded)
+            } catch (error: java.util.concurrent.CancellationException) {
+                throw error
+            } catch (error: Exception) {
+                return@withContext CatalogLookupResult.TemporaryFailure()
+            }
+            if (apple != null) {
+                return@withContext CatalogLookupResult.Found(apple)
+            }
+        }
+        val result = queryMusicBrainz(a, t, excluded)
         currentCoroutineContext().ensureActive()
-        next
+        result
     }
 
     /** A loose catalog search must still match the requested track on refresh. */
