@@ -43,6 +43,45 @@ class StationArtworkStoreTest {
         assertEquals(listOf("https://logos.example/nova.png"), result)
     }
 
+    @Test fun automaticEnrichmentMustReachPastThreeRejectedLogos() {
+        val logos = (1..4).map { index ->
+            logo("Radio Nova $index", "https://stream$index.example/live", "https://logos.example/$index.png")
+        }
+        val candidates = StationArtworkStore.candidateUrls(station, logos)
+
+        // Reaching beyond the first three matters when earlier favicons fail
+        // the 512px gate, while a fixed bound keeps network work predictable.
+        val automaticCandidates = StationArtworkStore.automaticCandidateUrls(candidates)
+        assertEquals(4, automaticCandidates.size)
+        assertEquals("https://logos.example/4.png", automaticCandidates.last())
+        assertTrue(automaticCandidates.size <= StationArtworkStore.MAX_AUTOMATIC_CANDIDATES)
+    }
+
+    @Test fun automaticEnrichmentKeepsTheNetworkCandidateBound() {
+        val urls = (1..20).map { "https://logos.example/$it.png" }
+        val result = StationArtworkStore.automaticCandidateUrls(urls)
+
+        assertEquals(5, result.size)
+        assertEquals(urls.take(5), result)
+    }
+
+    @Test fun automaticArtworkQueriesIncludeShortStationNames() {
+        assertEquals(listOf("FIP"), StationArtworkStore.candidateQueries("FIP"))
+        assertEquals(listOf("A1"), StationArtworkStore.candidateQueries("A1"))
+    }
+
+    @Test fun cancelledAutomaticLookupCanRetryButCompletedLookupCannot() {
+        val attempts = AutomaticArtworkAttempts()
+        assertTrue(attempts.begin("station"))
+        assertFalse(attempts.begin("station"))
+        attempts.release("station")
+        assertTrue(attempts.begin("station"))
+        attempts.complete("station")
+        assertFalse(attempts.begin("station"))
+        attempts.reset()
+        assertTrue(attempts.begin("station"))
+    }
+
     @Test fun refreshDoesNotPretendTheSoleChosenImageIsAnotherResult() {
         assertTrue(StationArtworkStore.alternateCandidateIndices(listOf("chosen"), "chosen", 0).isEmpty())
         assertTrue(StationArtworkStore.alternateCandidateIndices(emptyList(), "chosen", 0).isEmpty())

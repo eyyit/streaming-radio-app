@@ -1,7 +1,7 @@
 {
   "formatVersion": 1,
   "project": "Twinsen Radio independent source candidate",
-  "gitHead": "216e7073d5816affb4950dd7015282aa49b9f6b3",
+  "gitHead": "56e6c489f0aca0c3833782bf3296c8cbe1cf3e1e",
   "workingTree": "dirty",
   "hashAlgorithm": "SHA-256",
   "selfHashExcluded": true,
@@ -422,8 +422,8 @@
     },
     {
       "path": "app/src/main/java/net/mspanc/twinsenradio/playback/StationArtworkStore.kt",
-      "size": 22277,
-      "sha256": "fd2ad174b0680dd2f60cd70bbb42dc26523f7ed1b14c935dd586f6cbfa6787c2"
+      "size": 23277,
+      "sha256": "4cd5ed6b4d5f8f133f9d145302d11966b1902353da5b40cef9c1e47d5e270413"
     },
     {
       "path": "app/src/main/java/net/mspanc/twinsenradio/playback/StationLogoQuality.kt",
@@ -477,8 +477,8 @@
     },
     {
       "path": "app/src/main/java/net/mspanc/twinsenradio/ui/ArtworkLoader.kt",
-      "size": 8534,
-      "sha256": "c711b6593ec6eaa56b95863178a474ad6a2cc6110c7796716ad7e89f17d1941a"
+      "size": 10488,
+      "sha256": "e1583c7a5a4366d0226f4990034f68d5e89e86eb95369ef48407e690570bbd3d"
     },
     {
       "path": "app/src/main/java/net/mspanc/twinsenradio/ui/DiscoverActivity.kt",
@@ -877,8 +877,8 @@
     },
     {
       "path": "app/src/test/java/net/mspanc/twinsenradio/playback/StationArtworkStoreTest.kt",
-      "size": 3044,
-      "sha256": "a14f0caf893732536b5aa963e13ee2bdc9d9b2c836df4bdc24106b8f6d650de1"
+      "size": 4815,
+      "sha256": "064541ad344c39544a793031354707a2a05542b943770405d39ee0e6eb1e7247"
     },
     {
       "path": "app/src/test/java/net/mspanc/twinsenradio/playback/StationLogoQualityTest.kt",

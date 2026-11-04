@@ -13,6 +13,7 @@ import java.io.ByteArrayOutputStream
 
 /** Local station cards immediately; bounded, conservative directory-logo enrichment in background. */
 object StationArtworkStore {
+    internal const val MAX_AUTOMATIC_CANDIDATES = 5
     /** Small preview bytes; the full saved logo remains in the bounded disk cache. */
     data class ImageCandidate(val name: String, val url: String, val cacheName: String, val bytes: ByteArray)
     sealed class CandidateSearch {
@@ -62,8 +63,8 @@ object StationArtworkStore {
     private val mutex = Mutex()
     private val fileLock = Any()
     private val sampleLocks = java.util.concurrent.ConcurrentHashMap<String, Any>()
-    private val automaticAttempts = mutableSetOf<String>()
-    fun beginServiceLaunch() = synchronized(automaticAttempts) { automaticAttempts.clear() }
+    private val automaticAttempts = AutomaticArtworkAttempts()
+    fun beginServiceLaunch() = automaticAttempts.reset()
     private fun dir(context: Context) = File(context.filesDir, "station-art").apply { mkdirs() }
     private fun key(station: Station) = M3uParser.stableKey(station.id)
     private fun validDownloaded(context: Context, station: Station): Boolean {
@@ -279,15 +280,19 @@ object StationArtworkStore {
         }
     }
     private suspend fun candidates(station: Station): List<String> {
-        val short = station.name.substringBefore(" - ").trim()
-        val queries = listOf(station.name,short,short.removePrefix("Radio ")).distinct().filter { it.length >= 4 }
-        for (query in queries) {
+        for (query in candidateQueries(station.name)) {
             currentCoroutineContext().ensureActive()
             val result = RadioBrowser.searchArtwork(query,40,3000)
             val urls = if(result is RadioBrowser.ArtworkSearchResult.Success) candidateUrls(station,result.logos) else emptyList()
             if (urls.isNotEmpty()) return listOfNotNull(station.logoUrl).plus(urls).distinct()
         }
         return listOfNotNull(station.logoUrl)
+    }
+    internal fun candidateQueries(stationName: String): List<String> {
+        val short = stationName.substringBefore(" - ").trim()
+        return listOf(stationName, short, short.removePrefix("Radio "))
+            .distinct()
+            .filter { it.length >= 2 }
     }
     private suspend fun save(context: Context, station: Station, remote: String, automatic: Boolean = false): Boolean {
         currentCoroutineContext().ensureActive()
@@ -346,26 +351,57 @@ object StationArtworkStore {
             if (!prefs.onlineArtworkEnabled) break
             val id=key(station)
             if (isGeneric(context, station) || validDownloaded(context, station)) continue
-            val firstAttemptThisLaunch = synchronized(automaticAttempts) { automaticAttempts.add(id) }
-            if (!firstAttemptThisLaunch) continue
-            delay(75)
-            val saved=whileLoading(setOf(station.id)) { mutex.withLock {
-                if (validDownloaded(context,station) || !prefs.onlineArtworkEnabled) false
-                else {
-                    var result=false
-                    for (remote in candidates(station).take(3)) {
-                        result=runCatching { save(context,station,remote,automatic=true) }.getOrDefault(false)
-                        currentCoroutineContext().ensureActive()
-                        if (result || !prefs.onlineArtworkEnabled) break
+            if (!automaticAttempts.begin(id)) continue
+            var finished = false
+            try {
+                delay(75)
+                val saved=whileLoading(setOf(station.id)) { mutex.withLock {
+                    if (validDownloaded(context,station) || !prefs.onlineArtworkEnabled) false
+                    else {
+                        var result=false
+                        for (remote in automaticCandidateUrls(candidates(station))) {
+                            result=runCatching { save(context,station,remote,automatic=true) }.getOrDefault(false)
+                            currentCoroutineContext().ensureActive()
+                            if (result || !prefs.onlineArtworkEnabled) break
+                        }
+                        checked.edit().putLong(id,System.currentTimeMillis()).apply()
+                        result
                     }
-                    checked.edit().putLong(id,System.currentTimeMillis()).apply()
-                    result
-                }
-            } }
-            if (saved) withContext(Dispatchers.Main) { changed(station) }
+                } }
+                if (saved) withContext(Dispatchers.Main) { changed(station) }
+                finished = true
+            } finally {
+                if (finished) automaticAttempts.complete(id)
+                else automaticAttempts.release(id)
+            }
         }
         val keep=stations.map { key(it) }.toSet()
         dir(context).listFiles()?.filter { it.name.substringBefore('.').removeSuffix("-sample") !in keep }?.forEach { it.delete() }
+    }
+
+    internal fun automaticCandidateUrls(urls: List<String>): List<String> =
+        urls.distinct().take(MAX_AUTOMATIC_CANDIDATES)
+}
+
+internal class AutomaticArtworkAttempts {
+    private val attempted = mutableSetOf<String>()
+    private val inFlight = mutableSetOf<String>()
+
+    @Synchronized fun begin(id: String): Boolean =
+        id !in attempted && inFlight.add(id)
+
+    @Synchronized fun complete(id: String) {
+        inFlight.remove(id)
+        attempted.add(id)
+    }
+
+    @Synchronized fun release(id: String) {
+        inFlight.remove(id)
+    }
+
+    @Synchronized fun reset() {
+        attempted.clear()
+        inFlight.clear()
     }
 }
 

@@ -6,13 +6,14 @@ import android.net.Uri
 import android.util.LruCache
 import android.widget.ImageView
 import androidx.lifecycle.LifecycleCoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import net.mspanc.twinsenradio.data.StationRepository
 import net.mspanc.twinsenradio.playback.LogoProvider
-import java.net.HttpURLConnection
-import java.net.URL
+import net.mspanc.twinsenradio.BuildConfig
+import net.mspanc.twinsenradio.net.SafeHttp
+import net.mspanc.twinsenradio.playback.ArtworkAccessPolicy
+import net.mspanc.twinsenradio.playback.ArtworkWorkScheduler
 import android.graphics.drawable.BitmapDrawable
 import android.graphics.drawable.ColorDrawable
 import android.graphics.drawable.Drawable
@@ -105,10 +106,10 @@ object ArtworkLoader {
             return
         }
 
-        // The custom logo lives in the app's directory - decoded right away,
-        // without downloading and without caching by URL.
-        val localLogo = logoUri?.takeIf { it.scheme == "file" }
-            ?.let { runCatching { BitmapFactory.decodeFile(it.path) }.getOrNull() }
+        // Local files use the same bounded background decoder as remote art.
+        val fallbackUri = logoUri?.takeIf { it.scheme in listOf("file", "content", "http", "https") }
+            ?.takeUnless { it.scheme in listOf("http", "https") && !Prefs(target.context).onlineArtworkEnabled }
+        var localLogo: Bitmap? = null
 
         // The logo, or the bare placeholder - for when there is nothing better,
         // and only then. It used to go up first as a "resting image" under every
@@ -117,18 +118,18 @@ object ArtworkLoader {
         // after play exists to prevent (seen 30.10.2026 on the phone, frame by
         // frame: empty, logo, cover).
         fun resting() {
-            if (localLogo != null) show("local:$logoUri", BitmapDrawable(target.resources, localLogo))
+            if (localLogo != null) show(logoUri.toString(), BitmapDrawable(target.resources, localLogo))
             else ContextCompat.getDrawable(target.context, fallbackRes)?.let { show("res:$fallbackRes", it) }
         }
 
         // What has to be fetched: the presenter's photo (ours already, behind
         // LogoProvider - the same address the head unit gets), the cover, or a
         // remote station logo.
-        val candidate = coverUri?.takeIf { it.scheme == "content" || it.scheme == "http" || it.scheme == "https" }
-            ?: logoUri?.takeIf { it.scheme in listOf("content", "http", "https") }
+        val candidate = coverUri?.takeIf { it.scheme in listOf("content", "http", "https") }
+            ?: logoUri?.takeIf { it.scheme in listOf("file", "content", "http", "https") }
         val key = candidate?.takeUnless {
             it.scheme in listOf("http", "https") && !Prefs(target.context).onlineArtworkEnabled
-        }
+        } ?: fallbackUri
         if (key == null) {
             target.setTag(TAG_KEY, null)
             resting()
@@ -136,12 +137,12 @@ object ArtworkLoader {
         }
         // A favorite/order update must not re-open the same provider image,
         // or enqueue another copy of a request that is already in flight.
-        if (target.getTag(DISPLAY_KEY) == key.toString()) {
+        if (key.scheme != "file" && target.getTag(DISPLAY_KEY) == key.toString()) {
             target.setTag(TAG_KEY, null) // Invalidate any request for a different image.
             return
         }
         if (target.getTag(TAG_KEY) == key.toString()) return
-        cache.get(key.toString())?.let {
+        (if (key.scheme == "file") null else cache.get(key.toString()))?.let {
             target.setTag(TAG_KEY, null)
             show(key.toString(), BitmapDrawable(target.resources, it))
             return
@@ -153,18 +154,34 @@ object ArtworkLoader {
         target.setTag(TAG_KEY, key.toString())
         val resolver = target.context.applicationContext.contentResolver
         scope.launch {
-            val bitmap = withContext(Dispatchers.IO) {
-                if (key.scheme == "content") {
-                    runCatching { resolver.openInputStream(key)?.use { BitmapFactory.decodeStream(it) } }.getOrNull()
-                } else {
-                    fetch(key.toString())
+            val bitmap = withContext(ArtworkWorkScheduler.dispatcher) {
+                fun load(uri: Uri): Bitmap? = runCatching {
+                    when (uri.scheme) {
+                        "content" -> resolver.openInputStream(uri)?.use { input ->
+                            ArtworkAccessPolicy.readBounded(input)?.let(::decodeBounded)
+                        }
+                        "file" -> java.io.File(uri.path ?: return@runCatching null)
+                            .inputStream().use { input ->
+                                ArtworkAccessPolicy.readBounded(input)?.let(::decodeBounded)
+                            }
+                        else -> fetch(uri.toString())
+                    }
+                }.getOrNull()
+                load(key).also { bitmap ->
+                    // AAOS station logos use content URIs, not just file URIs.
+                    if (bitmap == null && fallbackUri != null && fallbackUri != key) {
+                        localLogo = (if (fallbackUri.scheme == "file") null else cache.get(fallbackUri.toString())) ?: load(fallbackUri)
+                        localLogo?.let { if (fallbackUri.scheme != "file") cache.put(fallbackUri.toString(), it) }
+                    }
                 }
             }
             // the track (or station) may have changed in the meantime
             if (target.getTag(TAG_KEY) != key.toString()) return@launch
             target.setTag(TAG_KEY, null)
             if (bitmap != null) {
-                cache.put(key.toString(), bitmap)
+                if (key.scheme != "file") cache.put(key.toString(), bitmap)
+                // A custom logo can change while keeping its file URI.
+                if (key.scheme == "file") target.setTag(DISPLAY_KEY, null)
                 show(key.toString(), BitmapDrawable(target.resources, bitmap))
             } else {
                 resting()
@@ -173,18 +190,26 @@ object ArtworkLoader {
     }
 
     private fun fetch(url: String): Bitmap? = runCatching {
-        val conn = (URL(url).openConnection() as HttpURLConnection).apply {
-            connectTimeout = 8_000
-            readTimeout = 8_000
-            instanceFollowRedirects = true
-            setRequestProperty("User-Agent", StationRepository.USER_AGENT)
-        }
-        try {
-            conn.inputStream.use { BitmapFactory.decodeStream(it) }
-        } finally {
-            conn.disconnect()
-        }
+        decodeBounded(SafeHttp.getBytes(url, ArtworkAccessPolicy.MAX_BYTES,
+            StationRepository.USER_AGENT, allowHttp = BuildConfig.DEBUG))
     }.getOrNull()
+
+    /** Inspect dimensions before allocating pixels; every caller already bounds bytes. */
+    internal fun decodeBounded(bytes: ByteArray): Bitmap? {
+        if (bytes.isEmpty() || bytes.size > ArtworkAccessPolicy.MAX_BYTES) return null
+        val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+        BitmapFactory.decodeByteArray(bytes, 0, bytes.size, bounds)
+        val sample = ArtworkAccessPolicy.sampleSize(bounds.outWidth, bounds.outHeight)
+            ?: return null
+        val bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size,
+            BitmapFactory.Options().apply { inSampleSize = sample }) ?: return null
+        if (bitmap.width > ArtworkAccessPolicy.MAX_DIMENSION ||
+            bitmap.height > ArtworkAccessPolicy.MAX_DIMENSION) {
+            bitmap.recycle()
+            return null
+        }
+        return bitmap
+    }
 
     private val TAG_KEY = "artwork_url".hashCode()
     private val DISPLAY_KEY = "artwork_displayed".hashCode()
