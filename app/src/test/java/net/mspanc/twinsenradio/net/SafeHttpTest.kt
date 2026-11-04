@@ -58,6 +58,37 @@ class SafeHttpTest {
         }
     }
 
+    @Test fun preservesServiceFailureStatusAndRetryAfter() {
+        serve(listOf("HTTP/1.1 503 Unavailable\r\nRetry-After: 2\r\nContent-Length: 0\r\nConnection: close\r\n\r\n")) { url ->
+            val failure = try { SafeHttp.getText(url, 10, "test", allowHttp = true); null }
+                catch (error: IOException) { error }
+            assertTrue("HTTP errors must preserve structured status", failure is SafeHttp.HttpStatusException)
+            assertEquals(503, (failure as SafeHttp.HttpStatusException).statusCode)
+            assertEquals(2L, failure.retryAfterSeconds)
+        }
+    }
+
+    @Test fun artworkHeadDistinguishesMissingImageFromUnavailableService() {
+        serve(listOf("HTTP/1.1 404 Missing\r\nContent-Length: 0\r\nConnection: close\r\n\r\n")) { url ->
+            assertFalse(SafeHttp.headExists(url, "test", allowHttp = true))
+        }
+        serve(listOf("HTTP/1.1 503 Unavailable\r\nContent-Length: 0\r\nConnection: close\r\n\r\n")) { url ->
+            val failure = try { SafeHttp.headExists(url, "test", allowHttp = true); null }
+                catch (error: IOException) { error }
+            assertTrue("Unavailable artwork service must not look like a missing image", failure is SafeHttp.HttpStatusException)
+            assertEquals(503, (failure as SafeHttp.HttpStatusException).statusCode)
+        }
+    }
+
+    @Test fun acceptsHttpDateRetryAdviceAndRejectsMalformedAdvice() {
+        val date = java.time.ZonedDateTime.now(java.time.ZoneOffset.UTC).plusMinutes(5)
+            .format(java.time.format.DateTimeFormatter.RFC_1123_DATE_TIME)
+        assertTrue(SafeHttp.retryAfterSeconds(date)!! in 240L..300L)
+        assertNull(SafeHttp.retryAfterSeconds("-1"))
+        assertNull(SafeHttp.retryAfterSeconds("not a date"))
+        assertNull(SafeHttp.retryAfterSeconds(null))
+    }
+
     private fun serve(responses: List<String>, block: (String) -> Unit) {
         val error = AtomicReference<Throwable?>()
         ServerSocket(0, 10, java.net.InetAddress.getByName("127.0.0.1")).use { server ->

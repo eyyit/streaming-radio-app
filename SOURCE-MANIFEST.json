@@ -1,7 +1,7 @@
 {
   "formatVersion": 1,
   "project": "Twinsen Radio independent source candidate",
-  "gitHead": "89e7fb8c416efdfc3f3ada62881171db68e669d1",
+  "gitHead": "3aa53c82859c7a74fe8dd8a9fe24045227b550f5",
   "workingTree": "dirty",
   "hashAlgorithm": "SHA-256",
   "selfHashExcluded": true,
@@ -277,8 +277,8 @@
     },
     {
       "path": "app/src/main/java/net/mspanc/twinsenradio/net/SafeHttp.kt",
-      "size": 4806,
-      "sha256": "25dbe228371897173f28f98efb54b9c6431325780ce7e48fc04ec18c08a2e964"
+      "size": 6009,
+      "sha256": "deac45366f167bb38de3433b387465f7a31ba95774719f9760ab0c3b7fcd5268"
     },
     {
       "path": "app/src/main/java/net/mspanc/twinsenradio/ParkedUxPolicy.kt",
@@ -782,8 +782,8 @@
     },
     {
       "path": "app/src/test/java/net/mspanc/twinsenradio/net/SafeHttpTest.kt",
-      "size": 4310,
-      "sha256": "6e23dac291656e9554b1dd8e12012825631cea6fb353135474120a8b4d739e36"
+      "size": 6139,
+      "sha256": "35229b60a83b51f5c598b2d007a65c18c5070ff6107a80e8a047e4eeb853df7e"
     },
     {
       "path": "app/src/test/java/net/mspanc/twinsenradio/ParkedUxPolicyTest.kt",

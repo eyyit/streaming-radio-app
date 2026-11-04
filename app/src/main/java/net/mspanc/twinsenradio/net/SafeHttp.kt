@@ -8,8 +8,30 @@ import java.net.URL
 
 /** Bounded HTTPS requests. HTTP requires an explicit caller opt-in for test fixtures. */
 object SafeHttp {
+    class HttpStatusException(val statusCode: Int, val retryAfterSeconds: Long? = null) :
+        IOException("HTTP $statusCode")
+
+    @Throws(IOException::class)
+    fun headExists(url: String, userAgent: String, timeoutMs: Int = 8000,
+        allowHttp: Boolean = false): Boolean = try {
+        request(url, userAgent, timeoutMs, allowHttp, "HEAD") { _, _ -> true }
+    } catch (error: HttpStatusException) {
+        if (error.statusCode == 404) false else throw error
+    }
+
     private const val MAX_REDIRECTS = 5
     private val redirects = setOf(301, 302, 303, 307, 308)
+
+    internal fun retryAfterSeconds(value: String?): Long? {
+        val raw = value?.trim()?.takeIf { it.isNotEmpty() } ?: return null
+        raw.toLongOrNull()?.let { return it.takeIf { seconds -> seconds >= 0 } }
+        return try {
+            (java.time.ZonedDateTime.parse(raw, java.time.format.DateTimeFormatter.RFC_1123_DATE_TIME)
+                .toEpochSecond() - java.time.Instant.now().epochSecond).coerceAtLeast(0)
+        } catch (_: java.time.format.DateTimeParseException) {
+            null // Invalid optional retry advice does not change the HTTP failure category.
+        }
+    }
 
     @Throws(IOException::class)
     fun getBytes(url: String, maxBytes: Int, userAgent: String,
@@ -46,7 +68,8 @@ object SafeHttp {
     internal fun checkedUrl(raw: String, allowHttp: Boolean): URL {
         if (raw.length > 8192) throw IOException("URL too long")
         val uri = try { URI(raw) } catch (error: Exception) { throw IOException("Invalid URL", error) }
-        if (uri.scheme != "https" && !(allowHttp && uri.scheme == "http")) throw IOException("HTTPS required")
+        if (!uri.scheme.equals("https", ignoreCase = true) &&
+            !(allowHttp && uri.scheme.equals("http", ignoreCase = true))) throw IOException("HTTPS required")
         if (uri.host.isNullOrBlank() || uri.rawUserInfo != null || uri.rawFragment != null ||
             uri.port !in -1..65535 || uri.port == 0) throw IOException("Invalid URL authority")
         return try { uri.toURL() } catch (error: Exception) { throw IOException("Invalid URL", error) }
@@ -86,7 +109,7 @@ object SafeHttp {
                     val location = connection.getHeaderField("Location") ?: throw IOException("Missing redirect target")
                     url = redirectTarget(url, location, allowHttp)
                 } else {
-                    if (status !in 200..299) throw IOException("HTTP $status")
+                    if (status !in 200..299) throw HttpStatusException(status, retryAfterSeconds(connection.getHeaderField("Retry-After")))
                     return consume(connection, deadline)
                 }
             } finally { connection.disconnect() }
