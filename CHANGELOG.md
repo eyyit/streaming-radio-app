@@ -10,7 +10,7 @@ trusted/read-only Media3 controller permissions, and the Guava33.7.2 security
 update. GPL and dependency notices and privacy information are accessible from
 two approved Settings entries. No broader UI redesign is included.
 
-The release configuration currently defaults to an empty playlist URL, disables online artwork, and disables iTunes artwork lookup pending terms review. No starter playlist is included as an approved redistribution artifact. Station and stream rights, public package identity, security review, and vehicle validation remain unresolved. No binary is included in this source bundle.
+The release configuration currently defaults to an empty playlist URL, enables online artwork unless a saved preference turns it off, and disables iTunes artwork lookup pending terms review. No starter playlist is included as an approved redistribution artifact. Station and stream rights, public package identity, security review, and vehicle validation remain unresolved. No binary is included in this source bundle.
 
 ### Continued candidate audit — 2 November 2026
 - Redact credential-bearing stream URLs and exception details from reviewed playback diagnostics and trace records.

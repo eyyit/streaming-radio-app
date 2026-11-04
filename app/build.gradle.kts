@@ -14,8 +14,8 @@ android {
         applicationId = "net.mspanc.twinsenradio"
         minSdk = 26
         targetSdk = 36
-        versionCode = 4
-        versionName = "0.3.0-rc2"
+        versionCode = 6
+        versionName = "0.3.0-rc4"
         testInstrumentationRunner = "net.mspanc.twinsenradio.automotive.PrototypeSmokeInstrumentation"
     }
 

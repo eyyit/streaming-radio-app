@@ -26,6 +26,14 @@ Optional upload signing reads all four environment variables:
 unsigned inspection. Do not put their values into shell history, source,
 build logs or the source archive. No production signing key is included.
 
+Shared verification (`node tools/verify-automotive.cjs`) additionally requires Node.js 24 and PowerShell 7 or newer (`pwsh` on PATH). Its developer-script tests use isolated fake ADB/Gradle processes; they do not contact a device.
+
+## Emulator-only install helper
+
+On Windows, `tools/install.ps1 -Automotive -Serial emulator-5580` uses the developer toolchain paths declared in the script. It refuses physical devices and requires the selected emulator to have Driver user10 current. Installation and launch explicitly target that serial and user10.
+
+Optional `tools/emulator-host-layout` helpers require an explicit `-AdbPath`. Wide-controls also requires an external `-OverlayApkPath` when installing its local resource overlay; that APK is not bundled here. These helpers are not required to build the app and do not represent the Volvo native player.
+
 ## Exported source bundle
 
 Run `node tools/export-public-source.cjs` from the project root to create `dist/public-source`, or pass `--output PATH` for an explicit destination. The exporter uses an explicit allowlist, rejects symlinks in included trees, scans text for high-confidence secret patterns, and writes SHA-256 entries to `SOURCE-MANIFEST.json`. It refuses to overwrite a nonempty destination. Reserved-domain credentials in security rejection tests are reported as reviewed fixtures. The scan is a safeguard, not a comprehensive source or security audit.

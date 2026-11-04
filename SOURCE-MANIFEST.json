@@ -1,7 +1,7 @@
 {
   "formatVersion": 1,
   "project": "Twinsen Radio independent source candidate",
-  "gitHead": "d78baf7ec907da8024f70ba374874a117824f1bb",
+  "gitHead": "a4a096b81be5938dfac296545c85d1d1dae22208",
   "workingTree": "dirty",
   "hashAlgorithm": "SHA-256",
   "selfHashExcluded": true,
@@ -33,7 +33,7 @@
     {
       "path": "app/build.gradle.kts",
       "size": 5683,
-      "sha256": "610e4048ba1851e1c238fb7f571595d0b29c38e2c2d6c147ed783cc968112c12"
+      "sha256": "0b08326894e3f34d8d1e80810fe67d143e874c521f30295f920b9c18ff443db6"
     },
     {
       "path": "app/src/androidTest/java/net/mspanc/twinsenradio/automotive/PrototypeSmokeInstrumentation.kt",
@@ -927,23 +927,23 @@
     },
     {
       "path": "BUILD.md",
-      "size": 2542,
-      "sha256": "cddaa13e34eeb9435235a307e95eee71e93206d79f328f80311ec91e2299898f"
+      "size": 3398,
+      "sha256": "809da5aa4f32983ae8215c39744558910025d0e18a20f073a986bf89f55f19af"
     },
     {
       "path": "CHANGELOG.md",
-      "size": 2268,
-      "sha256": "02c5be67944ac78a3aa18c515553f383e0e371fa2de13307b2a35acb6ce0f041"
+      "size": 2306,
+      "sha256": "c2281a7d2799195c0bddffcfc9a01d1a011ea54d5bb3b7032d9e80027931dbd9"
     },
     {
       "path": "docs/DESIGN-SYSTEM.md",
-      "size": 11732,
-      "sha256": "c26183d87105f15201198681aa6798d3e9aad3a22d454ec3239351e5905c2382"
+      "size": 12388,
+      "sha256": "361e6695e10035a6c01329ef2260ba2ed691f43595c01ba4be0dbfe7526f9102"
     },
     {
       "path": "docs/HANDOFF-NEXT.md",
-      "size": 15543,
-      "sha256": "3a908c98501e6038a925f93a988710e8a632b273eb32d5f65192d63939a43683"
+      "size": 17762,
+      "sha256": "47bed9e0bbd834b7694862b80a8b565ba757c141201c615d36b32120ecf68215"
     },
     {
       "path": "docs/INTERNAL-TEST-CHECKS.md",
@@ -987,13 +987,13 @@
     },
     {
       "path": "README.md",
-      "size": 7381,
-      "sha256": "c5a2776b4f4982ffadc98cc97168ca8f3afb04bf3357ed197e3e2c02a8940280"
+      "size": 7691,
+      "sha256": "9d7d24eb5950451f520d2fe5523a7ea203f4d74cbfcd00a1544b99bbc319c23f"
     },
     {
       "path": "SECURITY.md",
-      "size": 2202,
-      "sha256": "5b0e42a597101b3b9aeeb7351b2cd4b1d385a5d5a6c6edbd1e5abd29e181cbc6"
+      "size": 2440,
+      "sha256": "e04e5485f1c34360bde331b2ce2c8a4f5f3386bc3cd0b45a93f3ae308b137c3d"
     },
     {
       "path": "settings.gradle.kts",
@@ -1037,8 +1037,8 @@
     },
     {
       "path": "docs/images/settings.png",
-      "size": 53329,
-      "sha256": "fb7407d33c9cfed4f5f8c98aa35888dfff603bf25dd9df59032a4feb60df9a24"
+      "size": 49116,
+      "sha256": "8204704656fcac792edb12ab2e4987e8649940aa0a7f1b371373ac5b773928df"
     },
     {
       "path": "docs/SCREENSHOTS.md",
@@ -1137,8 +1137,8 @@
     },
     {
       "path": "docs/VERIFICATION.md",
-      "size": 2900,
-      "sha256": "12a7020f215bbdccc904caff608ddb16174ddf528163f1701ef1c8f036a69b28"
+      "size": 4355,
+      "sha256": "662aeb3b0696ac14a2ae8868814fdad857fc275c600bf842c2c9c45514dbfad8"
     },
     {
       "path": "docs/images/station-image-editor-mock.png",

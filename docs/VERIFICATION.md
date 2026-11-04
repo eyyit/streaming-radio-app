@@ -1,3 +1,9 @@
+# Candidate v6 publication preparation - 3 November 2026
+
+Current app sources match the 0.3.0-rc4/versionCode6 candidate. Online artwork now defaults on when no choice is saved; existing explicit opt-outs and hidden-track-art choices remain authoritative. All four JVM variants pass279 tests; release lint has0errors (134 automotive/110 phonewarnings). API33 native favorite action advertises a heart; artwork catalog selection/retry/caching and approved playlist/image-editor fixes are included. The custom parked UI does not replace the OEM native media host. Real-car system-wide audio distortion remains unresolved; public-release acceptance is blocked. No speculative audio-pipeline fix was made.
+
+User authorized a GitHub source push; the user handles Play uploads separately. Existing screenshots and approved image-editor mock are retained, including the replacement Settings image. No signing key, private playlist, car photograph, internal Google/Volvo report or raw vehicle log is included. Older notes below are historical; in particular mock-only/editor-pending and v3/v4 artifact notes do not describe this source candidate. CI result must be checked for the uploaded SHA before calling it passed.
+
 # Local and CI verification
 
 ## Why local checks missed the CI failures
@@ -19,3 +25,5 @@ Receipts under app/build/reports/verification identify the Git commit, clean/dir
 ## Windows workspace helper
 
 In the original Windows workspace, outputs/Verify-AAOS-local.ps1 and .cmd create a new checkout and configure the existing isolated toolchain. Use `-Source Server -Revision <candidate-sha>` to verify a server commit before GitHub push, or `-Source GitHub -Revision main` to verify the published branch. `-PreflightOnly` performs prerequisite/source/tooling checks only. Saved checkouts and logs are retained for inspection; the helper does not reset the working app or any emulator.
+
+The shared Gradle task set also compiles the debug instrumentation APK so UI-regression test source is checked on fresh local/CI builds. It does not run instrumentation or start an emulator; those require separate authorized device testing.
