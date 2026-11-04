@@ -150,6 +150,7 @@ class RadioService : MediaLibraryService() {
     private var coverGeneration = 0
     private var coverRevertJob: Job? = null
     private var coverLookupJob: Job? = null
+    private var manualArtworkLookup = false
 
     /**
      * The track that the cover art held in [coverArtUrl] belongs to. Used to
@@ -243,7 +244,13 @@ class RadioService : MediaLibraryService() {
         if (key != null && !isBookkeeping(key)) Trace.write("cfg") { put("key", key) }
         when (key) {
             "active_browse_parent" -> refreshAutomotiveQueue()
-            "random_station_order" -> { stationTraversal.invalidateOrder(); saveStationTraversal() }
+            "random_station_order" -> {
+                stationTraversal.invalidateOrder()
+                saveStationTraversal()
+                if (this@RadioService::session.isInitialized) {
+                    session.setCustomLayout(customLayout())
+                }
+            }
             "online_artwork_enabled" -> {
                 preloadStationArtwork()
                 val now = PlaybackStatusBus.nowPlaying.value
@@ -251,6 +258,9 @@ class RadioService : MediaLibraryService() {
                 updateCoverArt(now, trackKey, false)
                 notifyBrowseNodesChanged(NODE_ALL, NODE_FAVOURITES, NODE_RECENT)
                 refreshCurrentMetadata(force = true, why = "artwork-setting")
+                if (this@RadioService::session.isInitialized) {
+                    session.setCustomLayout(customLayout())
+                }
             }
             "station_artwork_revision" -> {
                 notifyBrowseNodesChanged(NODE_ALL, NODE_FAVOURITES, NODE_RECENT)
@@ -352,7 +362,14 @@ class RadioService : MediaLibraryService() {
                 preloadStationArtwork()
                 notifyBrowseNodesChanged(NODE_ALL, NODE_FAVOURITES, NODE_RECENT, NODE_GENRES, NODE_PLAYLISTS)
                 repo.playlists().forEach { notifyBrowseNodesChanged("/playlist/${it.id}") }
-                session.notifyChildrenChanged(NODE_ROOT, if (net.mspanc.twinsenradio.BuildConfig.IS_AUTOMOTIVE) 3 else 4, null)
+                session.notifyChildrenChanged(
+                    NODE_ROOT,
+                    NativeSessionControls.rootIds(
+                        net.mspanc.twinsenradio.BuildConfig.IS_AUTOMOTIVE,
+                        repo.favourites().isNotEmpty()
+                    ).size,
+                    null
+                )
                 refreshAutomotiveQueue()
             }
         }
@@ -381,7 +398,14 @@ class RadioService : MediaLibraryService() {
                 debugInfo(TAG, "ulubione zmienione (${favourites.size}) - odswiezam przyciski i wezly")
                 session.setCustomLayout(customLayout())
                 notifyBrowseNodesChanged(NODE_FAVOURITES, NODE_ALL, NODE_RECENT)
-                session.notifyChildrenChanged(NODE_ROOT, if (net.mspanc.twinsenradio.BuildConfig.IS_AUTOMOTIVE) 3 else 4, null)
+                session.notifyChildrenChanged(
+                    NODE_ROOT,
+                    NativeSessionControls.rootIds(
+                        net.mspanc.twinsenradio.BuildConfig.IS_AUTOMOTIVE,
+                        favourites.isNotEmpty()
+                    ).size,
+                    null
+                )
                 refreshAutomotiveQueue()
             }
         }
@@ -1539,6 +1563,7 @@ class RadioService : MediaLibraryService() {
         PlaybackStatusBus.resetMissingTrackInfo()
         coverGeneration++
         coverLookupJob?.cancel()
+        manualArtworkLookup = false
         PlaybackStatusBus.setTrackArtworkLoading(false)
         // Whatever we are about to open is a fresh connection, so the pause
         // before it has nothing left to say about how far behind we are.
@@ -1611,6 +1636,7 @@ class RadioService : MediaLibraryService() {
         val generation = ++coverGeneration
         coverRevertJob?.cancel()
         coverLookupJob?.cancel()
+        if (!alternative) manualArtworkLookup = false
         PlaybackStatusBus.setTrackArtworkLoading(false)
 
         fun applyIfCurrent(info: CoverArtLookup.TrackInfo?) {
@@ -1622,6 +1648,9 @@ class RadioService : MediaLibraryService() {
             PlaybackStatusBus.setCoverArt(url)
             PlaybackStatusBus.setTrackInfo(info)
             refreshCurrentMetadata(force = true, now = PlaybackStatusBus.nowPlaying.value, why = "katalog")
+            if (this@RadioService::session.isInitialized) {
+                session.setCustomLayout(customLayout())
+            }
             // We now know the track length - recompute the moment the description goes stale
             scheduleStaleCheck(PlaybackStatusBus.nowPlaying.value)
         }
@@ -1636,9 +1665,17 @@ class RadioService : MediaLibraryService() {
         }
 
         // An ad or the station's own slogan - nothing to look up in the catalog.
-        if (key == null || !prefs.onlineArtworkEnabled) return
+        if (key == null || !prefs.onlineArtworkEnabled) {
+            if (this@RadioService::session.isInitialized) {
+                session.setCustomLayout(customLayout())
+            }
+            return
+        }
 
         PlaybackStatusBus.setTrackArtworkLoading(true)
+        if (this@RadioService::session.isInitialized) {
+            session.setCustomLayout(customLayout())
+        }
         coverLookupJob = scope.launch {
             try {
             val startedAt = SystemClock.elapsedRealtime()
@@ -1683,7 +1720,13 @@ class RadioService : MediaLibraryService() {
                 android.widget.Toast.makeText(this@RadioService, message, android.widget.Toast.LENGTH_SHORT).show()
             } else applyIfCurrent(info?.copy(artworkUrl = cachedArtwork))
             } finally {
-                if (generation == coverGeneration) PlaybackStatusBus.setTrackArtworkLoading(false)
+                if (generation == coverGeneration) {
+                    manualArtworkLookup = false
+                    PlaybackStatusBus.setTrackArtworkLoading(false)
+                    if (this@RadioService::session.isInitialized) {
+                        session.setCustomLayout(customLayout())
+                    }
+                }
             }
         }
     }
@@ -1970,23 +2013,66 @@ class RadioService : MediaLibraryService() {
         else -> emptyList()
     }
 
-    /**
-     * Buttons in the Android Auto player template - the same set also shows up
-     * in the phone's playback notification, since both read the session's
-     * custom layout.
-     *
-     * The diagnostic toggle only appears once diagnostic mode is actually on -
-     * it's a developer convenience for turning it back off without leaving the
-     * car screen or the notification, not the way to turn it on in the first
-     * place (that's the switch in Options). Showing it all the time, for
-     * everyone, made no sense for a mode that's off by default.
-     */
-    private fun customLayout(): ImmutableList<CommandButton> =
-        if (prefs.diagnosticMode) {
-            ImmutableList.of(favouriteButton(), diagnosticButton())
-        } else {
-            ImmutableList.of(favouriteButton())
+    /** Player commands are preferences; the native host chooses their placement. */
+    private fun customLayout(): ImmutableList<CommandButton> = ImmutableList.copyOf(
+        NativeSessionControls.playerActions(
+            automotive = net.mspanc.twinsenradio.BuildConfig.IS_AUTOMOTIVE,
+            artworkEnabled = prefs.onlineArtworkEnabled,
+            diagnosticMode = prefs.diagnosticMode
+        ).map { action ->
+            when (action) {
+                NativeSessionControls.PlayerAction.FAVOURITE -> favouriteButton()
+                NativeSessionControls.PlayerAction.SHUFFLE -> shuffleButton()
+                NativeSessionControls.PlayerAction.TRACK_ART -> trackArtworkButton()
+                NativeSessionControls.PlayerAction.DIAGNOSTIC -> diagnosticButton()
+            }
         }
+    )
+
+    private fun shuffleButton(): CommandButton {
+        val enabled = prefs.randomStationOrder
+        val icon = if (enabled) CommandButton.ICON_SHUFFLE_ON else CommandButton.ICON_SHUFFLE_OFF
+        @Suppress("DEPRECATION")
+        return CommandButton.Builder()
+            .setSessionCommand(CMD_TOGGLE_SHUFFLE)
+            .setDisplayName(if (enabled) "Shuffle stations on" else "Shuffle stations off")
+            .setIconResId(
+                if (enabled) net.mspanc.twinsenradio.R.drawable.ic_shuffle_on_aa
+                else net.mspanc.twinsenradio.R.drawable.ic_shuffle_off_aa
+            )
+            .setExtras(
+                Bundle().apply {
+                    putInt(MediaConstants.EXTRAS_KEY_COMMAND_BUTTON_ICON_COMPAT, icon)
+                }
+            )
+            .build()
+    }
+
+    private fun trackArtworkButton(): CommandButton {
+        val hasAlternative = coverAlternatives.isNotEmpty()
+        val manualLookup = manualArtworkLookup && PlaybackStatusBus.trackArtworkLoading.value
+        @Suppress("DEPRECATION")
+        return CommandButton.Builder()
+            .setSessionCommand(CMD_REFRESH_ARTWORK)
+            .setDisplayName(
+                when {
+                    manualLookup -> "Finding track art…"
+                    hasAlternative -> "Try another track image"
+                    else -> "Find track art"
+                }
+            )
+            .setIconResId(net.mspanc.twinsenradio.R.drawable.ic_artwork_refresh)
+            .setExtras(
+                Bundle().apply {
+                    putInt(
+                        MediaConstants.EXTRAS_KEY_COMMAND_BUTTON_ICON_COMPAT,
+                        CommandButton.ICON_ALBUM
+                    )
+                    PlaybackStatusBus.stationId.value?.let { putString("stationId", it) }
+                }
+            )
+            .build()
+    }
 
     /**
      * The favorites heart. Without it, a station playing in the car couldn't
@@ -2109,6 +2195,7 @@ class RadioService : MediaLibraryService() {
                     if (access.controlPlayback) add(CMD_TOGGLE_DIAG)
                     if (access.editFavorites) add(CMD_TOGGLE_FAV)
                     if (access.refreshArtwork) add(CMD_REFRESH_ARTWORK)
+                    if (access.controlPlayback) add(CMD_TOGGLE_SHUFFLE)
                 }
                 .build()
             return MediaSession.ConnectionResult.AcceptedResultBuilder(session, controller)
@@ -2138,6 +2225,7 @@ class RadioService : MediaLibraryService() {
             val access = access(controller)
             val allowed = when (customCommand.customAction) {
                 CMD_REFRESH_ARTWORK.customAction -> access.refreshArtwork
+                CMD_TOGGLE_SHUFFLE.customAction -> access.controlPlayback
                 CMD_TOGGLE_DIAG.customAction -> access.toggleDiagnostics
                 CMD_TOGGLE_FAV.customAction, ACTION_FAVOURITE, ACTION_UNFAVOURITE -> access.editFavorites
                 else -> false
@@ -2145,10 +2233,56 @@ class RadioService : MediaLibraryService() {
             if (!allowed) return Futures.immediateFuture(SessionResult(SessionError.ERROR_PERMISSION_DENIED))
             when (customCommand.customAction) {
                 CMD_REFRESH_ARTWORK.customAction -> {
-                    if (args.getString("stationId") != PlaybackStatusBus.stationId.value || !prefs.onlineArtworkEnabled)
+                    if (!prefs.onlineArtworkEnabled) {
                         return Futures.immediateFuture(SessionResult(SessionError.ERROR_NOT_SUPPORTED))
-                    if (!PlaybackStatusBus.trackArtworkLoading.value)
-                        updateCoverArt(PlaybackStatusBus.nowPlaying.value, coverTrackKey, sameTrack = true, alternative = true)
+                    }
+                    val requestedStation = args.getString("stationId")
+                    if (requestedStation != null &&
+                        requestedStation != PlaybackStatusBus.stationId.value
+                    ) {
+                        return Futures.immediateFuture(
+                            SessionResult(SessionError.ERROR_NOT_SUPPORTED)
+                        )
+                    }
+                    val now = PlaybackStatusBus.nowPlaying.value
+                    if (now?.isRealSong != true || now.artist.isNullOrBlank() ||
+                        now.songTitle.isNullOrBlank()
+                    ) {
+                        android.widget.Toast.makeText(
+                            this@RadioService,
+                            "Track artist or title is not available.",
+                            android.widget.Toast.LENGTH_SHORT
+                        ).show()
+                        val result = Bundle().apply {
+                            putString(
+                                KEY_ACTION_RESULT_MESSAGE,
+                                "Track artist or title is not available."
+                            )
+                        }
+                        return Futures.immediateFuture(
+                            SessionResult(SessionError.ERROR_NOT_SUPPORTED, result)
+                        )
+                    }
+                    if (PlaybackStatusBus.trackArtworkLoading.value) {
+                        android.widget.Toast.makeText(
+                            this@RadioService,
+                            "Artwork lookup is already running.",
+                            android.widget.Toast.LENGTH_SHORT
+                        ).show()
+                    } else {
+                        manualArtworkLookup = true
+                        updateCoverArt(
+                            now,
+                            "${now.artist}|${now.songTitle}",
+                            sameTrack = true,
+                            alternative = true
+                        )
+                    }
+                    return Futures.immediateFuture(SessionResult(SessionResult.RESULT_SUCCESS))
+                }
+                CMD_TOGGLE_SHUFFLE.customAction -> {
+                    prefs.randomStationOrder = !prefs.randomStationOrder
+                    session.setCustomLayout(customLayout())
                     return Futures.immediateFuture(SessionResult(SessionResult.RESULT_SUCCESS))
                 }
                 CMD_TOGGLE_DIAG.customAction -> {
@@ -2255,19 +2389,27 @@ class RadioService : MediaLibraryService() {
             if (page < 0 || pageSize <= 0) return Futures.immediateFuture(
                 LibraryResult.ofError(SessionError.ERROR_BAD_VALUE))
             val children: List<MediaItem> = when {
-                parentId == NODE_ROOT -> BrowsePage.map((if (net.mspanc.twinsenradio.BuildConfig.IS_AUTOMOTIVE && repo.favourites().isEmpty()) listOf(
-                    folder(NODE_ALL, net.mspanc.twinsenradio.R.string.node_all),
-                    folder(NODE_FAVOURITES, net.mspanc.twinsenradio.R.string.node_favourites)
-                ) else listOf(
-                    folder(NODE_FAVOURITES, net.mspanc.twinsenradio.R.string.node_favourites),
-                    folder(NODE_ALL, net.mspanc.twinsenradio.R.string.node_all)
-                )) + (if(net.mspanc.twinsenradio.BuildConfig.IS_AUTOMOTIVE) listOf(
-                    MediaItem.Builder().setMediaId(NODE_PLAYLISTS).setMediaMetadata(
-                        metadata.forFolder("Playlists",MediaMetadata.MEDIA_TYPE_FOLDER_RADIO_STATIONS)).build()
-                ) else listOf(
-                    folder(NODE_RECENT, net.mspanc.twinsenradio.R.string.node_recent),
-                    folder(NODE_GENRES, net.mspanc.twinsenradio.R.string.node_genres)
-                )), page, pageSize) { it }
+                parentId == NODE_ROOT -> BrowsePage.map(
+                    NativeSessionControls.rootIds(
+                        net.mspanc.twinsenradio.BuildConfig.IS_AUTOMOTIVE,
+                        repo.favourites().isNotEmpty()
+                    ).map { node ->
+                        when (node) {
+                            NODE_ALL -> folder(NODE_ALL, net.mspanc.twinsenradio.R.string.node_all)
+                            NODE_FAVOURITES -> folder(
+                                NODE_FAVOURITES,
+                                net.mspanc.twinsenradio.R.string.node_favourites
+                            )
+                            NODE_RECENT -> folder(
+                                NODE_RECENT,
+                                net.mspanc.twinsenradio.R.string.node_recent
+                            )
+                            else -> folder(NODE_GENRES, net.mspanc.twinsenradio.R.string.node_genres)
+                        }
+                    },
+                    page,
+                    pageSize
+                ) { it }
 
                 parentId == NODE_PLAYLISTS -> BrowsePage.map(repo.playlists(), page, pageSize) { source ->
                     MediaItem.Builder().setMediaId("/playlist/${source.id}").setMediaMetadata(
@@ -2641,6 +2783,8 @@ class RadioService : MediaLibraryService() {
             SessionCommand("net.mspanc.twinsenradio.TOGGLE_DIAG", Bundle.EMPTY)
         private val CMD_TOGGLE_FAV =
             SessionCommand("net.mspanc.twinsenradio.TOGGLE_FAV", Bundle.EMPTY)
+        private val CMD_TOGGLE_SHUFFLE =
+            SessionCommand("net.mspanc.twinsenradio.TOGGLE_SHUFFLE", Bundle.EMPTY)
 
         // List item actions in Android Auto. The keys come from
         // androidx.media.utils.MediaConstants - hardcoded here because Media3

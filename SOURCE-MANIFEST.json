@@ -1,7 +1,7 @@
 {
   "formatVersion": 1,
   "project": "Streaming Radio repository source inventory",
-  "gitHead": "a7d9557643dbd4ecb77803a90bfef48952a9c896",
+  "gitHead": "e4a60fbb53e98562772b5314b4543fcc50dca6d6",
   "workingTree": "dirty",
   "hashAlgorithm": "SHA-256",
   "selfHashExcluded": true,
@@ -387,8 +387,8 @@
     },
     {
       "path": "app/src/main/java/net/mspanc/twinsenradio/playback/AutomotiveText.kt",
-      "size": 876,
-      "sha256": "4de57eef4444c267b54e8d8018ef8956c2da88603f4cf15f6b3cb9e998f785a8"
+      "size": 729,
+      "sha256": "3e2545c1c254ff8e884b8a432a9a9aff8a55a3961cf94ddd1ad5ae44c947c7bc"
     },
     {
       "path": "app/src/main/java/net/mspanc/twinsenradio/playback/BrowsePage.kt",
@@ -447,8 +447,8 @@
     },
     {
       "path": "app/src/main/java/net/mspanc/twinsenradio/playback/MediaControllerAccessPolicy.kt",
-      "size": 997,
-      "sha256": "783b1babfd9c073ebbf7aaebf7286a60fff2ade644550da80aed40dd2e195ba1"
+      "size": 1001,
+      "sha256": "2755c47c0a56c051da1e9b0314ca00549dca17820d3bc51479442bf37fc03c5d"
     },
     {
       "path": "app/src/main/java/net/mspanc/twinsenradio/playback/MetadataFactory.kt",
@@ -464,6 +464,11 @@
       "path": "app/src/main/java/net/mspanc/twinsenradio/playback/MissingTrackInfoGrace.kt",
       "size": 2449,
       "sha256": "82319ef76d66e34832a0d9d75640f99c33dfc7d0c1a1dfc33738c48d75af184c"
+    },
+    {
+      "path": "app/src/main/java/net/mspanc/twinsenradio/playback/NativeSessionControls.kt",
+      "size": 893,
+      "sha256": "dedaf105e71be645488a255fe7739c1ee59722f59b6f25b073c0d8872b58aa1f"
     },
     {
       "path": "app/src/main/java/net/mspanc/twinsenradio/playback/OnAirGuide.kt",
@@ -482,8 +487,8 @@
     },
     {
       "path": "app/src/main/java/net/mspanc/twinsenradio/playback/RadioService.kt",
-      "size": 133010,
-      "sha256": "7a77e44355772cccbff89a730c7c9b87dfdbab6e47f6838e51f4ef22b91be230"
+      "size": 138748,
+      "sha256": "f4b2d2e57085244824b979ae45ebf30d4a7ff23785074fcca588dd379325218a"
     },
     {
       "path": "app/src/main/java/net/mspanc/twinsenradio/playback/ReconnectController.kt",
@@ -689,6 +694,16 @@
       "path": "app/src/main/res/drawable/ic_search.xml",
       "size": 563,
       "sha256": "865c47ef1133b64969d851cd5d77df70d8b369a3a4264c50a750432be5671f4b"
+    },
+    {
+      "path": "app/src/main/res/drawable/ic_shuffle_off_aa.xml",
+      "size": 543,
+      "sha256": "69cef5954b3c77f8138d5f1aaf52b3f6deb3cc83a967d6a8414c7ca615adf9e7"
+    },
+    {
+      "path": "app/src/main/res/drawable/ic_shuffle_on_aa.xml",
+      "size": 543,
+      "sha256": "82e9a8adc00fca62583b9046b1fa9290ea53ab0a2a414d88bc5f104b3704be1b"
     },
     {
       "path": "app/src/main/res/drawable/ic_sort.xml",
@@ -907,8 +922,8 @@
     },
     {
       "path": "app/src/test/java/net/mspanc/twinsenradio/playback/AutomotiveTextTest.kt",
-      "size": 1161,
-      "sha256": "4cd3fd4d2a3727785a318573fa910ad90d098a9555b5f288dbcfd0de96a02824"
+      "size": 1415,
+      "sha256": "9b7ccd4c7f03586645a77cf10c9ae95f8f68cadd8256fe1942ea461c3dc522cc"
     },
     {
       "path": "app/src/test/java/net/mspanc/twinsenradio/playback/BrowsePageTest.kt",
@@ -932,8 +947,8 @@
     },
     {
       "path": "app/src/test/java/net/mspanc/twinsenradio/playback/MediaControllerAccessPolicyTest.kt",
-      "size": 2326,
-      "sha256": "bbf9e2f7e3f49ee0689d6c47bdb60fcb2737f6b623c10ef22ab1471470f949e9"
+      "size": 2295,
+      "sha256": "dae33a6731497737cc18a1c4c8f7b43f5e3f00f75acfae4487991e3993c4a261"
     },
     {
       "path": "app/src/test/java/net/mspanc/twinsenradio/playback/MissingTrackInfoGraceTest.kt",
@@ -944,6 +959,11 @@
       "path": "app/src/test/java/net/mspanc/twinsenradio/playback/MissingTrackInfoTest.kt",
       "size": 956,
       "sha256": "a36ae90b89f395d43378bb346a5568506b28f9f70a36f88ab62eb76b457a6ad6"
+    },
+    {
+      "path": "app/src/test/java/net/mspanc/twinsenradio/playback/NativeSessionControlsTest.kt",
+      "size": 2110,
+      "sha256": "e6ed96ac67186b0289aba693431af0deaf38fc17e2d80a5838ccb26f96fd2c70"
     },
     {
       "path": "app/src/test/java/net/mspanc/twinsenradio/playback/NetworkRecoveryPolicyTest.kt",

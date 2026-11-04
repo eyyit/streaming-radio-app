@@ -9,10 +9,9 @@ object AutomotiveText {
         val performer = artist?.trim().orEmpty()
         return Lines(
             title = track.ifBlank { station },
-            subtitle = listOf(performer, track, quality?.compactLabel().orEmpty())
+            subtitle = listOf(performer, track)
                 .filter { it.isNotBlank() }.distinct().joinToString(" · "),
-            description = listOf(station, album.orEmpty(), quality?.technicalLabel().orEmpty())
-                .filter { it.isNotBlank() }.distinct().joinToString(" · ")
+            description = quality?.compactLabel().orEmpty()
         )
     }
 }

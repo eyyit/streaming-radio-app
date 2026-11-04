@@ -16,7 +16,7 @@ internal object MediaControllerAccessPolicy {
         return Access(
             controlPlayback = control,
             editFavorites = control,
-            refreshArtwork = own,
+            refreshArtwork = control,
             // Car/notification diagnostics is an existing turn-OFF shortcut.
             // Only the app may enable diagnostics and its additional logging.
             toggleDiagnostics = own || (trusted && diagnosticsEnabled)

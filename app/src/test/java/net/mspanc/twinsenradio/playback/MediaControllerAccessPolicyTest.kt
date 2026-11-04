@@ -24,11 +24,11 @@ class MediaControllerAccessPolicyTest {
         assertFalse(spoofed.toggleDiagnostics)
     }
 
-    @Test fun trustedNativeHostCanPlayAndFavoriteButCannotRefreshOrEnableDiagnostics() {
+    @Test fun trustedNativeHostCanRefreshButCannotEnableDiagnostics() {
         val host = access(trusted = true)
         assertTrue(host.controlPlayback)
         assertTrue(host.editFavorites)
-        assertFalse(host.refreshArtwork)
+        assertTrue(host.refreshArtwork)
         assertFalse(host.toggleDiagnostics)
         assertTrue(access(trusted = true, diagnostics = true).toggleDiagnostics)
     }
@@ -37,7 +37,7 @@ class MediaControllerAccessPolicyTest {
         val legacy = access(uid = -1, name = "android.media.session.MediaController", trusted = true)
         assertTrue(legacy.controlPlayback)
         assertTrue(legacy.editFavorites)
-        assertFalse(legacy.refreshArtwork)
+        assertTrue(legacy.refreshArtwork)
         assertFalse(legacy.toggleDiagnostics)
     }
 
@@ -49,8 +49,8 @@ class MediaControllerAccessPolicyTest {
         assertFalse(external.toggleDiagnostics)
     }
 
-    @Test fun uidAndPackageMustBothMatchForAppOnlyArtworkRefresh() {
-        assertFalse(access(uid = 1000, name = "another.package", trusted = true).refreshArtwork)
+    @Test fun untrustedWrongPackageAndInvalidUidCannotRefreshArtwork() {
+        assertFalse(access(uid = 1000, name = "another.package").refreshArtwork)
         assertFalse(MediaControllerAccessPolicy.access(-1, "radio.app", -1, "radio.app", false, false).refreshArtwork)
     }
 }
