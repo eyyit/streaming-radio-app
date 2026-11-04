@@ -145,6 +145,18 @@ class ReconnectController(
         scheduleRetry()
     }
 
+    override fun onPlayWhenReadyChanged(playWhenReady: Boolean, reason: Int) {
+        if (!playWhenReady) {
+            cancelPending()
+            cancelStuckCheck()
+            attempt = 0
+            status = Status.OK
+        } else when (player.playbackState) {
+            Player.STATE_BUFFERING -> scheduleStuckCheck()
+            Player.STATE_IDLE, Player.STATE_ENDED -> retryNow("wznowienie")
+        }
+    }
+
     override fun onPlaybackStateChanged(playbackState: Int) {
         when (playbackState) {
             Player.STATE_READY -> {

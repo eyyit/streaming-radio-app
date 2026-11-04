@@ -217,9 +217,6 @@ class RadioService : MediaLibraryService() {
     /** Fingerprint of the last playback-state snapshot - see [traceState]. */
     private var lastStateTrace: String? = null
 
-    /** Address we're playing from - used to detect a quality variant change. */
-    private var currentStreamUrl: String? = null
-
     /** Last station slogan - shown when we don't know what's currently playing. */
     @Volatile
     private var lastSlogan: String? = null
@@ -355,7 +352,7 @@ class RadioService : MediaLibraryService() {
                 preloadStationArtwork()
                 notifyBrowseNodesChanged(NODE_ALL, NODE_FAVOURITES, NODE_RECENT, NODE_GENRES, NODE_PLAYLISTS)
                 repo.playlists().forEach { notifyBrowseNodesChanged("/playlist/${it.id}") }
-                session.notifyChildrenChanged(NODE_ROOT, 4, null)
+                session.notifyChildrenChanged(NODE_ROOT, if (net.mspanc.twinsenradio.BuildConfig.IS_AUTOMOTIVE) 3 else 4, null)
                 refreshAutomotiveQueue()
             }
         }
@@ -384,7 +381,7 @@ class RadioService : MediaLibraryService() {
                 debugInfo(TAG, "ulubione zmienione (${favourites.size}) - odswiezam przyciski i wezly")
                 session.setCustomLayout(customLayout())
                 notifyBrowseNodesChanged(NODE_FAVOURITES, NODE_ALL, NODE_RECENT)
-                session.notifyChildrenChanged(NODE_ROOT, 4, null)
+                session.notifyChildrenChanged(NODE_ROOT, if (net.mspanc.twinsenradio.BuildConfig.IS_AUTOMOTIVE) 3 else 4, null)
                 refreshAutomotiveQueue()
             }
         }
@@ -660,6 +657,7 @@ class RadioService : MediaLibraryService() {
             // description, the cover art, the deadline it was to expire at.
             resetStationState()
             player.stop()
+            player.seekToDefaultPosition()
             player.prepare()
             // Without this the dashboard would keep the track from before the
             // pause until the station happens to announce the next one.
@@ -1644,8 +1642,9 @@ class RadioService : MediaLibraryService() {
         coverLookupJob = scope.launch {
             try {
             val startedAt = SystemClock.elapsedRealtime()
-            val info = if (alternative) CoverArtLookup.findAlternative(now!!.artist, now.songTitle, coverAlternatives.toSet())
-                else CoverArtLookup.find(now!!.artist, now.songTitle)
+            val lookup = if (alternative) CoverArtLookup.findAlternativeDetailed(now!!.artist, now.songTitle, coverAlternatives.toSet())
+                else CoverArtLookup.findDetailed(now!!.artist, now.songTitle)
+            val info = (lookup as? CoverArtLookup.CatalogLookupResult.Found)?.info
             if (generation != coverGeneration) return@launch
             info?.artworkUrl?.let { coverAlternatives.add(it) }
             val cachedArtwork = info?.artworkUrl?.let { url ->
@@ -1661,6 +1660,11 @@ class RadioService : MediaLibraryService() {
                 put("pytanieUtwor", now.songTitle)
                 put("ms", SystemClock.elapsedRealtime() - startedAt)
                 put("znaleziono", info != null)
+                put("lookupOutcome", when (lookup) {
+                    is CoverArtLookup.CatalogLookupResult.Found -> if (cachedArtwork != null) "artwork-ready" else "image-unavailable"
+                    CoverArtLookup.CatalogLookupResult.NotFound -> "no-match"
+                    is CoverArtLookup.CatalogLookupResult.TemporaryFailure -> "service-unavailable"
+                })
                 put("album", info?.album)
                 put("rok", info?.year)
                 put("dlugoscMs", info?.durationMs)
@@ -1671,7 +1675,12 @@ class RadioService : MediaLibraryService() {
             }
             if (generation != coverGeneration) return@launch
             if (alternative && cachedArtwork == null) {
-                android.widget.Toast.makeText(this@RadioService, "No different matching artwork was found. Current image kept.", android.widget.Toast.LENGTH_SHORT).show()
+                val message = when {
+                    lookup is CoverArtLookup.CatalogLookupResult.TemporaryFailure -> "Artwork service is temporarily unavailable. Try again later."
+                    info?.artworkUrl != null -> "Artwork download failed. Current image kept."
+                    else -> "No different matching artwork was found. Current image kept."
+                }
+                android.widget.Toast.makeText(this@RadioService, message, android.widget.Toast.LENGTH_SHORT).show()
             } else applyIfCurrent(info?.copy(artworkUrl = cachedArtwork))
             } finally {
                 if (generation == coverGeneration) PlaybackStatusBus.setTrackArtworkLoading(false)
@@ -1690,8 +1699,7 @@ class RadioService : MediaLibraryService() {
     private fun reloadCurrentStation() {
         val id = PlaybackStatusBus.stationId.value ?: return
         val station = repo.byId(id) ?: return
-        if (station.stream == currentStreamUrl) return
-        currentStreamUrl = station.stream
+        if (station.stream == player.currentMediaItem?.localConfiguration?.uri?.toString()) return
         debugInfo(TAG, "zmieniono strumien stacji ${station.name} na ${DiagnosticUrls.endpoint(station.stream)}")
         val wasPlaying = player.playWhenReady
         player.setMediaItem(playableItem(station))
@@ -1981,7 +1989,7 @@ class RadioService : MediaLibraryService() {
         }
 
     /**
-     * The favourites star. Without it, a station playing in the car couldn't
+     * The favorites heart. Without it, a station playing in the car couldn't
      * be added to favourites at all - and it's exactly in the car that a person
      * decides they want it within reach.
      */
@@ -1997,7 +2005,7 @@ class RadioService : MediaLibraryService() {
         // EXTRAS_KEY_COMMAND_BUTTON_ICON_COMPAT key, because that "overrides the
         // icon resource passed to CustomAction.Builder and lets the system draw
         // the action consistently with the others". In other words, the head
-        // unit then draws its OWN star and doesn't look at our resources at all.
+        // unit then draws its OWN heart and doesn't look at our resources at all.
         //
         // The fallback channel is the resource id - for systems that don't know
         // that key. And only there does it matter that the vector has no
@@ -2006,14 +2014,14 @@ class RadioService : MediaLibraryService() {
         // that's exactly where it used to fail.
         //
         // What NOT to do: pass the semantic constant to the
-        // CommandButton.Builder(ICON_STAR_FILLED) constructor and assume that's
+        // CommandButton.Builder(ICON_HEART_FILLED) constructor and assume that's
         // enough. Media3 then translates it for the old API into the resource id
         // of its own bundled resource, and the Desktop Head Unit rendered from
         // that a music note and the text "1.8X".
         val icon = if (isFav) {
-            CommandButton.ICON_STAR_FILLED
+            CommandButton.ICON_HEART_FILLED
         } else {
-            CommandButton.ICON_STAR_UNFILLED
+            CommandButton.ICON_HEART_UNFILLED
         }
         @Suppress("DEPRECATION")
         return CommandButton.Builder()
@@ -2754,4 +2762,3 @@ class RadioService : MediaLibraryService() {
         private val BROWSE_NODES = listOf(NODE_FAVOURITES, NODE_ALL, NODE_RECENT, NODE_GENRES)
     }
 }
-

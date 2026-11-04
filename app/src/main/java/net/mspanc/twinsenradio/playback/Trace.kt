@@ -179,6 +179,6 @@ object Trace {
 
     private fun versionOf(context: Context): String = runCatching {
         val info = context.packageManager.getPackageInfo(context.packageName, 0)
-        "${info.versionName} (${info.longVersionCode})"
+        "${info.versionName} (${androidx.core.content.pm.PackageInfoCompat.getLongVersionCode(info)})"
     }.getOrDefault("?")
 }
