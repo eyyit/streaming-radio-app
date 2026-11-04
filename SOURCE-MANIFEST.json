@@ -1,7 +1,7 @@
 {
   "formatVersion": 1,
   "project": "Twinsen Radio independent source candidate",
-  "gitHead": "a4a096b81be5938dfac296545c85d1d1dae22208",
+  "gitHead": "b20cc9a7873d6f7970340c100592bf9f0241fb7a",
   "workingTree": "dirty",
   "hashAlgorithm": "SHA-256",
   "selfHashExcluded": true,
@@ -1027,8 +1027,8 @@
     },
     {
       "path": "tools/export-public-source.cjs",
-      "size": 8111,
-      "sha256": "1cf4bb56faff8e54afc12180782bda03772239e922c65831312c86710b87c7a0"
+      "size": 8425,
+      "sha256": "695257698d0131e298c7d3f8578e71ddd0d751d1fe9221a1f50f29f25eee5653"
     },
     {
       "path": "UPSTREAM-README.md",
@@ -1127,8 +1127,8 @@
     },
     {
       "path": "tools/verify-automotive.cjs",
-      "size": 8933,
-      "sha256": "d0cd996398248f3ee2aade16c7457aef512b1f3b4f94a6b46d540a837db29793"
+      "size": 8966,
+      "sha256": "aa6372e4e82a09a00f936840b755223844215812332882156e13c5a096266161"
     },
     {
       "path": "tools/verify-automotive.test.cjs",
@@ -1296,6 +1296,26 @@
       "sha256": "19f012cc4bd2bda23ffe3935b45c095186a01912df480fd7cce7b03e14bf4dce"
     },
     {
+      "path": "docs/public/BUILD.md",
+      "size": 3398,
+      "sha256": "809da5aa4f32983ae8215c39744558910025d0e18a20f073a986bf89f55f19af"
+    },
+    {
+      "path": "docs/public/CHANGELOG.md",
+      "size": 2306,
+      "sha256": "c2281a7d2799195c0bddffcfc9a01d1a011ea54d5bb3b7032d9e80027931dbd9"
+    },
+    {
+      "path": "docs/public/README.md",
+      "size": 1267,
+      "sha256": "1364413cb2a4ac63d174e3dd1642b2607e76f84561ce93fd0b6054b35e8d73e3"
+    },
+    {
+      "path": "docs/public/SECURITY.md",
+      "size": 2440,
+      "sha256": "e04e5485f1c34360bde331b2ce2c8a4f5f3386bc3cd0b45a93f3ae308b137c3d"
+    },
+    {
       "path": "tools/emulator-host-layout/Set-AAOS-pinned-player.ps1",
       "size": 3556,
       "sha256": "4263a94ad20f840cd1940b7f0e418531a3059e3cf0820c1315d024443cce8ddc"
@@ -1304,6 +1324,11 @@
       "path": "tools/emulator-host-layout/Set-AAOS-wide-controls.ps1",
       "size": 5985,
       "sha256": "656b1df811ca14b8ac55bd76f3e61caeca529ad97babab7d858ba7b475f053b4"
+    },
+    {
+      "path": "tools/export-public-source.test.cjs",
+      "size": 1404,
+      "sha256": "f2d338222a50296a825abacf9fc7145afa1094245f238d6449a28c37daf7ea43"
     },
     {
       "path": "tools/install-and-root-state.test.cjs",

@@ -80,7 +80,7 @@ function sourceCheck(root, env) {
 function toolTests(root, env) {
   run(process.execPath, ['--test', ...['check-dependencies.test.cjs',
     'check-source-tree.test.cjs', 'verify-automotive.test.cjs',
-    'install-and-root-state.test.cjs'].map(x => path.join(root, 'tools', x))],
+    'install-and-root-state.test.cjs', 'export-public-source.test.cjs'].map(x => path.join(root, 'tools', x))],
   root, env, 'TOOL_TESTS_FAILED');
 }
 function writeReceipt(root, data) {

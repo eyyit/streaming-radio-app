@@ -14,12 +14,15 @@ function addTree(rel){const base=inside(root,path.join(root,rel));if(!fs.statSyn
 for(const f of ['.gitignore','LICENSE','THIRD-PARTY-NOTICES.md','gradlew','gradlew.bat','gradle.properties','settings.gradle.kts','build.gradle.kts','app/build.gradle.kts','gradle/wrapper/gradle-wrapper.jar','gradle/wrapper/gradle-wrapper.properties','tools/aaos-fixture-server.cjs'])addFile(f);
 for(const d of ['main','automotive','debug','test','androidTest'])addTree('app/src/'+d);
 if(fs.existsSync(path.join(root,'app/src/automotiveDebug')))addTree('app/src/automotiveDebug');
-for(const f of ['README.md','BUILD.md','SECURITY.md','CHANGELOG.md'])addFile('docs/public/'+f,f);
+for(const f of ['README.md','BUILD.md','SECURITY.md','CHANGELOG.md']){addFile('docs/public/'+f,f);addFile('docs/public/'+f);}
 addFile('tools/export-public-source.cjs');
 addFile('AGENTS.md');
 addFile('tools/check-source-tree.cjs');
+for(const f of ['tools/install-and-root-state.test.cjs','tools/install.ps1','tools/emulator-host-layout/Set-AAOS-pinned-player.ps1','tools/emulator-host-layout/Set-AAOS-wide-controls.ps1'])addFile(f);
 for(const f of ['tools/check-source-tree.test.cjs','tools/verify-automotive.cjs','tools/verify-automotive.test.cjs'])addFile(f);
 addFile('docs/DESIGN-SYSTEM.md');
+addFile('docs/privacy.html');
+addFile('tools/export-public-source.test.cjs');
 addFile('.cursor/rules/streaming-radio-design.mdc');
 for(const f of ['tools/check-dependencies.cjs','tools/check-dependencies.test.cjs','.github/workflows/android-ci.yml','.github/dependabot.yml'])addFile(f);
 const gh=spawnSync('git',['-C',root,'rev-parse','HEAD'],{encoding:'utf8',windowsHide:true});
@@ -31,7 +34,7 @@ if(workingTree!=='clean')warnings.push('Working tree is '+workingTree+'; Git HEA
 let upstream=null;if(gitHead){const u=spawnSync('git',['-C',root,'show',gitHead+':README.md'],{encoding:'utf8',windowsHide:true,maxBuffer:4194304});if(u.status===0)upstream=u.stdout}
 if(upstream===null){upstream='# Upstream README unavailable\n\nSee https://github.com/szczepl/twinsen-radio.\n';warnings.push('Could not retrieve upstream README from Git history; included a provenance note instead.')}
 included.set('UPSTREAM-README.md',{generated:Buffer.from(upstream,'utf8')});
-const exts=new Set(['.kt','.java','.xml','.json','.kts','.gradle','.properties','.cjs','.js','.md','.txt','.sh','.bat','.yml','.yaml','.toml','.pro']);
+const exts=new Set(['.kt','.java','.xml','.json','.kts','.gradle','.properties','.cjs','.js','.md','.txt','.sh','.bat','.ps1','.yml','.yaml','.toml','.pro']);
 const pats=[['private key',/-----BEGIN (?:RSA |EC |OPENSSH |DSA )?PRIVATE KEY-----/i],['GitHub token',/\bgh[pousr]_[A-Za-z0-9_]{30,}\b/],['AWS access key',/\bAKIA[0-9A-Z]{16}\b/],['Slack token',/\bxox[baprs]-[A-Za-z0-9-]{20,}\b/],['Google API key',/\bAIza[0-9A-Za-z_-]{30,}\b/],['OpenAI-style secret',/\bsk-(?:proj-)?[A-Za-z0-9_-]{24,}\b/],['authorization bearer',/\bBearer\s+[A-Za-z0-9._~+/-]{20,}/i],['URL user information',/https?:\/\/[^\s/:@]+:[^\s/@]+@/i],['credential assignment',/(?:password|passwd|secret|api[_-]?key|access[_-]?token)\s*[:=]\s*["'][^"']{12,}["']/i]];
 const found=[];
 function syntheticUserInfo(line,dest){
