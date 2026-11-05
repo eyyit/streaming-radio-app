@@ -1,7 +1,7 @@
 {
   "formatVersion": 1,
   "project": "Streaming Radio repository source inventory",
-  "gitHead": "3c57676dacd177978d748cc26d3359fa865b8963",
+  "gitHead": "e5e43679c5187697c00ce220f7ad0298a4e2e195",
   "workingTree": "dirty",
   "hashAlgorithm": "SHA-256",
   "selfHashExcluded": true,
@@ -42,8 +42,8 @@
     },
     {
       "path": "CHANGELOG.md",
-      "size": 2306,
-      "sha256": "c2281a7d2799195c0bddffcfc9a01d1a011ea54d5bb3b7032d9e80027931dbd9"
+      "size": 2788,
+      "sha256": "d7a17b19ba0bd8c9715ca160a63bf3362603b4dd053f2359ff5763332e5b68ce"
     },
     {
       "path": "LICENSE",
@@ -52,8 +52,8 @@
     },
     {
       "path": "README.md",
-      "size": 8018,
-      "sha256": "e95199131ccf64d0a723815bed0bdfbf639b490324418417b0f3b1702a54b6d4"
+      "size": 8094,
+      "sha256": "0b35cc1cb6c9b999c8357c7d46a6d776136ab7607f6eee8ebbec02a033930a13"
     },
     {
       "path": "SECURITY.md",
@@ -73,7 +73,7 @@
     {
       "path": "app/build.gradle.kts",
       "size": 6236,
-      "sha256": "0266c59a2895cf0d6a0e72ba4d1f41fc7e644214c84f8f9a268a56a8f6b4bad6"
+      "sha256": "4a213aa9b502bd182ae92267ee155c2e405787bee03d895df933db0232e70e31"
     },
     {
       "path": "app/src/androidTest/java/net/mspanc/twinsenradio/automotive/PrototypeSmokeInstrumentation.kt",
@@ -122,8 +122,8 @@
     },
     {
       "path": "app/src/automotive/java/net/mspanc/twinsenradio/automotive/AutomotiveDesign.kt",
-      "size": 678,
-      "sha256": "5285eb3f87fed3e3313eafc1f899654178c743c792370934656460f592b68bc8"
+      "size": 927,
+      "sha256": "607f0b8346842276ec7ebb6ddf4071a8035f99a5797e78071035c29cb1656d32"
     },
     {
       "path": "app/src/automotive/java/net/mspanc/twinsenradio/automotive/AutomotiveSettingsActivity.kt",
@@ -137,8 +137,8 @@
     },
     {
       "path": "app/src/automotive/java/net/mspanc/twinsenradio/automotive/RadioManagement.kt",
-      "size": 29273,
-      "sha256": "d5a52ebae18e692126c98b7f5b6668d1babd861bbcd59586785bd146e77e2c50"
+      "size": 30596,
+      "sha256": "a23af9f713c39cd558bead9b053246e8f6429ac5c298ddaf38da6522103a8967"
     },
     {
       "path": "app/src/automotive/java/net/mspanc/twinsenradio/automotive/StationImageDialog.kt",
@@ -1057,8 +1057,8 @@
     },
     {
       "path": "docs/DESIGN-SYSTEM.md",
-      "size": 13376,
-      "sha256": "87eb81e6a007c4209e353238012b50dcc0a4f1b326e820c714f960f7d474a56d"
+      "size": 14091,
+      "sha256": "04a738e709e80b493041d1e65d43b09a75ecfb3b3e51f7491601814747ff0fd2"
     },
     {
       "path": "docs/DOCKER-BUILD.md",
@@ -1087,8 +1087,8 @@
     },
     {
       "path": "docs/public/CHANGELOG.md",
-      "size": 2306,
-      "sha256": "c2281a7d2799195c0bddffcfc9a01d1a011ea54d5bb3b7032d9e80027931dbd9"
+      "size": 2788,
+      "sha256": "d7a17b19ba0bd8c9715ca160a63bf3362603b4dd053f2359ff5763332e5b68ce"
     },
     {
       "path": "docs/public/README.md",
@@ -1099,6 +1099,11 @@
       "path": "docs/public/SECURITY.md",
       "size": 2440,
       "sha256": "e04e5485f1c34360bde331b2ce2c8a4f5f3386bc3cd0b45a93f3ae308b137c3d"
+    },
+    {
+      "path": "docs/screenshots/manage-playlists.png",
+      "size": 71504,
+      "sha256": "7bd3ac4ec68660f5bb7930122a358b96289882fe3f2caa086ad9c67734078bd8"
     },
     {
       "path": "gradle.properties",

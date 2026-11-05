@@ -7,6 +7,11 @@ internal object AutomotiveDesign {
     const val SETTINGS_FONT_FAMILY = "sans-serif"
     const val SETTINGS_ROW_HEIGHT_DP = 56
     const val SETTINGS_SWITCH_HEIGHT_DP = 48
+    const val LARGE_MANAGEMENT_LABEL_SP = 36f
+    const val LARGE_MANAGEMENT_ROW_HEIGHT_DP = 112
+    const val LARGE_MANAGEMENT_HEADER_HEIGHT_DP = 80
+    const val LARGE_MANAGEMENT_ACTION_SP = 28f
+    const val LARGE_MANAGEMENT_ACTION_HEIGHT_DP = 72
     const val CANVAS = 0xff0d0e12.toInt()
     const val SURFACE = 0xff20252c.toInt()
     const val CONTROL = 0xff333a43.toInt()

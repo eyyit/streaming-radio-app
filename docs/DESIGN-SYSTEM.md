@@ -1,11 +1,18 @@
-## Approved retail sizing - S8 revision 2 / P8 revision 3
+## Approved retail sizing - S8 revision 2 / P8 revision 3 and native management
 
-Approved 4 November 2026. Native full-area Settings uses 36sp row labels,
-equal minimum 112dp rows scaled for system font size, a 36sp/80dp heading,
-and a themed 28sp/72dp Done control. The artwork switch is a 108x54dp themed
+PL09 approved 4 November: show the actual full source URL on the plain canvas.
+Use a single line with a middle ellipsis only when width requires it, without
+pre-truncating the stored URL. Local sources keep their name. Put station count
+and equal-width neutral Open/Remove buttons underneath, with no enclosing card.
+
+Approved 4 November 2026. Native full-area Settings and its Manage playlists
+surfaces share 36sp primary labels, equal minimum 112dp rows scaled for system
+font size, a 36sp/80dp heading, and a themed 28sp/72dp Done control. Equivalent
+native management actions use 28sp/72dp controls where they fit; native form fields use the action scale, while P8
+station-row actions retain their existing typography and geometry. The artwork switch is a 108x54dp themed
 pill with a 44dp white circular thumb; it retains a minimum 72dp touch height.
-Content scrolls when it exceeds the available app area. These are Settings
-sizes, not a reason to change unrelated typography or image-picker geometry.
+Content scrolls when it exceeds the available app area. These shared sizes do not
+change unrelated typography or image-picker geometry.
 
 Playlist station rows retain 128dp height, 112dp artwork, existing text labels
 and typography. Their heart/image actions use 80dp targets with 56dp glyphs,
@@ -79,7 +86,7 @@ Settings sizing rule (3 November 2026): all Settings action and toggle cells are
 
 - A requested height/width/alignment fix changes only that property. Preserve font size, weight, line height, padding, colors, radii, icon geometry, labels, ordering and navigation unless explicitly requested or strictly necessary. State any necessary adjacent change before doing it. Never shrink text to make a row fit silently.
 - Equivalent items on the same screen use the same label typography, row dimensions, alignment and spacing. A switch does not create a new heading level or justify larger text/cells. Differences must come from an approved hierarchy, not widget defaults.
-- Use shared tokens/components rather than independent per-row literals. Settings labels are22sp; every Settings row56dp, switches48dp. Back/Done/Cancel remain18sp action typography; do not resize them with row captions. Preserve unrelated management views.
+- Use shared tokens/components rather than independent per-row literals. Prototype Settings labels are22sp; every prototype Settings row56dp and switches48dp. Native full-area Settings and its playlist overview use the approved36sp/112dp scale and28sp/72dp Done/action controls; native fields use the action scale; P8 station rows preserve their separate typography and geometry. Preserve unrelated management views.
 - Review the entire affected view, including plain rows, switches, long labels, disabled states and bottom controls. Compare before/after against approved references. Build success is not proof of visual correctness. Capture and inspect the installed result before claiming completion.
 - Keep approved controls, touch targets, icons, content and artwork positions stable during unrelated fixes. Match established charcoal surfaces and theme semantics on every screen. Do not add headers, hide controls, redesign navigation or introduce a new font hierarchy as a side effect.
 - New flows/structural redesigns require identified mocks and approval. Narrow corrections to these existing requirements do not require the user to repeat or reapprove them.

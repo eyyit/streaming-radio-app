@@ -38,18 +38,20 @@ class RadioManagement(
  private val coral get()=AppearanceTheme.current(activity).accent
  private val muted=AutomotiveDesign.MUTED
  private fun dp(value:Int)=(value*activity.resources.displayMetrics.density).toInt()
+ private val largeManagement get()=play==null
+ private fun actionHeightDp()=if(largeManagement)AutomotiveDesign.LARGE_MANAGEMENT_ACTION_HEIGHT_DP else 52
  private fun settingsRowHeightDp(fullArea:Boolean):Int {
   if(!fullArea) return AutomotiveDesign.SETTINGS_ROW_HEIGHT_DP
   val fontScale=activity.resources.configuration.fontScale
-  return ceil(112f*fontScale).toInt().coerceAtLeast(112)
+  return ceil(AutomotiveDesign.LARGE_MANAGEMENT_ROW_HEIGHT_DP*fontScale).toInt().coerceAtLeast(AutomotiveDesign.LARGE_MANAGEMENT_ROW_HEIGHT_DP)
  }
  private fun rounded(color:Int,radius:Int=18)=GradientDrawable().apply { setColor(color); cornerRadius=dp(radius).toFloat() }
  private fun text(value:String,size:Float=18f,color:Int=AutomotiveDesign.TEXT)=TextView(activity).apply {
   text=value; textSize=size; setTextColor(color); setPadding(dp(8),dp(6),dp(8),dp(6))
  }
  private fun button(value:String,accent:Boolean=value=="Done",action:()->Unit)=TextView(activity).apply {
-  text=value; textSize=AutomotiveDesign.BUTTON_TEXT_SP; setTypeface(Typeface.create("sans-serif-medium",Typeface.NORMAL)); setTextColor(if(accent)AppearanceTheme.current(activity).onAccent else AutomotiveDesign.TEXT); gravity=Gravity.CENTER; minHeight=dp(52)
-  setPadding(dp(18),dp(6),dp(18),dp(6)); isFocusable=true
+  text=value; textSize=if(largeManagement)AutomotiveDesign.LARGE_MANAGEMENT_ACTION_SP else AutomotiveDesign.BUTTON_TEXT_SP; setTypeface(Typeface.create("sans-serif-medium",Typeface.NORMAL)); setTextColor(if(accent)AppearanceTheme.current(activity).onAccent else AutomotiveDesign.TEXT); gravity=Gravity.CENTER; minHeight=dp(actionHeightDp())
+  setPadding(dp(if(largeManagement)24 else 18),dp(6),dp(if(largeManagement)24 else 18),dp(6)); isFocusable=true
   background=RippleDrawable(ColorStateList.valueOf(0x30ffffff),rounded(if(accent)coral else AutomotiveDesign.CONTROL),null)
   setOnClickListener { action() }
  }
@@ -79,7 +81,7 @@ class RadioManagement(
   }
   return logo
  }
- private fun show(title:String,done:String="Done",onClose:()->Unit={},scroll:Boolean=true,settingsLayout:Boolean=false,build:(LinearLayout,Dialog)->Unit):Dialog {
+ private fun show(title:String,done:String="Done",onClose:()->Unit={},scroll:Boolean=true,settingsLayout:Boolean=largeManagement,build:(LinearLayout,Dialog)->Unit):Dialog {
   lateinit var root:LinearLayout
   var dismissed=false
   fun finish(dialog:Dialog) {
@@ -101,10 +103,10 @@ class RadioManagement(
   }
   root.addView(panel,LinearLayout.LayoutParams(-1,-1))
   val header=LinearLayout(activity).apply { gravity=Gravity.CENTER_VERTICAL }
-  header.addView(text(title,if(settingsLayout)36f else 30f).apply { setTypeface(null,Typeface.BOLD); maxLines=1; ellipsize=android.text.TextUtils.TruncateAt.END },LinearLayout.LayoutParams(0,dp(if(settingsLayout)80 else 60),1f))
+  header.addView(text(title,if(settingsLayout)AutomotiveDesign.LARGE_MANAGEMENT_LABEL_SP else 30f).apply { setTypeface(null,Typeface.BOLD); maxLines=1; ellipsize=android.text.TextUtils.TruncateAt.END },LinearLayout.LayoutParams(0,dp(if(settingsLayout)AutomotiveDesign.LARGE_MANAGEMENT_HEADER_HEIGHT_DP else 60),1f))
   header.addView(button(done) { dialog.dismiss() }.apply {
-   if(settingsLayout) { textSize=28f; minHeight=dp(72); setPadding(dp(24),dp(8),dp(24),dp(8)) }
-  },LinearLayout.LayoutParams(-2,dp(if(settingsLayout)72 else 52)))
+   if(settingsLayout) { textSize=AutomotiveDesign.LARGE_MANAGEMENT_ACTION_SP; minHeight=dp(AutomotiveDesign.LARGE_MANAGEMENT_ACTION_HEIGHT_DP); setPadding(dp(24),dp(8),dp(24),dp(8)) }
+  },LinearLayout.LayoutParams(-2,dp(if(settingsLayout)AutomotiveDesign.LARGE_MANAGEMENT_ACTION_HEIGHT_DP else 52)))
   panel.addView(header)
   val body=column()
   val content:View=if(scroll) ScrollView(activity).apply { isFillViewport=settingsLayout; clipToPadding=false; addView(body) } else body
@@ -122,8 +124,8 @@ class RadioManagement(
   dialog.window?.setLayout((activity.resources.displayMetrics.widthPixels*0.94f).toInt(),(activity.resources.displayMetrics.heightPixels*0.88f).toInt())
   return dialog
  }
- private fun addAction(parent:LinearLayout,caption:String,bottomMarginDp:Int=0,captionSize:Float=AutomotiveDesign.BUTTON_TEXT_SP,captionTypeface:Typeface?=null,action:()->Unit) {
-  parent.addView(button(caption,action=action).apply { textSize=captionSize; if(captionTypeface!=null)typeface=captionTypeface; gravity=Gravity.CENTER_VERTICAL or Gravity.START },LinearLayout.LayoutParams(-1,dp(AutomotiveDesign.SETTINGS_ROW_HEIGHT_DP)).apply { topMargin=dp(8); bottomMargin=dp(bottomMarginDp) })
+ private fun addAction(parent:LinearLayout,caption:String,bottomMarginDp:Int=0,captionSize:Float=if(largeManagement)AutomotiveDesign.LARGE_MANAGEMENT_LABEL_SP else AutomotiveDesign.BUTTON_TEXT_SP,captionTypeface:Typeface?=null,action:()->Unit) {
+  parent.addView(button(caption,action=action).apply { textSize=if(largeManagement && caption=="Done")AutomotiveDesign.LARGE_MANAGEMENT_ACTION_SP else captionSize; if(captionTypeface!=null)typeface=captionTypeface else if(largeManagement && caption!="Done")typeface=Typeface.create(AutomotiveDesign.SETTINGS_FONT_FAMILY,Typeface.NORMAL); gravity=Gravity.CENTER_VERTICAL or Gravity.START },LinearLayout.LayoutParams(-1,dp(if(largeManagement && caption=="Done")actionHeightDp() else settingsRowHeightDp(largeManagement))).apply { topMargin=dp(8); bottomMargin=dp(bottomMarginDp) })
  }
  fun settings(onClose:()->Unit={}) = settingsScreen(includeArtworkTransitions=play!=null,fullArea=play==null,onClose=onClose)
 
@@ -139,7 +141,7 @@ class RadioManagement(
     }
     val row=TextView(activity).apply {
      text=caption
-     textSize=36f
+     textSize=AutomotiveDesign.LARGE_MANAGEMENT_LABEL_SP
      setTextColor(AutomotiveDesign.TEXT)
      typeface=Typeface.create(AutomotiveDesign.SETTINGS_FONT_FAMILY,Typeface.NORMAL)
      gravity=Gravity.CENTER_VERTICAL
@@ -210,7 +212,7 @@ class RadioManagement(
      if(fullArea) { marginStart=dp(8); marginEnd=dp(8) }
     })
     if(fullArea) addSettingsRow(parent,row,settingsRowHeightDp(fullArea))
-    else parent.addView(row,LinearLayout.LayoutParams(-1,dp(AutomotiveDesign.SETTINGS_ROW_HEIGHT_DP)).apply { topMargin=dp(8) })
+    else parent.addView(row,LinearLayout.LayoutParams(-1,dp(settingsRowHeightDp(largeManagement))).apply { topMargin=dp(8) })
    }
    val themeAction:()->Unit = {
     val settingsView=screens.firstOrNull { it.first===settingsDialog }?.second
@@ -259,18 +261,20 @@ class RadioManagement(
   fun render() {
    dialog?.dismiss()
    dialog=show("Manage playlists","Done") { body,_ ->
-    body.addView(button("+ Add playlist",true) { editPlaylist(null) { render(); changed() } },LinearLayout.LayoutParams(-2,dp(52)).apply { topMargin=dp(8); bottomMargin=dp(12) })
+    body.addView(button("+ Add playlist",true) { editPlaylist(null) { render(); changed() } },LinearLayout.LayoutParams(-2,dp(actionHeightDp())).apply { topMargin=dp(8); bottomMargin=dp(12) })
     addAction(body,"Hidden and removed stations") { restoreStations() }
     addAction(body,"Refresh playlists",bottomMarginDp=12) { refreshPlaylists { render(); changed() } }
     val sources=repo.playlists()
     if(sources.isEmpty()) body.addView(text("No playlists yet. Add an M3U URL to load stations.",18f,muted))
     sources.forEach { source ->
-     val row=LinearLayout(activity).apply { gravity=Gravity.CENTER_VERTICAL; background=rounded(AutomotiveDesign.CONTROL); setPadding(dp(12),dp(12),dp(12),dp(12)) }
-     val captions=column(); captions.addView(text(source.name,23f).apply { setTypeface(null,Typeface.BOLD); maxLines=1; ellipsize=if(source.name==PlaylistNames.fromUrl(source.url,""))android.text.TextUtils.TruncateAt.MIDDLE else android.text.TextUtils.TruncateAt.END }); captions.addView(text("${repo.sourceStations(source.id).size} stations"+(if(source.isLocal)" · Saved on device" else ""),16f,muted))
-     row.addView(captions,LinearLayout.LayoutParams(0,-2,1f))
-     row.addView(button("Open") { openSource(source.id) { render(); changed() } },LinearLayout.LayoutParams(-2,dp(52)).apply { marginEnd=dp(12) })
-     row.addView(button("Remove") { confirmRemove(source.id,source.name) { render(); changed() } },LinearLayout.LayoutParams(-2,dp(52)))
-     body.addView(row,LinearLayout.LayoutParams(-1,-2).apply { bottomMargin=dp(10) })
+     val details=column()
+     details.addView(text(if(source.isLocal)source.name else source.url.trim(),if(largeManagement)AutomotiveDesign.LARGE_MANAGEMENT_LABEL_SP else 23f).apply { setTypeface(null,Typeface.BOLD); setSingleLine(); ellipsize=android.text.TextUtils.TruncateAt.MIDDLE },LinearLayout.LayoutParams(-1,-2))
+     details.addView(text("${repo.sourceStations(source.id).size} stations"+(if(source.isLocal)" · Saved on device" else ""),16f,muted))
+     body.addView(details,LinearLayout.LayoutParams(-1,-2).apply { topMargin=dp(12); bottomMargin=dp(8) })
+     val actions=LinearLayout(activity)
+     actions.addView(button("Open") { openSource(source.id) { render(); changed() } },LinearLayout.LayoutParams(0,dp(actionHeightDp()),1f).apply { marginEnd=dp(6) })
+     actions.addView(button("Remove") { confirmRemove(source.id,source.name) { render(); changed() } },LinearLayout.LayoutParams(0,dp(actionHeightDp()),1f).apply { marginStart=dp(6) })
+     body.addView(actions,LinearLayout.LayoutParams(-1,-2).apply { bottomMargin=dp(20) })
     }
     body.addView(text("All stations combines these sources. Shared stream URLs appear once. Your saved order is kept when sources refresh.",16f,muted))
    }
@@ -282,7 +286,7 @@ class RadioManagement(
   lateinit var dialog:Dialog
   dialog=show(item.name,"Done",scroll=false) { body,screen ->
    val actions=LinearLayout(activity)
-   actions.addView(button("Edit") { editPlaylist(id) { dialog.dismiss(); onChanged(); openSource(id,onChanged) } },LinearLayout.LayoutParams(-2,dp(52)).apply { marginEnd=dp(12) })
+   actions.addView(button("Edit") { editPlaylist(id) { dialog.dismiss(); onChanged(); openSource(id,onChanged) } },LinearLayout.LayoutParams(-2,dp(actionHeightDp())).apply { marginEnd=dp(12) })
    actions.addView(button("Remove") { confirmRemove(id,item.name) { dialog.dismiss(); onChanged() } })
    body.addView(actions)
    body.addView(text(if(item.isLocal) "${item.stationCount} stations · Saved on device; no remote refresh" else "${item.stationCount} stations · M3U source order",16f,muted))
@@ -321,7 +325,7 @@ class RadioManagement(
     },LinearLayout.LayoutParams(dp(80),dp(80)).apply { marginStart=dp(16) })
     val remove=button("Remove…") { stationAction(station) {
      stations=repo.sourceStations(id); notifyDataSetChanged(); changed()
-    } }.apply { minHeight=0; background=RippleDrawable(ColorStateList.valueOf(0x30ffffff),rounded(AutomotiveDesign.SURFACE,16),null) }
+    } }.apply { textSize=AutomotiveDesign.BUTTON_TEXT_SP; minHeight=0; background=RippleDrawable(ColorStateList.valueOf(0x30ffffff),rounded(AutomotiveDesign.SURFACE,16),null) }
     captions.addView(remove,LinearLayout.LayoutParams(dp(246),dp(48)).apply { marginStart=dp(8); topMargin=dp(4) })
     captions.addOnLayoutChangeListener { _,left,_,right,_,_,_,_,_ ->
      val available=(right-left-dp(8)).coerceAtLeast(0)
@@ -342,15 +346,15 @@ class RadioManagement(
   show(if(source==null)"Add playlist" else "Edit playlist","Cancel") { body,dialog ->
    fun input(caption:String,value:String):EditText {
     body.addView(text(caption,16f,muted))
-    val edit=EditText(activity).apply { setText(value); setTextColor(AutomotiveDesign.TEXT); setSingleLine(); textSize=18f; setPadding(dp(14),dp(8),dp(14),dp(8)); background=rounded(AutomotiveDesign.FIELD,12) }
-    body.addView(edit,LinearLayout.LayoutParams(-1,dp(56)).apply { bottomMargin=dp(12) }); return edit
+    val edit=EditText(activity).apply { setText(value); setTextColor(AutomotiveDesign.TEXT); setSingleLine(); textSize=if(largeManagement)AutomotiveDesign.LARGE_MANAGEMENT_ACTION_SP else 18f; setPadding(dp(14),dp(8),dp(14),dp(8)); background=rounded(AutomotiveDesign.FIELD,12) }
+    body.addView(edit,LinearLayout.LayoutParams(-1,dp(if(largeManagement)AutomotiveDesign.LARGE_MANAGEMENT_ACTION_HEIGHT_DP else 56)).apply { bottomMargin=dp(12) }); return edit
    }
    val name=input("Name",source?.name.orEmpty())
    if(source?.isLocal==true) {
     body.addView(text("Saved on device; no remote refresh. Add a hosted M3U as a separate playlist when needed.",17f,muted))
     body.addView(button("Save changes",true) {
      if(repo.renameLocalPlaylist(name.text.toString().trim())) { dialog.dismiss(); saved() }
-    },LinearLayout.LayoutParams(-2,dp(52)))
+    },LinearLayout.LayoutParams(-2,dp(actionHeightDp())))
     return@show
    }
    val url=input("M3U playlist URL",source?.url.orEmpty()).apply { inputType=android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_VARIATION_URI; hint="https://example.com/stations.m3u"; setHintTextColor(muted) }
@@ -384,7 +388,7 @@ class RadioManagement(
      finally { busy=false; available() }
     }
    }
-   actions.addView(test,LinearLayout.LayoutParams(-2,dp(52)).apply { marginEnd=dp(12) }); actions.addView(save,LinearLayout.LayoutParams(-2,dp(52)))
+   actions.addView(test,LinearLayout.LayoutParams(-2,dp(actionHeightDp())).apply { marginEnd=dp(12) }); actions.addView(save,LinearLayout.LayoutParams(-2,dp(actionHeightDp())))
    url.addTextChangedListener(object:TextWatcher {
     override fun beforeTextChanged(s:CharSequence?,start:Int,count:Int,after:Int) {}
     override fun onTextChanged(s:CharSequence?,start:Int,before:Int,count:Int) { validatedUrl=null; available() }
@@ -400,7 +404,7 @@ class RadioManagement(
     val card=column().apply { background=rounded(AutomotiveDesign.FIELD,20); setPadding(dp(16),dp(12),dp(16),dp(12)) }
     card.addView(text(title,27f).apply { setTypeface(null,Typeface.BOLD) })
     card.addView(text(explanation,21f,muted))
-    card.addView(button(title,true,action),LinearLayout.LayoutParams(-2,dp(52)).apply { topMargin=dp(10) })
+    card.addView(button(title,true,action),LinearLayout.LayoutParams(-2,dp(actionHeightDp())).apply { topMargin=dp(10) })
     body.addView(card,LinearLayout.LayoutParams(-1,-2).apply { topMargin=dp(16) })
    }
    choice("Hide from All stations","Hide only from All stations. Keep it in this playlist and Favorites. Restore in the app.") { repo.hideFromAll(station); dialog.dismiss(); updated() }
@@ -425,7 +429,7 @@ class RadioManagement(
      val sources=repo.exclusionSourceNames(station)
      captions.addView(text((if(rule.removed)"Removed" else "Hidden")+" · "+sources.joinToString().ifBlank { "Source unavailable" },16f,muted))
      val available=repo.canRestoreStation(station)
-     captions.addView(button("Restore",true) { if(repo.restoreStation(station)) { changed(); render() } }.apply { isEnabled=available; alpha=if(available)1f else 0.4f },LinearLayout.LayoutParams(-2,dp(52)))
+     captions.addView(button("Restore",true) { if(repo.restoreStation(station)) { changed(); render() } }.apply { isEnabled=available; alpha=if(available)1f else 0.4f },LinearLayout.LayoutParams(-2,dp(actionHeightDp())))
      if(!available) captions.addView(text("Re-add this station's playlist before restoring.",17f,muted))
      body.addView(row,LinearLayout.LayoutParams(-1,-2).apply { topMargin=dp(12) })
     }
@@ -453,7 +457,7 @@ class RadioManagement(
  private fun confirmRemove(id:String,name:String,removed:()->Unit) {
   show("Remove $name?","Cancel") { body,dialog ->
    body.addView(text("Stations shared with another playlist stay. Favorites keep their saved stream URL. Current playback continues.",20f,muted))
-   body.addView(button("Remove playlist",true) { repo.removePlaylist(id); dialog.dismiss(); removed() },LinearLayout.LayoutParams(-2,dp(52)).apply { topMargin=dp(20) })
+   body.addView(button("Remove playlist",true) { repo.removePlaylist(id); dialog.dismiss(); removed() },LinearLayout.LayoutParams(-2,dp(actionHeightDp())).apply { topMargin=dp(20) })
   }
  }
  private fun chooseStationImage() {

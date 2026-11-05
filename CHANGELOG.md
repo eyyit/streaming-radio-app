@@ -1,5 +1,14 @@
 # Candidate changes
 
+## 0.3.0-rc7 (version code 9)
+
+- Match native playlist-management typography and Done controls to Settings.
+- Show full playlist URLs without an enclosing card; use a middle ellipsis
+  only when needed, with equal Open and Remove buttons underneath.
+- Preserve source order, favorites, and existing station-row artwork controls.
+- Refresh documentation screenshots using clearly labeled emulator demo data.
+- Internal-testing candidate only; no claim of fixing vehicle-wide audio.
+
 ## 0.3.0-rc1 source snapshot
 
 This is a source snapshot for review; it is not a release announcement. The project contains an Android Automotive radio player, station library and search, custom station artwork, and local prototype tooling.

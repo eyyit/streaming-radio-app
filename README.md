@@ -23,11 +23,11 @@ No station catalog is bundled. Screenshots and personal test libraries do not im
   <img src="docs/images/reorder.png" width="350" alt="Emulator app-content capture: sample playlist, station icons, favorites and move-up/down controls">
 </p>
 <p>
-  <img src="docs/images/settings.png" width="350" alt="Emulator app-content capture: equal-height Settings rows, including switches">
-  <img src="docs/images/station-image-editor-mock.png" width="350" alt="Approved design mock: station image editor with fixed Save image action; not a current app screenshot">
+  <img src="docs/images/settings.png" width="350" alt="API33 emulator capture: full-area Settings with shared large heading and controls">
+  <img src="docs/screenshots/manage-playlists.png" width="350" alt="API33 emulator capture: parked Manage playlists view with unboxed playlist URL and actions below">
 </p>
 
-**Emulator captures and an approved design mock, not Volvo photographs.** The pictured custom player is a debug-only prototype excluded from retail release builds; Volvo controls the retail native media-player layout. These prototype captures do not promise that layout or controls on a production vehicle. The player, station-list and Settings images are earlier app-content renders from an Android 13 / API33 emulator; the current release has larger native Settings controls. The fourth image is the approved station-image editor mock, not a capture of the current app build. The emulator's system bars and bottom dock are excluded; real vehicle system UI and available app area vary. No Volvo system interface has been simulated or composited into the images.
+**Emulator captures, not Volvo photographs.** The pictured custom player is a debug-only prototype excluded from retail release builds; Volvo controls the retail native media-player layout. These captures do not promise that layout or controls on a production vehicle. The player and station-list images are app-content-only prototype captures with the bottom dock excluded. The Settings and Manage playlists images are raw 768 x 1024 captures from an Android 13 / API33 emulator, including its system bars; they use shared large heading, row and action sizes. Long playlist URLs stay unboxed and use a middle ellipsis when needed, with Open and Remove actions below. Playlist management is for parked use. Emulator system bars and available app area vary from vehicle hosts. No Volvo system interface has been simulated or composited into the images.
 
 The six demo stations, icons, artist **Paper Satellites**, track **Midnight Colors**, album art and quiet synthetic audio are screenshot fixtures, not a bundled radio catalog or commercial recording. Online artwork is enabled for this demo and by default in release builds unless turned off in Settings. The [Favorites capture](docs/images/favorites.png) also shows the up/down ordering controls. A disabled up arrow on the first row prevents moving past the beginning of the list.
 
@@ -70,13 +70,13 @@ node tools/verify-automotive.cjs --preflight
 node tools/verify-automotive.cjs
 ```
 
-Run this from a fresh checkout of the exact candidate commit. The full command checks Java/SDK prerequisites, source parity and tooling regressions, then runs both automotive unit-test variants, full release lint, an unsigned bundle, runtime dependency inventory and OSV. It never starts an emulator or installs an app. Signing variables are removed from child processes. A quick debug build is not this full verification.
+Run this from a fresh checkout of the exact candidate commit. The full command checks Java/SDK prerequisites, source parity and tooling regressions, then runs debug and release unit tests for automotive and phone, release lint, an unsigned bundle, runtime dependency inventory and OSV. It never starts an emulator or installs an app. Signing variables are removed from child processes. A quick debug build is not this full verification.
 
 Evidence is saved at `app/build/reports/verification/verification.json`, including the commit and clean/dirty working-tree status. A dirty working-tree pass is candidate evidence, not proof of the committed tree. See [verification guide](docs/VERIFICATION.md).
 
 ## Testing and release status
 
-Current source candidate: **0.3.0-rc6**, version code **8**, package `com.impostorlabs.streamingradio`. Native media favorite actions now advertise hearts; playlist naming, management and station-image editing use the approved UX. Artwork lookup checks bounded matching releases, distinguishes unavailable services from missing covers, and respects retry delays. Android 13 / API 33 is the development vehicle OS level. System-wide audio distortion was reported during real-car testing and remains under investigation; this candidate does not claim to fix it. Public-release acceptance remains blocked. Passing tests is not vehicle certification or Play approval.
+Current source candidate: **0.3.0-rc7**, version code **9**, package `com.impostorlabs.streamingradio`. Native media favorite actions now advertise hearts; playlist naming and management use the approved UX. Artwork lookup checks bounded matching releases, distinguishes unavailable services from missing covers, and respects retry delays. Android 13 / API 33 is the development vehicle OS level. System-wide audio distortion was reported during real-car testing and remains under investigation; this candidate does not claim to fix it. Public-release acceptance remains blocked. Passing tests is not vehicle certification or Play approval.
 
 GitHub Actions builds unsigned candidates, runs unit tests and lint, and checks the resolved dependency inventory against OSV. Dependabot proposes dependency updates; updates and releases still need review. No automatic Play deployment or automatic merging is configured.
 
