@@ -6,8 +6,7 @@ internal object NativeSessionControls {
 
     fun rootIds(automotive: Boolean, hasFavourites: Boolean): List<String> =
         if (automotive) {
-            if (hasFavourites) listOf("/fav", "/all")
-            else listOf("/all", "/fav")
+            listOf("/playlists")
         } else {
             listOf("/fav", "/all", "/recent", "/genres")
         }

@@ -333,6 +333,40 @@ class CoverArtLookupAlternativeTest {
         assertTrue(checked.isEmpty())
     }
 
+    @Test fun slashFeaturedArtistQueryAndRecordingRequireExactTitleAndAllCredits() {
+        val artist = "Drake f/ Future & Young Thug"
+        val title = "Way 2 Sexy"
+        assertEquals(listOf(
+            "artist:\"Drake f/ Future & Young Thug\" AND recording:\"Way 2 Sexy\"",
+            "artist:\"Drake\" AND artist:\"Future\" AND artist:\"Young Thug\" AND recording:\"Way 2 Sexy\""
+        ), CatalogSearchTerms.musicBrainzQueries(artist, title))
+        assertEquals(listOf(
+            "artist:\"Earth, Wind & Fire f/ Lucky Daye\" AND recording:\"Run the World\"",
+            "artist:\"Earth, Wind & Fire\" AND artist:\"Lucky Daye\" AND recording:\"Run the World\""
+        ), CatalogSearchTerms.musicBrainzQueries(
+            "Earth, Wind & Fire f/ Lucky Daye", "Run the World"
+        ))
+        val good = """{"recordings":[{"title":"Way 2 Sexy",
+            "artist-credit":[{"name":"Drake","joinphrase":" feat. "},
+            {"name":"Future","joinphrase":" & "},{"name":"Young Thug"}],
+            "releases":[{"id":"way-2-sexy","title":"Certified Lover Boy"}]}]}"""
+        val result = ReleaseCatalog.select(good, artist, title) { true }
+        assertEquals("Drake feat. Future feat. Young Thug",
+            (result as ReleaseCatalog.Result.Found).candidate.artistName)
+        assertEquals(ReleaseCatalog.Result.NotFound, ReleaseCatalog.select(
+            good.replace("Way 2 Sexy", "Way 2 Sexy (Live)"), artist, title) { true })
+        val wrongArtist = good.replace("Young Thug", "Lil Wayne")
+        val checked = mutableListOf<String>()
+        assertEquals(ReleaseCatalog.Result.NotFound,
+            ReleaseCatalog.select(wrongArtist, artist, title) { checked += it; true })
+        assertTrue(checked.isEmpty())
+        val finalCandidate = info("Drake feat. Future feat. Young Thug", title)
+        assertSame(finalCandidate, CoverArtLookup.matchingAlternative(
+            artist, title, finalCandidate, emptySet()))
+        assertNull(CoverArtLookup.matchingAlternative(artist, title,
+            info("Drake feat. Future feat. Lil Wayne", title), emptySet()))
+    }
+
     @Test fun allClassicalComposerAndMovementVariantNormalizesWithoutClaimingArt() {
         val artist = "Wagner, Richard"
         val title = "The Flying Dutchman (Der Fliegende Hollander): Overture"

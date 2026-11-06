@@ -17,6 +17,7 @@ import net.mspanc.twinsenradio.data.Prefs
 import net.mspanc.twinsenradio.data.Presentation
 import net.mspanc.twinsenradio.data.Station
 import net.mspanc.twinsenradio.data.StationNames
+import net.mspanc.twinsenradio.data.StationRepository
 import net.mspanc.twinsenradio.data.StationText
 import java.io.ByteArrayOutputStream
 import java.time.LocalDate
@@ -28,6 +29,7 @@ import java.util.Locale
  * Builds the metadata that goes into the MediaSession, and from there to Android Auto
  * and on to the dashboard display.
  */
+@androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
 class MetadataFactory(private val context: Context, private val prefs: Prefs) {
 
     /**
@@ -176,7 +178,13 @@ class MetadataFactory(private val context: Context, private val prefs: Prefs) {
                 .setGenre(station.genre)
             if (net.mspanc.twinsenradio.BuildConfig.IS_AUTOMOTIVE) {
                 val lines = AutomotiveText.playback(station.name, titleLine(now, title), artist,
-                    trackInfo?.album, PlaybackStatusBus.quality.value)
+                    trackInfo?.album, PlaybackStatusBus.quality.value,
+                    when (val parent = prefs.activeBrowseParent) {
+                        RadioService.NODE_FAVOURITES -> context.getString(R.string.node_favourites)
+                        RadioService.NODE_ALL -> context.getString(R.string.node_all)
+                        else -> StationRepository.get(context).playlists()
+                            .firstOrNull { "/playlist/${it.id}" == parent }?.name.orEmpty()
+                    }, PlaybackStatusBus.trackArtworkLoading.value)
                 b.setTitle(lines.title)
                     .setDisplayTitle(station.name)
                     .setSubtitle(lines.subtitle)

@@ -25,16 +25,29 @@ object TrackArtworkStore {
         return File(directory(context), name).takeIf { it.isFile && it.length() > 0 }
     }
 
-    suspend fun fetch(context: Context, url: String, currentTrack: Boolean = false): Uri? = withContext(
+    suspend fun fetch(context: Context, url: String, currentTrack: Boolean = false,
+        allowedHosts: Set<String>? = null): Uri? = withContext(
         if (currentTrack) ArtworkWorkScheduler.trackDispatcher else ArtworkWorkScheduler.dispatcher
     ) {
-        if (!Prefs(context).onlineArtworkEnabled || Uri.parse(url).scheme !in listOf("https", "http")) return@withContext null
-        val name = M3uParser.stableKey(url) + ".jpg"
+        val checkedUrl = try {
+            net.mspanc.twinsenradio.net.SafeHttp.checkedUrl(
+                url, allowHttp = net.mspanc.twinsenradio.BuildConfig.DEBUG,
+                allowedHosts = allowedHosts)
+        } catch (_: java.io.IOException) { return@withContext null }
+        if (!Prefs(context).onlineArtworkEnabled || checkedUrl.protocol !in listOf("https", "http")) return@withContext null
+        // A cache hit must carry the same redirect trust policy as its download.
+        val cacheKey = if (allowedHosts == null) url else {
+            val policy = allowedHosts.map { it.lowercase(java.util.Locale.ROOT) }
+                .distinct().sorted().joinToString("") { "${it.length}:$it" }
+            "restricted-artwork-v1\u0000$policy\u0000$url"
+        }
+        val name = M3uParser.stableKey(cacheKey) + ".jpg"
         val file = File(directory(context), name)
         if (!file.isFile || file.length() == 0L) {
             downloadCalls.incrementAndGet()
                 val bytes = try { net.mspanc.twinsenradio.net.SafeHttp.getBytes(url,5*1024*1024,StationRepository.USER_AGENT,
-                    allowHttp=net.mspanc.twinsenradio.BuildConfig.DEBUG) } catch(_:java.io.IOException) { return@withContext null }
+                    allowHttp=net.mspanc.twinsenradio.BuildConfig.DEBUG, allowedHosts=allowedHosts) }
+                    catch(_:java.io.IOException) { return@withContext null }
                 currentCoroutineContext().ensureActive()
                 val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
                 BitmapFactory.decodeByteArray(bytes, 0, bytes.size, bounds)

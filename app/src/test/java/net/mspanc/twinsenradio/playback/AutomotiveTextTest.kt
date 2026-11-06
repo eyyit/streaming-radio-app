@@ -4,6 +4,26 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class AutomotiveTextTest {
+    @Test fun loadingArtworkOwnsOnlyTheDescriptionLine() {
+        val lines = AutomotiveText.playback("Station", "Song", "Artist", null,
+            StreamQuality("AAC", 128, 44100, 2), "Favorites", true)
+        assertEquals("Loading artwork…", lines.description)
+        assertEquals("Artist · Song", lines.subtitle)
+        assertEquals("Song", lines.title)
+    }
+
+    @Test fun completedArtworkRestoresCollectionAndQualityOnce() {
+        val lines = AutomotiveText.playback("Station", "Song", "Artist", null,
+            StreamQuality("AAC", 128, 44100, 2), "Favorites", false)
+        assertEquals("Favorites · AAC · 128 kbps", lines.description)
+    }
+
+    @Test fun collectionStillAppearsBeforeQualityIsKnown() {
+        val lines = AutomotiveText.playback("Station", null, null, null, null,
+            "All stations", false)
+        assertEquals("All stations", lines.description)
+    }
+
     @Test fun unnamedTrackStillNamesItsStation() {
         val text = AutomotiveText.playback("Radio Nova", "", null, null, null)
         assertEquals("Radio Nova", text.title)

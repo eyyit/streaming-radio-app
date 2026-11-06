@@ -201,12 +201,12 @@ internal object ReleaseCatalog {
 
 /** Query and verify explicit featured credits without broadening TrackMatch. */
 internal object CatalogSearchTerms {
-    private val featuredMarker = Regex("""(?i)\b(?:feat(?:uring)?|ft)\.?\s""")
+    private val featuredMarker = Regex("""(?i)\b(?:feat(?:uring)?|ft|f\s*/)\.?\s""")
     private val featuredSeparator = Regex(
-        """(?i)\s*\b(?:feat(?:uring)?|ft)\.?\s*"""
+        """(?i)\s*\b(?:feat(?:uring)?|ft|f\s*/)\.?\s*"""
     )
     private val trailingFeaturedCredit = Regex(
-        """(?i)\s*(?:\(\s*|\[\s*)?(?:feat(?:uring)?|ft)\.?\s+[^)\]]*[)\]]?\s*$"""
+        """(?i)\s*(?:\(\s*|\[\s*)?(?:feat(?:uring)?|ft|f\s*/)\.?\s+[^)\]]*[)\]]?\s*$"""
     )
     private val translatedAliasBeforeMovement = Regex("""\s*\([^()]*\)(?=\s*:)""")
     private val versionQualifier = Regex(
@@ -244,6 +244,27 @@ internal object CatalogSearchTerms {
         catalogTitle: String?
     ): Boolean {
         if (!hasFeaturedArtist(queryArtist) || creditedArtists.isEmpty()) return false
+        return hasAllFeaturedCredits(queryArtist, creditedArtists, queryTitle, catalogTitle)
+    }
+
+    fun matchesFeaturedTrack(
+        queryArtist: String?,
+        queryTitle: String?,
+        catalogArtist: String?,
+        catalogTitle: String?
+    ): Boolean {
+        if (queryArtist.isNullOrBlank() || catalogArtist.isNullOrBlank()) return false
+        return hasAllFeaturedCredits(
+            queryArtist, splitFeaturedArtists(catalogArtist), queryTitle, catalogTitle
+        )
+    }
+
+    private fun hasAllFeaturedCredits(
+        queryArtist: String,
+        creditedArtists: List<String>,
+        queryTitle: String?,
+        catalogTitle: String?
+    ): Boolean {
         val queryCredits = splitFeaturedArtists(queryArtist).map(::normalize)
         val catalogCredits = creditedArtists.map(::normalize)
         return queryCredits.size > 1 && queryCredits.all { it in catalogCredits } &&
@@ -270,8 +291,12 @@ internal object CatalogSearchTerms {
     fun isLiveRelease(title: String?): Boolean =
         !title.isNullOrBlank() && liveRelease.containsMatchIn(title)
 
-    private fun splitFeaturedArtists(value: String): List<String> =
-        value.split(featuredSeparator).map(String::trim).filter(String::isNotEmpty)
+    private fun splitFeaturedArtists(value: String): List<String> {
+        val credits = value.split(featuredSeparator)
+        return credits.first().let(::listOf) + credits.drop(1).flatMap { credit ->
+            credit.split(Regex("""\s*&\s*"""))
+        }.map(String::trim).filter(String::isNotEmpty)
+    }
 
     private fun reorderedCommaName(value: String): String? {
         val comma = value.indexOf(',')
@@ -612,9 +637,13 @@ object CoverArtLookup {
         title: String?,
         catalogArtist: String?,
         catalogTitle: String?
-    ): Boolean = TrackMatch.plausible(artist, title, catalogArtist, catalogTitle) ||
-        (CatalogSearchTerms.sameArtist(artist, catalogArtist) &&
-            CatalogSearchTerms.sameRecordingTitle(title, catalogTitle))
+    ): Boolean = if (CatalogSearchTerms.hasFeaturedArtist(artist.orEmpty())) {
+        CatalogSearchTerms.matchesFeaturedTrack(artist, title, catalogArtist, catalogTitle)
+    } else {
+        TrackMatch.plausible(artist, title, catalogArtist, catalogTitle) ||
+            (CatalogSearchTerms.sameArtist(artist, catalogArtist) &&
+                CatalogSearchTerms.sameRecordingTitle(title, catalogTitle))
+    }
 
     /**
      * Fallback for tracks not found in iTunes. MusicBrainz is an open
