@@ -1,0 +1,134 @@
+{
+  "version": 1,
+  "cases": [
+    {
+      "name": "snapshots-and-artwork-changes",
+      "mime": "audio/mpeg",
+      "file": "snapshots-and-artwork-changes.packed",
+      "file_sha256": "bea0726c9e6226a487c00913513fa2b819c1945627cd76f604f2cf11e43ac707",
+      "source_file": "source-silence.mp3",
+      "source_sha256": "6f2e9108a6dea74fee9208e778533a02927f9b352be2cf35610baf9a231d285b",
+      "segments": [
+        {
+          "offset": 0,
+          "length": 3494,
+          "title": "Artist \"Q\" \\ Ω",
+          "artwork_url": "https://cdn.example/one.jpg",
+          "expected_apple_pts_90k": 0,
+          "audio_sha256": "5c6105dff9b476b95ee9f852fa2a3173b85e40655192c31efcc73795d68c1012",
+          "source_frame_count": 8
+        },
+        {
+          "offset": 3494,
+          "length": 3494,
+          "title": "Artist \"Q\" \\ Ω",
+          "artwork_url": "https://cdn.example/two.jpg",
+          "expected_apple_pts_90k": 18808,
+          "audio_sha256": "5c6105dff9b476b95ee9f852fa2a3173b85e40655192c31efcc73795d68c1012",
+          "source_frame_count": 8
+        },
+        {
+          "offset": 6988,
+          "length": 3467,
+          "title": "Artist \"Q\" \\ Ω",
+          "artwork_url": "",
+          "expected_apple_pts_90k": 37616,
+          "audio_sha256": "5c6105dff9b476b95ee9f852fa2a3173b85e40655192c31efcc73795d68c1012",
+          "source_frame_count": 8
+        },
+        {
+          "offset": 10455,
+          "length": 3494,
+          "title": "Artist \"Q\" \\ Ω",
+          "artwork_url": "https://cdn.example/two.jpg",
+          "expected_apple_pts_90k": 56424,
+          "audio_sha256": "5c6105dff9b476b95ee9f852fa2a3173b85e40655192c31efcc73795d68c1012",
+          "source_frame_count": 8
+        },
+        {
+          "offset": 13949,
+          "length": 3494,
+          "title": "Artist \"Q\" \\ Ω",
+          "artwork_url": "https://cdn.example/two.jpg",
+          "expected_apple_pts_90k": 75232,
+          "audio_sha256": "5c6105dff9b476b95ee9f852fa2a3173b85e40655192c31efcc73795d68c1012",
+          "source_frame_count": 8
+        }
+      ]
+    },
+    {
+      "name": "invalid-art-clears-and-title-controls",
+      "mime": "audio/mpeg",
+      "file": "invalid-art-clears-and-title-controls.packed",
+      "file_sha256": "f7eeab0ac104d4fd27851929033b90c5b78a6950ad200287f4c1ce714dcf2fd7",
+      "source_file": "source-silence.mp3",
+      "source_sha256": "6f2e9108a6dea74fee9208e778533a02927f9b352be2cf35610baf9a231d285b",
+      "segments": [
+        {
+          "offset": 0,
+          "length": 3463,
+          "title": "Title clean",
+          "artwork_url": "",
+          "expected_apple_pts_90k": 0,
+          "audio_sha256": "5c6105dff9b476b95ee9f852fa2a3173b85e40655192c31efcc73795d68c1012",
+          "source_frame_count": 8
+        },
+        {
+          "offset": 3463,
+          "length": 3463,
+          "title": "Title clean",
+          "artwork_url": "",
+          "expected_apple_pts_90k": 18808,
+          "audio_sha256": "5c6105dff9b476b95ee9f852fa2a3173b85e40655192c31efcc73795d68c1012",
+          "source_frame_count": 8
+        },
+        {
+          "offset": 6926,
+          "length": 3463,
+          "title": "Title clean",
+          "artwork_url": "",
+          "expected_apple_pts_90k": 37616,
+          "audio_sha256": "5c6105dff9b476b95ee9f852fa2a3173b85e40655192c31efcc73795d68c1012",
+          "source_frame_count": 8
+        }
+      ]
+    },
+    {
+      "name": "timestamp-wrap-and-discontinuity",
+      "mime": "audio/aac",
+      "file": "timestamp-wrap-and-discontinuity.packed",
+      "file_sha256": "2a488b2d306256334941196ddb2937b3a0ffc7b9c324a9b668622368b7a1eddb",
+      "source_file": "source-silence.aac",
+      "source_sha256": "f801a9c81231bbcaabe92ae6a2fef192b34024fb079030f98d017cf184896f1d",
+      "segments": [
+        {
+          "offset": 0,
+          "length": 271,
+          "title": "Before wrap",
+          "artwork_url": "https://cdn.example/wrap.jpg",
+          "expected_apple_pts_90k": 8589933892,
+          "audio_sha256": "8fd6e6ab901e63eba93528432e5b0b24a1197d7eb0bdd4ce95661301c7a36046",
+          "source_frame_count": 8
+        },
+        {
+          "offset": 271,
+          "length": 268,
+          "title": "After wrap",
+          "artwork_url": "https://cdn.example/wrap.jpg",
+          "expected_apple_pts_90k": 16018,
+          "audio_sha256": "8fd6e6ab901e63eba93528432e5b0b24a1197d7eb0bdd4ce95661301c7a36046",
+          "source_frame_count": 8
+        },
+        {
+          "offset": 539,
+          "length": 275,
+          "title": "New decoder epoch",
+          "artwork_url": "https://cdn.example/wrap.jpg",
+          "expected_apple_pts_90k": 32736,
+          "audio_sha256": "8fd6e6ab901e63eba93528432e5b0b24a1197d7eb0bdd4ce95661301c7a36046",
+          "source_frame_count": 8
+        }
+      ]
+    }
+  ]
+}

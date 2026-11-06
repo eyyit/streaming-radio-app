@@ -1,7 +1,7 @@
 {
   "formatVersion": 1,
   "project": "Streaming Radio repository source inventory",
-  "gitHead": "9fb6df935d2ca95260fd6075dd06c9d081e6a73c",
+  "gitHead": "a36b901012959d8212f5245ee762b7d45f1ea80b",
   "workingTree": "dirty",
   "hashAlgorithm": "SHA-256",
   "selfHashExcluded": true,
@@ -1064,6 +1064,46 @@
       "path": "app/src/test/java/net/mspanc/twinsenradio/playback/TrackMatchTest.kt",
       "size": 3689,
       "sha256": "fabe5f82ab415efdcc19a9b0012b8c6d4cf7e2083babaadfb11ef3938d90e256"
+    },
+    {
+      "path": "app/src/test/resources/hls-artwork/HLS_ARTWORK.md",
+      "size": 3195,
+      "sha256": "dc3fb6c7f3e637ab253d01a43e65f88ae0457b5044ec58f1ae09b24cb9280a3b"
+    },
+    {
+      "path": "app/src/test/resources/hls-artwork/PROVENANCE.md",
+      "size": 410,
+      "sha256": "aec779a64a702c50b984a4c382587eab29bb581ef44d69400d682f694cfe692d"
+    },
+    {
+      "path": "app/src/test/resources/hls-artwork/invalid-art-clears-and-title-controls.packed",
+      "size": 10389,
+      "sha256": "f7eeab0ac104d4fd27851929033b90c5b78a6950ad200287f4c1ce714dcf2fd7"
+    },
+    {
+      "path": "app/src/test/resources/hls-artwork/manifest.json",
+      "size": 4827,
+      "sha256": "e9b56d636994d58dd5e62070b95614f05510975f4b8a28abfecd6f70feb25668"
+    },
+    {
+      "path": "app/src/test/resources/hls-artwork/snapshots-and-artwork-changes.packed",
+      "size": 17443,
+      "sha256": "bea0726c9e6226a487c00913513fa2b819c1945627cd76f604f2cf11e43ac707"
+    },
+    {
+      "path": "app/src/test/resources/hls-artwork/source-silence.aac",
+      "size": 602,
+      "sha256": "f801a9c81231bbcaabe92ae6a2fef192b34024fb079030f98d017cf184896f1d"
+    },
+    {
+      "path": "app/src/test/resources/hls-artwork/source-silence.mp3",
+      "size": 16718,
+      "sha256": "6f2e9108a6dea74fee9208e778533a02927f9b352be2cf35610baf9a231d285b"
+    },
+    {
+      "path": "app/src/test/resources/hls-artwork/timestamp-wrap-and-discontinuity.packed",
+      "size": 814,
+      "sha256": "2a488b2d306256334941196ddb2937b3a0ffc7b9c324a9b668622368b7a1eddb"
     },
     {
       "path": "build.gradle.kts",
