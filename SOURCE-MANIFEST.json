@@ -1,7 +1,7 @@
 {
   "formatVersion": 1,
   "project": "Streaming Radio repository source inventory",
-  "gitHead": "a36b901012959d8212f5245ee762b7d45f1ea80b",
+  "gitHead": "eb76916fefc53480b67674751e7292898b03076c",
   "workingTree": "dirty",
   "hashAlgorithm": "SHA-256",
   "selfHashExcluded": true,
@@ -419,6 +419,11 @@
       "path": "app/src/main/java/net/mspanc/twinsenradio/playback/DiagnosticUrls.kt",
       "size": 2016,
       "sha256": "c7409cf9229c2388bed0b31426fb733e6432ee301414e347873f91b776b61095"
+    },
+    {
+      "path": "app/src/main/java/net/mspanc/twinsenradio/playback/HlsStreamsMetadataParser.kt",
+      "size": 2348,
+      "sha256": "ae391db6a097bc4506bac929804fd591da02bfb3c2322144e47739772bf79924"
     },
     {
       "path": "app/src/main/java/net/mspanc/twinsenradio/playback/IcyArtworkParser.kt",
@@ -961,6 +966,16 @@
       "sha256": "ec2f0a5bf78ed0df4df7cedc047dc36d327539912165e8f1fd6b7f4c9a72c7a1"
     },
     {
+      "path": "app/src/test/java/net/mspanc/twinsenradio/playback/HlsMetadataTimingTest.kt",
+      "size": 4929,
+      "sha256": "0c72e667653b52877ec19519715df9a7f44f4c1f10d32fb4fe9ae86972e9f833"
+    },
+    {
+      "path": "app/src/test/java/net/mspanc/twinsenradio/playback/HlsStreamsMetadataParserTest.kt",
+      "size": 2835,
+      "sha256": "596aa6292bd8de2246dcfdf5db5ef2a61ea1663b7a667619b6aa346f74420c21"
+    },
+    {
       "path": "app/src/test/java/net/mspanc/twinsenradio/playback/IcyArtworkParserTest.kt",
       "size": 3713,
       "sha256": "46c9f18b174caf5ad04c1cd04db64de797502924cf67bc495443343442e37e84"
@@ -1139,6 +1154,11 @@
       "path": "docs/PLAYLIST-GUIDE.md",
       "size": 3040,
       "sha256": "d13e42169d3453cade904a621cc8d44947f702a9c339e5959a8d97540c4a235a"
+    },
+    {
+      "path": "docs/STREAMS-METADATA.md",
+      "size": 3088,
+      "sha256": "29766a54feaec96e315aea1da89449ca4ed546ca8db3183f51ecfaa215586c22"
     },
     {
       "path": "docs/examples/playlist-template.m3u",
