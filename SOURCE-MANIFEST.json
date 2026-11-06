@@ -1,7 +1,7 @@
 {
   "formatVersion": 1,
   "project": "Streaming Radio repository source inventory",
-  "gitHead": "eb76916fefc53480b67674751e7292898b03076c",
+  "gitHead": "618a757084018c73fca263a4309d707778d73081",
   "workingTree": "dirty",
   "hashAlgorithm": "SHA-256",
   "selfHashExcluded": true,
@@ -424,6 +424,11 @@
       "path": "app/src/main/java/net/mspanc/twinsenradio/playback/HlsStreamsMetadataParser.kt",
       "size": 2348,
       "sha256": "ae391db6a097bc4506bac929804fd591da02bfb3c2322144e47739772bf79924"
+    },
+    {
+      "path": "app/src/main/java/net/mspanc/twinsenradio/playback/HlsTimedId3ExtractorFactory.kt",
+      "size": 6839,
+      "sha256": "bcac4039d35fb0df325aedc10425f24c738109d7dfccbafe5ad6e38a38646fd4"
     },
     {
       "path": "app/src/main/java/net/mspanc/twinsenradio/playback/IcyArtworkParser.kt",
@@ -1014,6 +1019,11 @@
       "path": "app/src/test/java/net/mspanc/twinsenradio/playback/NowPlayingParseTest.kt",
       "size": 4236,
       "sha256": "c59b98b1156287215e1c9f3552a71231020557c19e424a2a6fed07a9c6e6bf59"
+    },
+    {
+      "path": "app/src/test/java/net/mspanc/twinsenradio/playback/PackedMp3Id3ExtractorTest.kt",
+      "size": 13256,
+      "sha256": "2b9f49680539027ed3ea7ef3f64c5e7dda0d8d90d3841ca28abb0dd2b993b818"
     },
     {
       "path": "app/src/test/java/net/mspanc/twinsenradio/playback/PhoneTextTest.kt",
