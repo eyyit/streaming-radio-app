@@ -1,5 +1,6 @@
 package net.mspanc.twinsenradio.playback
 
+import net.mspanc.twinsenradio.net.SafeHttp
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -76,6 +77,18 @@ class IcyArtworkParserTest {
         assertTrue(afterMalformedKnown.hasArtwork)
         assertEquals("https://art.example/ok.jpg", afterMalformedKnown.artworkUrl)
         assertEquals("Song", afterMalformedKnown.title)
+    }
+
+    @Test fun capturedNovaSourceHostArtworkPassesDownloadPolicy() {
+        val capturedFormatUrl = "https://www.lesinrocks.com/wp-content/uploads/contract-cover.jpg"
+        val update = IcyArtworkParser.parse("StreamArtwork='$capturedFormatUrl'")
+        assertEquals(capturedFormatUrl, update.artworkUrl)
+        val checkedUrl = runCatching {
+            SafeHttp.checkedUrl(
+                update.artworkUrl!!, false, StreamArtworkPolicy.allowedHosts
+            ).toString()
+        }.getOrNull()
+        assertEquals(capturedFormatUrl, checkedUrl)
     }
 
     @Test fun unrelatedTagsIncludingStreamUrlDoNotBecomeArtwork() {

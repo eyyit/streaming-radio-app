@@ -38,8 +38,8 @@ late image completion replacing a newer station/track.
 ## Image security
 
 Online artwork settings remain authoritative. Existing bounded cached downloads
-allow source artwork only on HTTPS port 443, exact nova.fr/www.nova.fr hosts,
-including every redirect. Parsed URLs are not automatically trusted. New hosts
+allow source artwork only on HTTPS port 443, exact nova.fr, www.nova.fr and
+www.lesinrocks.com hosts, including every redirect. Parsed URLs are not automatically trusted. New hosts
 need verified broadcaster evidence and review. Unknown hosts or failed images
 use existing placeholders/catalog fallback. No embedded image bytes.
 

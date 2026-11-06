@@ -4,6 +4,7 @@ import androidx.media3.common.Metadata
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.extractor.metadata.id3.Id3Decoder
 import androidx.media3.extractor.metadata.id3.TextInformationFrame
+import net.mspanc.twinsenradio.net.SafeHttp
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -45,6 +46,22 @@ class HlsStreamsMetadataParserTest {
         assertEquals(url, update.artworkUrl)
         assertTrue(update.hasTitle)
         assertTrue(update.hasArtwork)
+    }
+
+    @Test fun capturedNovaSourceHostArtworkPassesDownloadPolicy() {
+        val capturedFormatUrl = "https://www.lesinrocks.com/wp-content/uploads/contract-cover.jpg"
+        val update = HlsStreamsMetadataParser.parse(id3(
+            frame("TIT2", "Nova Track"),
+            frame("TXXX", "StreamArtwork\u0000$capturedFormatUrl")
+        ))!!
+        assertEquals("Nova Track", update.title)
+        assertEquals(capturedFormatUrl, update.artworkUrl)
+        val checkedUrl = runCatching {
+            SafeHttp.checkedUrl(
+                update.artworkUrl!!, false, StreamArtworkPolicy.allowedHosts
+            ).toString()
+        }.getOrNull()
+        assertEquals(capturedFormatUrl, checkedUrl)
     }
 
     @Test fun actualId3DecoderPreservesExplicitEmptyArtwork() {
