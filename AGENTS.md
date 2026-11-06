@@ -23,3 +23,10 @@ The Preserve approved design / consistency section of docs/DESIGN-SYSTEM.md appl
 Public-source preparation must reconcile app/src deletions as well as additions. Do not overlay an export onto upstream while retaining obsolete source/tests. CI tools/check-source-tree.cjs checks the Git app/src inventory before compilation. Preserve executable mode for gradlew. All Done buttons use the active theme accent/onAccent; Back/Cancel stay neutral.
 
 Before publishing a candidate, run tools/verify-automotive.cjs from a fresh checkout of that exact commit. GitHub runs the same driver. Report commit/working-tree identity and full versus preflight scope; a developer debug build is not publication verification. Do not operate the emulator unless explicitly authorized for the current task.
+
+
+## Approved collection and artwork contract (5 November 2026)
+
+M10-C/D and M11-01/02/03 are approved: Settings has a gap below its header, aligned captions and a neutral standard large switch; Add playlist puts URL first and optional Name second. Native Playlists exposes playable All stations, Favorites and imported collection entries, not separate ordered/shuffle sub-actions. A chosen collection determines Next/Previous and shuffle; browsing alone does not choose a queue. Keep the current member when switching collections; empty selections preserve audio. The native player description temporarily shows only Loading artwork... during real work, then active collection plus compact quality. The Volvo host owns placement, overflow and truncation; emulator rendering does not establish identical retail behavior. No additional custom driving player or full-title details screen is approved.
+
+StreamArtwork is a custom ICY extension associated with StreamTitle. Prefer its safe downloaded image over catalog fallback, honor online-artwork settings and generation/cancellation guards, clear explicit empty artwork, and never reinterpret StreamUrl as artwork. The relay integration is a separate task; do not claim Nova end-to-end support until that relay actually emits the tag.

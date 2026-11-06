@@ -134,6 +134,7 @@ class RadioManagement(
 
  private fun settingsScreen(includeArtworkTransitions:Boolean,fullArea:Boolean,onClose:()->Unit) {
   show("Settings",onClose=onClose,settingsLayout=fullArea) { body,settingsDialog ->
+   if(fullArea) body.setPadding(0,dp(12),0,0)
    fun settingsAction(parent:LinearLayout,caption:String,action:()->Unit) {
     if(!fullArea) {
      addAction(parent,caption,captionSize=AutomotiveDesign.SETTINGS_LABEL_SP,captionTypeface=Typeface.create(AutomotiveDesign.SETTINGS_FONT_FAMILY,Typeface.NORMAL),action=action)
@@ -175,28 +176,28 @@ class RadioManagement(
      gravity=Gravity.CENTER_VERTICAL
      typeface=Typeface.create(AutomotiveDesign.SETTINGS_FONT_FAMILY,Typeface.NORMAL)
      maxLines=if(fullArea)2 else 1
-    },LinearLayout.LayoutParams(0,dp(settingsRowHeightDp(fullArea)),1f).apply {
-     if(fullArea) marginStart=dp(12)
-    })
+     if(fullArea) setPadding(dp(12),dp(4),dp(12),dp(4))
+    },LinearLayout.LayoutParams(0,dp(settingsRowHeightDp(fullArea)),1f))
     val toggle=Switch(activity).apply {
      contentDescription=caption
      isChecked=value
      if(fullArea) {
-      val thumbShape=GradientDrawable().apply {
+      // Explicit artwork avoids platform drawable insets shrinking the approved control.
+      thumbDrawable=android.graphics.drawable.InsetDrawable(GradientDrawable().apply {
        shape=GradientDrawable.OVAL
        setColor(Color.WHITE)
        setSize(dp(44),dp(44))
-      }
-      thumbDrawable=android.graphics.drawable.InsetDrawable(thumbShape,dp(5))
-      thumbTintList=ColorStateList.valueOf(Color.WHITE)
-      val trackShape=GradientDrawable().apply {
+      },dp(5))
+      trackDrawable=GradientDrawable().apply {
+       shape=GradientDrawable.RECTANGLE
        cornerRadius=dp(27).toFloat()
-       setColor(Color.WHITE)
+       setColor(AutomotiveDesign.BORDER)
        setSize(dp(108),dp(54))
       }
-      trackDrawable=trackShape
+      thumbTintList=ColorStateList.valueOf(Color.WHITE)
       val states=arrayOf(intArrayOf(android.R.attr.state_checked),intArrayOf())
-      trackTintList=ColorStateList(states,intArrayOf(coral,AutomotiveDesign.CONTROL))
+      trackTintList=ColorStateList(states,intArrayOf(AutomotiveDesign.BORDER,AutomotiveDesign.CONTROL))
+      background=null
       switchMinWidth=dp(108)
       gravity=Gravity.CENTER_VERTICAL
       minHeight=dp(72)
@@ -349,7 +350,13 @@ class RadioManagement(
     val edit=EditText(activity).apply { setText(value); setTextColor(AutomotiveDesign.TEXT); setSingleLine(); textSize=if(largeManagement)AutomotiveDesign.LARGE_MANAGEMENT_ACTION_SP else 18f; setPadding(dp(14),dp(8),dp(14),dp(8)); background=rounded(AutomotiveDesign.FIELD,12) }
     body.addView(edit,LinearLayout.LayoutParams(-1,dp(if(largeManagement)AutomotiveDesign.LARGE_MANAGEMENT_ACTION_HEIGHT_DP else 56)).apply { bottomMargin=dp(12) }); return edit
    }
-   val name=input("Name",source?.name.orEmpty())
+   val urlField=if(source?.isLocal==true)null else input("M3U playlist URL",source?.url.orEmpty()).apply {
+    inputType=android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_VARIATION_URI
+    hint="https://example.com/stations.m3u"; setHintTextColor(muted)
+   }
+   val name=input(if(source?.isLocal==true)"Name" else "Name (optional)",source?.name.orEmpty()).apply {
+    if(source?.isLocal!=true) { hint="Leave blank to use the playlist URL"; setHintTextColor(muted) }
+   }
    if(source?.isLocal==true) {
     body.addView(text("Saved on device; no remote refresh. Add a hosted M3U as a separate playlist when needed.",17f,muted))
     body.addView(button("Save changes",true) {
@@ -357,7 +364,8 @@ class RadioManagement(
     },LinearLayout.LayoutParams(-2,dp(actionHeightDp())))
     return@show
    }
-   val url=input("M3U playlist URL",source?.url.orEmpty()).apply { inputType=android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_VARIATION_URI; hint="https://example.com/stations.m3u"; setHintTextColor(muted) }
+   val url=checkNotNull(urlField)
+   if(source==null) url.requestFocus()
    val status=text("Test the URL before saving. Existing stations stay available if validation fails.",17f,muted); body.addView(status)
    val progress=ProgressBar(activity).apply { isIndeterminate=true; visibility=View.GONE; indeterminateTintList=ColorStateList.valueOf(coral); contentDescription="Checking playlist" }
    body.addView(progress,LinearLayout.LayoutParams(dp(40),dp(40)))

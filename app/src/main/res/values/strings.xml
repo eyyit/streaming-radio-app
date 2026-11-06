@@ -8,6 +8,7 @@
     <string name="node_all">Wszystkie</string>
     <string name="node_recent">Ostatnie</string>
     <string name="node_genres">Gatunki</string>
+    <string name="node_playlists">Playlists</string>
     <string name="fav_add">Dodaj do ulubionych</string>
     <string name="fav_remove">Usuń z ulubionych</string>
     <string name="fav_added_toast">%1$s — dodano do ulubionych</string>

@@ -1,7 +1,7 @@
 {
   "formatVersion": 1,
   "project": "Streaming Radio repository source inventory",
-  "gitHead": "cc8847320cda4e3be6f2f0685bc7beba0da8fe47",
+  "gitHead": "548fb8b75d7ffa0a231803203671e76b1fad8103",
   "workingTree": "dirty",
   "hashAlgorithm": "SHA-256",
   "selfHashExcluded": true,
@@ -32,8 +32,8 @@
     },
     {
       "path": "AGENTS.md",
-      "size": 3901,
-      "sha256": "f36d409534859ef724dafc66eefa425de1a80accff16215af14512bea6e33b55"
+      "size": 5186,
+      "sha256": "b3d6f36579dd4175ff51c627d7e99cb037ec20f2be4ffe041064e56d3739a849"
     },
     {
       "path": "BUILD.md",
@@ -137,8 +137,8 @@
     },
     {
       "path": "app/src/automotive/java/net/mspanc/twinsenradio/automotive/RadioManagement.kt",
-      "size": 30596,
-      "sha256": "a23af9f713c39cd558bead9b053246e8f6429ac5c298ddaf38da6522103a8967"
+      "size": 31051,
+      "sha256": "f1f03fd10ad2f472cbce163edf4247afb9f5c97ed567b3860646c16ae5489597"
     },
     {
       "path": "app/src/automotive/java/net/mspanc/twinsenradio/automotive/StationImageDialog.kt",
@@ -507,8 +507,8 @@
     },
     {
       "path": "app/src/main/java/net/mspanc/twinsenradio/playback/RadioService.kt",
-      "size": 138748,
-      "sha256": "f4b2d2e57085244824b979ae45ebf30d4a7ff23785074fcca588dd379325218a"
+      "size": 145413,
+      "sha256": "60eadcd1c7874b67dfedc3fd00a94fce19e094bdd484102a48e305f6b6526acb"
     },
     {
       "path": "app/src/main/java/net/mspanc/twinsenradio/playback/ReconnectController.kt",
@@ -567,8 +567,8 @@
     },
     {
       "path": "app/src/main/java/net/mspanc/twinsenradio/playback/StreamWitness.kt",
-      "size": 3336,
-      "sha256": "086b6e74a206ef4c13e4c9a8c6421d334f3a556dd944b3da2c65e5d7eda03706"
+      "size": 3341,
+      "sha256": "3296e0c0d79a8d894368f4f65c18ff374b8b77a357142e15d194902c8a021afe"
     },
     {
       "path": "app/src/main/java/net/mspanc/twinsenradio/playback/TextCase.kt",
@@ -842,8 +842,8 @@
     },
     {
       "path": "app/src/main/res/values/strings.xml",
-      "size": 10328,
-      "sha256": "b0c77a790943f0223c7c14d987ea643804862d10edf39b0b0c47e5422686105b"
+      "size": 10381,
+      "sha256": "aa7e54959316850e83dca4c31e925a4fa053e5e753907d35d7cad4add1a6cad1"
     },
     {
       "path": "app/src/main/res/values/themes.xml",
@@ -979,6 +979,11 @@
       "path": "app/src/test/java/net/mspanc/twinsenradio/playback/DiagnosticUrlsTest.kt",
       "size": 2618,
       "sha256": "ec2f0a5bf78ed0df4df7cedc047dc36d327539912165e8f1fd6b7f4c9a72c7a1"
+    },
+    {
+      "path": "app/src/test/java/net/mspanc/twinsenradio/playback/HlsEmptyTitleServiceTest.kt",
+      "size": 6787,
+      "sha256": "c499afc0e263d5eea0883aebdeda91d15b0647e3fb647c63f0cd600cdbff10c1"
     },
     {
       "path": "app/src/test/java/net/mspanc/twinsenradio/playback/HlsMetadataTimingTest.kt",
@@ -1167,8 +1172,8 @@
     },
     {
       "path": "docs/DESIGN-SYSTEM.md",
-      "size": 14091,
-      "sha256": "04a738e709e80b493041d1e65d43b09a75ecfb3b3e51f7491601814747ff0fd2"
+      "size": 15925,
+      "sha256": "ed45d2df1b5d429d82ecebea80ddbe7ddc661a6f439791a1dc68d68521627ce2"
     },
     {
       "path": "docs/DOCKER-BUILD.md",

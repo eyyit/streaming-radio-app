@@ -24,7 +24,7 @@ import java.text.Normalizer
  */
 class StreamWitness {
 
-    enum class Source { ICY, API }
+    enum class Source { ICY, HLS, API }
 
     /**
      * @param agrees whether this matches what the other source last said;

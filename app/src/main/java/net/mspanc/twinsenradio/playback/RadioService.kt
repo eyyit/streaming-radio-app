@@ -20,13 +20,18 @@ import androidx.media3.common.MediaMetadata
 import androidx.media3.common.Metadata
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
+import androidx.media3.common.util.Util
 import androidx.media3.datasource.DefaultDataSource
 import androidx.media3.datasource.DefaultHttpDataSource
 import androidx.media3.exoplayer.DefaultLoadControl
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
+import androidx.media3.exoplayer.source.MediaSource
+import androidx.media3.exoplayer.hls.HlsMediaSource
 import androidx.media3.extractor.metadata.icy.IcyHeaders
 import androidx.media3.extractor.metadata.icy.IcyInfo
+import androidx.media3.extractor.metadata.id3.TextInformationFrame
+import androidx.media3.extractor.metadata.id3.PrivFrame
 import androidx.media3.session.CommandButton
 import androidx.media3.session.LibraryResult
 import androidx.media3.session.MediaConstants
@@ -151,6 +156,7 @@ class RadioService : MediaLibraryService() {
     private var coverRevertJob: Job? = null
     private var coverLookupJob: Job? = null
     private var manualArtworkLookup = false
+    private val streamArtwork = StreamArtworkState()
 
     /**
      * The track that the cover art held in [coverArtUrl] belongs to. Used to
@@ -525,8 +531,21 @@ class RadioService : MediaLibraryService() {
             }
         ) { prefs.diagnosticMode && prefs.stripIcyInDiagnostic }
 
-        val mediaSourceFactory = DefaultMediaSourceFactory(filtered)
+        val fallbackSourceFactory = DefaultMediaSourceFactory(filtered)
             .setLoadErrorHandlingPolicy(InfiniteLoadErrorHandlingPolicy())
+        val hlsSourceFactory = HlsMediaSource.Factory(filtered)
+            .setMetadataType(HlsMediaSource.METADATA_TYPE_ID3)
+            .setExtractorFactory(HlsTimedId3ExtractorFactory())
+            .setLoadErrorHandlingPolicy(InfiniteLoadErrorHandlingPolicy())
+        val mediaSourceFactory = object : MediaSource.Factory by fallbackSourceFactory {
+            override fun createMediaSource(mediaItem: MediaItem): MediaSource {
+                val local = mediaItem.localConfiguration
+                return if (local != null && Util.inferContentTypeForUriAndMimeType(
+                        local.uri, local.mimeType) == C.CONTENT_TYPE_HLS) {
+                    hlsSourceFactory.createMediaSource(mediaItem)
+                } else fallbackSourceFactory.createMediaSource(mediaItem)
+            }
+        }
 
         return ExoPlayer.Builder(this)
             .setLoadControl(loadControl)
@@ -728,20 +747,45 @@ class RadioService : MediaLibraryService() {
         }
 
         override fun onMetadata(meta: Metadata) {
+            // Media3 delivers ID3 here at presentation time, not when a segment downloads.
+            HlsStreamsMetadataParser.parse(meta)?.let { update ->
+                handleStreamsMetadata(update, update.title, null, StreamWitness.Source.HLS)
+            }
             for (i in 0 until meta.length()) {
                 when (val entry = meta.get(i)) {
                     is IcyHeaders -> logIcyHeaders(entry)
                     is IcyInfo -> {
                         val raw = logIcyInfo(entry)
-                        val api = titleApiSource()
-                        if (api == null) {
-                            handleIcyTitle(entry.title, raw)
-                        } else {
-                            witness(StreamWitness.Source.ICY, entry.title, raw)
-                        }
+                        handleStreamsMetadata(IcyArtworkParser.parse(raw), entry.title, raw,
+                            StreamWitness.Source.ICY)
                     }
+                    // Decoded above as one snapshot; never log artwork URLs from frame.toString().
+                    is TextInformationFrame, is PrivFrame -> Unit
                     else -> debugInfo(TAG_ICY, "inny typ metadanych: ${entry.javaClass.simpleName} | $entry")
                 }
+            }
+        }
+    }
+
+    /** Apply each timed title/art pair before starting its cancellable image lookup. */
+    private fun handleStreamsMetadata(update: IcyArtworkParser.Update, title: String?,
+        rawBlock: String?, source: StreamWitness.Source) {
+        val artworkChanged = streamArtwork.update(update)
+        val artworkGeneration = coverGeneration
+        if (titleApiSource() == null) {
+            if (update.hasTitle) handleIcyTitle(title, rawBlock,
+                clearEmptyTitle = source == StreamWitness.Source.HLS)
+        } else {
+            witness(source, title, rawBlock.orEmpty())
+        }
+        if (artworkChanged && artworkGeneration == coverGeneration) {
+            val now = PlaybackStatusBus.nowPlaying.value
+            // A clear may retire old artwork even when a blank ICY title is ignored.
+            val clearsArtwork = update.hasArtwork && update.artworkUrl.isNullOrEmpty()
+            // API titles may lag the stream: never attach its art to another description.
+            if (clearsArtwork || streamArtwork.matches(now?.raw)) {
+                val key = if (now?.isRealSong == true) "${now.artist}|${now.songTitle}" else null
+                updateCoverArt(now, key, false)
             }
         }
     }
@@ -796,7 +840,8 @@ class RadioService : MediaLibraryService() {
         return raw
     }
 
-    private fun handleIcyTitle(rawTitle: String?, rawBlock: String? = null) {
+    private fun handleIcyTitle(rawTitle: String?, rawBlock: String? = null,
+        clearEmptyTitle: Boolean = false) {
         val title = rawTitle?.trim().orEmpty()
         // The title alone isn't enough to detect a repeat: ads have an empty
         // title, and different insertions only differ in their adId fields.
@@ -875,7 +920,9 @@ class RadioService : MediaLibraryService() {
         // ads, and an empty title arrives there alongside adw_ad, which parses to
         // an ad and not to null.
         if (now == null) {
-            debugInfo(TAG_ICY, "pusty blok bez znacznika reklamy - zostawiam opis bez zmian")
+            // HLS snapshots explicitly replace the title, including an empty one.
+            if (clearEmptyTitle) publish(null)
+            else debugInfo(TAG_ICY, "pusty blok bez znacznika reklamy - zostawiam opis bez zmian")
             return
         }
         publish(now)
@@ -934,7 +981,7 @@ class RadioService : MediaLibraryService() {
         val now = NowPlaying.parse(title, stationName, rawBlock)
         val atMs = SystemClock.elapsedRealtime()
         val result = when (source) {
-            StreamWitness.Source.ICY -> streamWitness.fromIcy(now, atMs)
+            StreamWitness.Source.ICY, StreamWitness.Source.HLS -> streamWitness.fromIcy(now, atMs)
             // The poll hands over only what parsed - an API answer that says
             // nothing never reaches here.
             StreamWitness.Source.API -> now?.let { streamWitness.fromApi(it, atMs) } ?: return
@@ -1561,6 +1608,7 @@ class RadioService : MediaLibraryService() {
      */
     private fun resetStationState() {
         PlaybackStatusBus.resetMissingTrackInfo()
+        streamArtwork.clear()
         coverGeneration++
         coverLookupJob?.cancel()
         manualArtworkLookup = false
@@ -1665,7 +1713,7 @@ class RadioService : MediaLibraryService() {
         }
 
         // An ad or the station's own slogan - nothing to look up in the catalog.
-        if (key == null || !prefs.onlineArtworkEnabled) {
+        if (key == null || now == null || !prefs.onlineArtworkEnabled) {
             if (this@RadioService::session.isInitialized) {
                 session.setCustomLayout(customLayout())
             }
@@ -1673,18 +1721,30 @@ class RadioService : MediaLibraryService() {
         }
 
         PlaybackStatusBus.setTrackArtworkLoading(true)
+        refreshCurrentMetadata(force = true, why = "artwork-loading")
         if (this@RadioService::session.isInitialized) {
             session.setCustomLayout(customLayout())
         }
         coverLookupJob = scope.launch {
             try {
             val startedAt = SystemClock.elapsedRealtime()
-            val lookup = if (alternative) CoverArtLookup.findAlternativeDetailed(now!!.artist, now.songTitle, coverAlternatives.toSet())
+            val broadcasterArtwork = if (!alternative) streamArtwork.urlFor(now?.raw)?.let { url ->
+                try { TrackArtworkStore.fetch(this@RadioService, url, currentTrack = true,
+                    allowedHosts = StreamArtworkPolicy.allowedHosts)?.toString() }
+                catch (cancel: CancellationException) { throw cancel }
+                catch (_: Exception) { null }
+            } else null
+            if (generation != coverGeneration) return@launch
+            val lookup = if (broadcasterArtwork != null) {
+                CoverArtLookup.CatalogLookupResult.Found(
+                    CoverArtLookup.TrackInfo(artworkUrl = broadcasterArtwork,
+                        album = null, year = null, isSingle = false))
+            } else if (alternative) CoverArtLookup.findAlternativeDetailed(now!!.artist, now.songTitle, coverAlternatives.toSet())
                 else CoverArtLookup.findDetailed(now!!.artist, now.songTitle)
             val info = (lookup as? CoverArtLookup.CatalogLookupResult.Found)?.info
             if (generation != coverGeneration) return@launch
             info?.artworkUrl?.let { coverAlternatives.add(it) }
-            val cachedArtwork = info?.artworkUrl?.let { url ->
+            val cachedArtwork = broadcasterArtwork ?: info?.artworkUrl?.let { url ->
                 try { TrackArtworkStore.fetch(this@RadioService, url, currentTrack = true)?.toString() }
                 catch (cancel: CancellationException) { throw cancel }
                 catch (_: Exception) { null }
@@ -1723,6 +1783,7 @@ class RadioService : MediaLibraryService() {
                 if (generation == coverGeneration) {
                     manualArtworkLookup = false
                     PlaybackStatusBus.setTrackArtworkLoading(false)
+                    refreshCurrentMetadata(force = true, why = "artwork-complete")
                     if (this@RadioService::session.isInitialized) {
                         session.setCustomLayout(customLayout())
                     }
@@ -1991,7 +2052,8 @@ class RadioService : MediaLibraryService() {
         for (node in nodes) {
             // The actual item count, not Int.MAX_VALUE - this way the HDU gets
             // a meaningful sense of how much the list changed.
-            val count = childrenOf(node).size
+            val count = if (node == NODE_PLAYLISTS) 2 + repo.playlists().size
+                else childrenOf(node).size
             session.notifyChildrenChanged(node, count, params)
             session.notifyChildrenChanged(node, count, null)
             for (controller in controllers) {
@@ -2000,6 +2062,12 @@ class RadioService : MediaLibraryService() {
             }
         }
         debugInfo(TAG, "powiadomiono ${controllers.size} kontroler(ow) o ${nodes.joinToString()}")
+    }
+
+    private fun collectionLabel(parent: String): String? = when (parent) {
+        NODE_ALL -> getString(net.mspanc.twinsenradio.R.string.node_all)
+        NODE_FAVOURITES -> getString(net.mspanc.twinsenradio.R.string.node_favourites)
+        else -> repo.playlists().firstOrNull { "/playlist/${it.id}" == parent }?.name
     }
 
     /** Browse node content - shared between responses and notifications. */
@@ -2064,10 +2132,6 @@ class RadioService : MediaLibraryService() {
             .setIconResId(net.mspanc.twinsenradio.R.drawable.ic_artwork_refresh)
             .setExtras(
                 Bundle().apply {
-                    putInt(
-                        MediaConstants.EXTRAS_KEY_COMMAND_BUTTON_ICON_COMPAT,
-                        CommandButton.ICON_ALBUM
-                    )
                     PlaybackStatusBus.stationId.value?.let { putString("stationId", it) }
                 }
             )
@@ -2395,6 +2459,9 @@ class RadioService : MediaLibraryService() {
                         repo.favourites().isNotEmpty()
                     ).map { node ->
                         when (node) {
+                            NODE_PLAYLISTS -> MediaItem.Builder().setMediaId(NODE_PLAYLISTS)
+                                .setMediaMetadata(metadata.forFolder(getString(net.mspanc.twinsenradio.R.string.node_playlists),
+                                    MediaMetadata.MEDIA_TYPE_FOLDER_PLAYLISTS)).build()
                             NODE_ALL -> folder(NODE_ALL, net.mspanc.twinsenradio.R.string.node_all)
                             NODE_FAVOURITES -> folder(
                                 NODE_FAVOURITES,
@@ -2411,9 +2478,14 @@ class RadioService : MediaLibraryService() {
                     pageSize
                 ) { it }
 
-                parentId == NODE_PLAYLISTS -> BrowsePage.map(repo.playlists(), page, pageSize) { source ->
-                    MediaItem.Builder().setMediaId("/playlist/${source.id}").setMediaMetadata(
-                        metadata.forFolder(source.name,MediaMetadata.MEDIA_TYPE_FOLDER_RADIO_STATIONS)).build()
+                parentId == NODE_PLAYLISTS -> {
+                    val collections = listOf(
+                        NODE_ALL to getString(net.mspanc.twinsenradio.R.string.node_all),
+                        NODE_FAVOURITES to getString(net.mspanc.twinsenradio.R.string.node_favourites)
+                    ) + repo.playlists().map { "/playlist/${it.id}" to it.name }
+                    BrowsePage.map(collections, page, pageSize) { (parent, label) ->
+                        collectionItem(parent, label)
+                    }
                 }
                 parentId.startsWith("/playlist/") -> BrowsePage.map(childrenOf(parentId), page, pageSize) { browseItem(it,parentId) }
 
@@ -2474,8 +2546,8 @@ class RadioService : MediaLibraryService() {
                 "wznawiam po podlaczeniu: ${station.name} ($skad, zlecil ${controller.packageName})"
             )
             val queue = if (net.mspanc.twinsenradio.BuildConfig.IS_AUTOMOTIVE)
-                childrenOf(prefs.activeBrowseParent).ifEmpty { repo.all() } else listOf(station)
-            val resumeQueue = if (queue.any { it.id == station.id }) queue else listOf(station) + queue
+                childrenOf(prefs.activeBrowseParent) else listOf(station)
+            val resumeQueue = CollectionQueue.withSelected(queue, station) { it.id }
             return Futures.immediateFuture(
                 MediaSession.MediaItemsWithStartPosition(
                     resumeQueue.map(::playableItem),
@@ -2510,6 +2582,12 @@ class RadioService : MediaLibraryService() {
             browser: MediaSession.ControllerInfo,
             mediaId: String
         ): ListenableFuture<LibraryResult<MediaItem>> {
+            if (mediaId.startsWith(COLLECTION_PREFIX)) {
+                val parent = mediaId.removePrefix(COLLECTION_PREFIX)
+                val label = collectionLabel(parent)
+                    ?: return Futures.immediateFuture(LibraryResult.ofError(SessionError.ERROR_BAD_VALUE))
+                return Futures.immediateFuture(LibraryResult.ofItem(collectionItem(parent, label), null))
+            }
             val station = repo.byMediaId(mediaId)
                 ?: return Futures.immediateFuture(LibraryResult.ofError(SessionError.ERROR_BAD_VALUE))
             return Futures.immediateFuture(LibraryResult.ofItem(
@@ -2567,13 +2645,33 @@ class RadioService : MediaLibraryService() {
             startPositionMs: Long
         ): ListenableFuture<MediaSession.MediaItemsWithStartPosition> {
             if (net.mspanc.twinsenradio.BuildConfig.IS_AUTOMOTIVE && mediaItems.size == 1) {
+                val requested = mediaItems[0].mediaId
+                if (requested.startsWith(COLLECTION_PREFIX)) {
+                    val parent = requested.removePrefix(COLLECTION_PREFIX)
+                    val label = collectionLabel(parent)
+                    val stations = if (label != null) childrenOf(parent) else emptyList()
+                    if (stations.isEmpty()) {
+                        android.widget.Toast.makeText(this@RadioService,
+                            if (label == null) "This playlist is no longer available."
+                            else "$label has no stations. Current audio kept.",
+                            android.widget.Toast.LENGTH_LONG).show()
+                        return Futures.immediateFailedFuture(
+                            UnsupportedOperationException("Selected collection has no stations"))
+                    }
+                    prefs.activeBrowseParent = parent
+                    stationTraversal.invalidateOrder()
+                    val current = Station.idFromMediaId(player.currentMediaItem?.mediaId.orEmpty())
+                    val index = CollectionQueue.startIndex(stations.map { it.id }, current)!!
+                    refreshCurrentMetadata(force = true, why = "collection")
+                    return Futures.immediateFuture(MediaSession.MediaItemsWithStartPosition(
+                        stations.map(::playableItem), index, C.TIME_UNSET))
+                }
                 val selected = repo.byMediaId(mediaItems[0].mediaId)
                     ?: mediaItems[0].requestMetadata.searchQuery?.let { repo.search(it).firstOrNull() }
                 if (selected != null) {
-                    val parent = Station.parentFromMediaId(mediaItems[0].mediaId) ?: NODE_ALL
-                    prefs.activeBrowseParent = parent
-                    val stations = childrenOf(parent).ifEmpty { repo.all() }
-                    val queue = if (stations.any { it.id == selected.id }) stations else listOf(selected) + stations
+                    val parent = CollectionQueue.stationScope(prefs.activeBrowseParent,
+                        Station.parentFromMediaId(mediaItems[0].mediaId))
+                    val queue = CollectionQueue.withSelected(childrenOf(parent), selected) { it.id }
                     return Futures.immediateFuture(MediaSession.MediaItemsWithStartPosition(
                         queue.map(::playableItem), queue.indexOfFirst { it.id == selected.id }, C.TIME_UNSET))
                 }
@@ -2589,6 +2687,13 @@ class RadioService : MediaLibraryService() {
             )
         }
     }
+
+    private fun collectionItem(parent: String, label: String): MediaItem =
+        MediaItem.Builder().setMediaId(COLLECTION_PREFIX + parent)
+            .setMediaMetadata(MediaMetadata.Builder()
+                .setTitle(label).setIsBrowsable(false).setIsPlayable(true)
+                .setMediaType(MediaMetadata.MEDIA_TYPE_PLAYLIST).build())
+            .build()
 
     private fun folder(id: String, titleRes: Int): MediaItem =
         MediaItem.Builder()
@@ -2634,7 +2739,7 @@ class RadioService : MediaLibraryService() {
     private fun refreshAutomotiveQueue() {
         if (!net.mspanc.twinsenradio.BuildConfig.IS_AUTOMOTIVE || player.currentMediaItem == null) return
         val id = Station.idFromMediaId(player.currentMediaItem!!.mediaId) ?: return
-        val desired = childrenOf(prefs.activeBrowseParent).ifEmpty { repo.all() }
+        val desired = childrenOf(prefs.activeBrowseParent)
         val desiredIndex = desired.indexOfFirst { it.id == id }
         val queue = if (desiredIndex >= 0) desired else listOf(repo.byId(id) ?: return) + desired
         if (player.mediaItemCount == queue.size && queue.indices.all {
@@ -2705,8 +2810,9 @@ class RadioService : MediaLibraryService() {
     private fun navigateStationOrder(delta: Int): Boolean {
         if (!net.mspanc.twinsenradio.BuildConfig.IS_AUTOMOTIVE || !prefs.randomStationOrder) return false
         val current=Station.idFromMediaId(player.currentMediaItem?.mediaId.orEmpty())
-        val target=if(delta<0) stationTraversal.previous((repo.all()+repo.favourites()).map { it.id }.toSet(),current)
-            else stationTraversal.next(childrenOf(prefs.activeBrowseParent).ifEmpty { repo.all() }.map { it.id },current)
+        val allowed = childrenOf(prefs.activeBrowseParent).map { it.id }
+        val target=if(delta<0) stationTraversal.previous(allowed.toSet(),current)
+            else stationTraversal.next(allowed,current)
         saveStationTraversal()
         if(target==null || target==current) return true
         val wasPlaying=player.playWhenReady
@@ -2773,6 +2879,7 @@ class RadioService : MediaLibraryService() {
     }
 
     companion object {
+        private const val COLLECTION_PREFIX = "/collection"
         private const val TAG = "RadioService"
         private const val TAG_ICY = "IcyMeta"
         private const val TAG_DUMP = "MetaDump"
