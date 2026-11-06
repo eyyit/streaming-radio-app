@@ -1,7 +1,7 @@
 {
   "formatVersion": 1,
   "project": "Streaming Radio repository source inventory",
-  "gitHead": "e5e43679c5187697c00ce220f7ad0298a4e2e195",
+  "gitHead": "381121c1859f402c09c083a46c8dd054cc7ef97a",
   "workingTree": "dirty",
   "hashAlgorithm": "SHA-256",
   "selfHashExcluded": true,
@@ -72,8 +72,8 @@
     },
     {
       "path": "app/build.gradle.kts",
-      "size": 6236,
-      "sha256": "4a213aa9b502bd182ae92267ee155c2e405787bee03d895df933db0232e70e31"
+      "size": 6718,
+      "sha256": "a8c9b7afa4f36ea32ee2fa55a63b62fd0c5e91999e13dfcc20d7e0d1fb6fdfd0"
     },
     {
       "path": "app/src/androidTest/java/net/mspanc/twinsenradio/automotive/PrototypeSmokeInstrumentation.kt",
@@ -357,8 +357,8 @@
     },
     {
       "path": "app/src/main/java/net/mspanc/twinsenradio/net/SafeHttp.kt",
-      "size": 6009,
-      "sha256": "deac45366f167bb38de3433b387465f7a31ba95774719f9760ab0c3b7fcd5268"
+      "size": 6636,
+      "sha256": "33de35adc18f9c980b66e82251c3f7b28322f568cbe63d8c0a08073e70f242fb"
     },
     {
       "path": "app/src/main/java/net/mspanc/twinsenradio/playback/AlbumNames.kt",
@@ -529,6 +529,11 @@
       "path": "app/src/main/java/net/mspanc/twinsenradio/playback/StatusLine.kt",
       "size": 1802,
       "sha256": "0664f601613ed9f1336aebbe275fc7d71a8bce5014f084dd0c5bf1369b35498f"
+    },
+    {
+      "path": "app/src/main/java/net/mspanc/twinsenradio/playback/StreamArtworkPolicy.kt",
+      "size": 338,
+      "sha256": "187bc350057bd85f38c44954749166072626e2b7a9f101a344d5d5ea7c91fa0d"
     },
     {
       "path": "app/src/main/java/net/mspanc/twinsenradio/playback/StreamQuality.kt",
@@ -894,6 +899,11 @@
       "path": "app/src/test/java/net/mspanc/twinsenradio/net/SafeHttpTest.kt",
       "size": 6139,
       "sha256": "35229b60a83b51f5c598b2d007a65c18c5070ff6107a80e8a047e4eeb853df7e"
+    },
+    {
+      "path": "app/src/test/java/net/mspanc/twinsenradio/net/StreamArtworkPolicyTest.kt",
+      "size": 1890,
+      "sha256": "788976747ae33018cec586fcd73bb541e6732944fb2a2306901efae597819f93"
     },
     {
       "path": "app/src/test/java/net/mspanc/twinsenradio/playback/AlbumNamesTest.kt",

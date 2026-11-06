@@ -14,8 +14,8 @@ android {
         applicationId = "net.mspanc.twinsenradio"
         minSdk = 26
         targetSdk = 36
-        versionCode = 9
-        versionName = "0.3.0-rc7"
+        versionCode = 10
+        versionName = "0.3.0-rc8"
         testInstrumentationRunner = "net.mspanc.twinsenradio.automotive.PrototypeSmokeInstrumentation"
     }
 
@@ -139,8 +139,16 @@ dependencies {
     // sprawdzic na JVM - bez telefonu i bez czekania, az radio zagra akurat ten
     // utwor, na ktorym cos sie wywalilo.
     testImplementation("junit:junit:4.13.2")
+    // The real Media3 extractor uses Android platform utilities during JVM tests.
+    testImplementation("org.robolectric:robolectric:4.17")
     // android.jar ma org.json tylko jako zaslepke - na JVM potrzebny prawdziwy (StationTitleApi)
     testImplementation("org.json:json:20240303")
 }
 
 
+
+// Keep Android JVM fixtures on canonical Maven Central and reuse their SDK jar.
+tasks.withType<org.gradle.api.tasks.testing.Test>().configureEach {
+    systemProperty("robolectric.dependency.repo.url", "https://repo.maven.apache.org/maven2")
+    systemProperty("maven.repo.local", gradle.gradleUserHomeDir.resolve("robolectric").path)
+}

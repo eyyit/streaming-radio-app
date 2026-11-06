@@ -35,9 +35,10 @@ object SafeHttp {
 
     @Throws(IOException::class)
     fun getBytes(url: String, maxBytes: Int, userAgent: String,
-        timeoutMs: Int = 8000, allowHttp: Boolean = false): ByteArray {
+        timeoutMs: Int = 8000, allowHttp: Boolean = false,
+        allowedHosts: Set<String>? = null): ByteArray {
         if (maxBytes <= 0 || timeoutMs <= 0) throw IOException("Invalid request bounds")
-        return request(url, userAgent, timeoutMs, allowHttp, "GET") { connection, deadline ->
+        return request(url, userAgent, timeoutMs, allowHttp, "GET", allowedHosts) { connection, deadline ->
             if (connection.contentLengthLong > maxBytes) throw IOException("Response too large")
             connection.inputStream.use { input ->
                 val output = ByteArrayOutputStream(minOf(maxBytes, 8192))
@@ -65,29 +66,40 @@ object SafeHttp {
     } catch (_: IOException) { false }
 
     /** Validates every redirect target before opening a connection. */
-    internal fun checkedUrl(raw: String, allowHttp: Boolean): URL {
+    internal fun checkedUrl(raw: String, allowHttp: Boolean,
+        allowedHosts: Set<String>? = null): URL {
         if (raw.length > 8192) throw IOException("URL too long")
         val uri = try { URI(raw) } catch (error: Exception) { throw IOException("Invalid URL", error) }
         if (!uri.scheme.equals("https", ignoreCase = true) &&
             !(allowHttp && uri.scheme.equals("http", ignoreCase = true))) throw IOException("HTTPS required")
         if (uri.host.isNullOrBlank() || uri.rawUserInfo != null || uri.rawFragment != null ||
             uri.port !in -1..65535 || uri.port == 0) throw IOException("Invalid URL authority")
+        if (allowedHosts != null) {
+            val host = uri.host.lowercase(java.util.Locale.ROOT)
+            val allowed = allowedHosts.any { it.equals(host, ignoreCase = true) }
+            if (!allowed || uri.port != -1 && uri.port != 443 ||
+                !uri.scheme.equals("https", ignoreCase = true)) {
+                throw IOException("URL host is not allowed")
+            }
+        }
         return try { uri.toURL() } catch (error: Exception) { throw IOException("Invalid URL", error) }
     }
 
-    internal fun redirectTarget(current: URL, location: String, allowHttp: Boolean): URL {
+    internal fun redirectTarget(current: URL, location: String, allowHttp: Boolean,
+        allowedHosts: Set<String>? = null): URL {
         val target = try { current.toURI().resolve(location).toString() }
             catch (error: Exception) { throw IOException("Invalid redirect", error) }
-        val checked = checkedUrl(target, allowHttp)
+        val checked = checkedUrl(target, allowHttp, allowedHosts)
         if (current.protocol == "https" && checked.protocol != "https") throw IOException("HTTPS downgrade denied")
         return checked
     }
 
     private fun <T> request(raw: String, userAgent: String, timeoutMs: Int, allowHttp: Boolean,
-        method: String, consume: (HttpURLConnection, Long) -> T): T {
+        method: String, allowedHosts: Set<String>? = null,
+        consume: (HttpURLConnection, Long) -> T): T {
         if (timeoutMs <= 0) throw IOException("Invalid timeout")
         val deadline = System.nanoTime() + timeoutMs.toLong() * 1_000_000L
-        var url = checkedUrl(raw, allowHttp)
+        var url = checkedUrl(raw, allowHttp, allowedHosts)
         var followed = 0
         while (true) {
             val remaining = ((deadline - System.nanoTime()) / 1_000_000L)
@@ -107,7 +119,7 @@ object SafeHttp {
                 if (status in redirects) {
                     if (followed++ >= MAX_REDIRECTS) throw IOException("Too many redirects")
                     val location = connection.getHeaderField("Location") ?: throw IOException("Missing redirect target")
-                    url = redirectTarget(url, location, allowHttp)
+                    url = redirectTarget(url, location, allowHttp, allowedHosts)
                 } else {
                     if (status !in 200..299) throw HttpStatusException(status, retryAfterSeconds(connection.getHeaderField("Retry-After")))
                     return consume(connection, deadline)
