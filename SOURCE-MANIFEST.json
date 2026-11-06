@@ -1,7 +1,7 @@
 {
   "formatVersion": 1,
   "project": "Streaming Radio repository source inventory",
-  "gitHead": "381121c1859f402c09c083a46c8dd054cc7ef97a",
+  "gitHead": "9fb6df935d2ca95260fd6075dd06c9d081e6a73c",
   "workingTree": "dirty",
   "hashAlgorithm": "SHA-256",
   "selfHashExcluded": true,
@@ -421,6 +421,11 @@
       "sha256": "c7409cf9229c2388bed0b31426fb733e6432ee301414e347873f91b776b61095"
     },
     {
+      "path": "app/src/main/java/net/mspanc/twinsenradio/playback/IcyArtworkParser.kt",
+      "size": 4370,
+      "sha256": "a12c144135fe51134431511c76c81a64034a042cf21048c0300e34822c8c0c86"
+    },
+    {
       "path": "app/src/main/java/net/mspanc/twinsenradio/playback/IcyFilteringDataSource.kt",
       "size": 3699,
       "sha256": "4d1cfb22f658f5768b8251b4ac63db579d091c78cc279bfb81086652471b4812"
@@ -534,6 +539,11 @@
       "path": "app/src/main/java/net/mspanc/twinsenradio/playback/StreamArtworkPolicy.kt",
       "size": 338,
       "sha256": "187bc350057bd85f38c44954749166072626e2b7a9f101a344d5d5ea7c91fa0d"
+    },
+    {
+      "path": "app/src/main/java/net/mspanc/twinsenradio/playback/StreamArtworkState.kt",
+      "size": 1210,
+      "sha256": "6665e882298615d30e58476dd290d06495e2e3cc4a8b100ea4c1b2933db832c7"
     },
     {
       "path": "app/src/main/java/net/mspanc/twinsenradio/playback/StreamQuality.kt",
@@ -951,6 +961,11 @@
       "sha256": "ec2f0a5bf78ed0df4df7cedc047dc36d327539912165e8f1fd6b7f4c9a72c7a1"
     },
     {
+      "path": "app/src/test/java/net/mspanc/twinsenradio/playback/IcyArtworkParserTest.kt",
+      "size": 3713,
+      "sha256": "46c9f18b174caf5ad04c1cd04db64de797502924cf67bc495443343442e37e84"
+    },
+    {
       "path": "app/src/test/java/net/mspanc/twinsenradio/playback/JoinedNamesTest.kt",
       "size": 1146,
       "sha256": "65317752d53f5ab6c958c14eedfcc90d32dded407d16f184cd8a0f808cf40e06"
@@ -1019,6 +1034,11 @@
       "path": "app/src/test/java/net/mspanc/twinsenradio/playback/StationTraversalTest.kt",
       "size": 1701,
       "sha256": "8ac6c73de1bd1ca481677136512f021c075e0c77d67cb6b44ff148f1086eff2f"
+    },
+    {
+      "path": "app/src/test/java/net/mspanc/twinsenradio/playback/StreamArtworkStateTest.kt",
+      "size": 2350,
+      "sha256": "98827d3f8e28a4758b84c577a848d72ac63628f0d03d926638ac68fcd6f5e4ad"
     },
     {
       "path": "app/src/test/java/net/mspanc/twinsenradio/playback/StreamQualityTest.kt",
