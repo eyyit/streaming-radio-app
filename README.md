@@ -18,20 +18,22 @@ No station catalog is bundled. Screenshots and personal test libraries do not im
 
 ## A look inside
 
-<p>
-  <img src="docs/screenshots/api33-v11/native-player.png" width="320" alt="Android Automotive native media host showing the fictional playing station and its station logo">
-  <img src="docs/screenshots/api33-v11/native-stations.png" width="320" alt="Android Automotive native media host browse screen with the fictional station queue">
-</p>
-<p>
-  <img src="docs/screenshots/api33-v11/manage-playlists.png" width="320" alt="App-owned parked Manage playlists screen with isolated demo data">
-  <img src="docs/screenshots/api33-v11/manage-stations.png" width="320" alt="App-owned parked Manage stations screen with isolated demo data">
-</p>
-<p>
-  <img src="docs/screenshots/api33-v11/settings.png" width="320" alt="App-owned Settings screen">
-  <img src="docs/screenshots/api33-v11/station-image.png" width="320" alt="App-owned station image selection screen">
-</p>
+These are screenshot-style reconstructions based on the app's photographed Volvo Android 13 layouts, not captured screenshots. Fictional stations, original sample artwork, example.com URLs and anonymous profile icons keep personal test data out of the gallery.
 
-**Fresh API 33 captures, 9 November 2026.** The native-player and native-stations images show the standard Android Automotive media-host template using six fictional stations and local demo metadata; the player shows a station logo, not album artwork. Their layout is not Volvo-specific and may differ from the vehicle interface. The remaining images show app-owned parked screens. All six are raw 1024 x 1365 emulator captures with no cropping, compositing, or image edits. They use isolated fixture data, not personal playlists or broadcaster content.
+<p>
+  <img src="docs/screenshots/volvo-mocks/VR01-F.png" width="320" alt="VR01-F: Player with fictional track artwork; reconstructed mock">
+  <img src="docs/screenshots/volvo-mocks/VR02-F.png" width="320" alt="VR02-F: Native station list; reconstructed mock">
+</p>
+<p>
+  <img src="docs/screenshots/volvo-mocks/VR03-F.png" width="320" alt="VR03-F: Playlist station management; reconstructed mock">
+  <img src="docs/screenshots/volvo-mocks/VR04-F.png" width="320" alt="VR04-F: Settings; reconstructed mock">
+</p>
+<p>
+  <img src="docs/screenshots/volvo-mocks/VR05-F.png" width="320" alt="VR05-F: Station-image picker; reconstructed mock">
+</p>
+**VR01-F:** Player · **VR02-F:** Stations · **VR03-F:** Playlist management · **VR04-F:** Settings · **VR05-F:** Image picker. These approved illustrations show the existing UI structure; they are not pixel-exact verification of any vehicle or release. No sample stations or artwork are bundled.
+
+See [gallery provenance](docs/SCREENSHOTS.md).
 
 ## Getting started
 
