@@ -2,6 +2,19 @@ Streaming Radio privacy notice — release candidate
 Prepared 2 November 2026. Publisher brand: Impostor Labs.
 Contact: impostor.labs@gmail.com
 
+Optional phone playlist transfer (6 November 2026): When configured and selected,
+the phone and car use Firebase Authentication anonymous technical identities
+and Firebase Realtime Database to exchange a playlist URL or M3U contents and
+an optional name. Firebase receives connection information including IP address.
+HTTPS protects transmission; the content is not end-to-end encrypted. Pairing
+access expires after five minutes. Completed transfers are deleted; cancellation
+and returning clients attempt cleanup. If both clients disappear, physical
+deletion has no guaranteed deadline. Transfer credentials remain in app-private
+storage until cleanup succeeds. The feature collects no listening history and
+adds no analytics SDK. Manual playlist entry/playback does not require Firebase.
+The bundled default configuration disables this feature until a project is set.
+
+
 This notice describes the local release candidate. A reviewed public policy
 URL and final release review are required before this app is published.
 

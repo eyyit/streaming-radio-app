@@ -1,0 +1,24 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+    <application android:appCategory="audio" android:theme="@style/Theme.StreamingRadioPhone"
+        tools:replace="android:theme">
+        <activity android:name=".ui.MainActivity" android:exported="false" tools:replace="android:exported">
+            <intent-filter tools:node="removeAll" />
+        </activity>
+        <activity android:name=".phone.PhoneLibraryActivity" android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.APP_MUSIC" />
+            </intent-filter>
+        </activity>
+        <activity android:name=".phone.PhonePlayerActivity" android:exported="false" />
+        <activity android:name=".phone.PhoneImportActivity" android:exported="false"
+            android:windowSoftInputMode="adjustResize" />
+        <activity android:name=".phone.PhonePlaylistActivity" android:exported="false" />
+    </application>
+</manifest>

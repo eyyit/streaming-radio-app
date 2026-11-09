@@ -65,7 +65,8 @@ object PlaylistLibrary {
     /** Internal cached source only; never accept arbitrary local paths or URIs. */
     const val LOCAL_SNAPSHOT_URL = "local:saved-stations"
 
-    fun isLocalSnapshot(url: String): Boolean = url == LOCAL_SNAPSHOT_URL
+    private val imported = Regex("local:imported:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}")
+    fun isLocalSnapshot(url: String): Boolean = url == LOCAL_SNAPSHOT_URL || imported.matches(url)
 
     fun remoteSources(sources: List<PlaylistSource>): List<PlaylistSource> =
         sources.filterNot { it.isLocal }

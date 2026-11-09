@@ -16,6 +16,15 @@ android {
         targetSdk = 36
         versionCode = 11
         versionName = "0.3.0-rc9"
+        for ((field, property) in mapOf(
+            "PHONE_TRANSFER_API_KEY" to "phoneTransferApiKey",
+            "PHONE_TRANSFER_DATABASE_URL" to "phoneTransferDatabaseUrl",
+            "PHONE_TRANSFER_HOSTING_URL" to "phoneTransferHostingUrl"
+        )) {
+            val value = providers.gradleProperty(property).orElse("").get()
+                .replace("\\", "\\\\").replace("\"", "\\\"")
+            buildConfigField("String", field, "\"$value\"")
+        }
         testInstrumentationRunner = "net.mspanc.twinsenradio.automotive.PrototypeSmokeInstrumentation"
     }
 
@@ -70,7 +79,12 @@ android {
 
     flavorDimensions += "platform"
     productFlavors {
-        create("phone") { dimension = "platform" }
+        create("phone") {
+            dimension = "platform"
+            applicationId = providers.gradleProperty("publicApplicationId").orElse("com.impostorlabs.streamingradio").get()
+            versionCode = 12
+            versionName = "0.3.0-rc10"
+        }
         create("automotive") {
             dimension = "platform"
             applicationId = providers.gradleProperty("publicApplicationId").orElse("com.impostorlabs.streamingradio").get()
@@ -83,6 +97,10 @@ android {
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
+    }
+
+    testOptions {
+        unitTests.isIncludeAndroidResources = true
     }
 
     buildFeatures {
@@ -109,6 +127,8 @@ androidComponents {
     onVariants(selector().withBuildType("debug")) { variant ->
         if (variant.productFlavors.any { it.second == "automotive" }) {
             variant.applicationId.set("com.impostorlabs.streamingradio.debug")
+        } else if (variant.productFlavors.any { it.second == "phone" }) {
+            variant.applicationId.set("com.impostorlabs.streamingradio.phone.debug")
         }
     }
 }
@@ -126,6 +146,8 @@ dependencies {
     implementation("androidx.media3:media3-session:$media3")
     implementation("androidx.media3:media3-datasource:$media3")
 
+    // Local QR encoding only: no camera, remote QR service or phone SDK.
+    implementation("com.google.zxing:core:3.5.4")
     implementation("androidx.core:core-ktx:1.17.0")
     implementation("androidx.appcompat:appcompat:1.7.1")
     implementation("com.google.android.material:material:1.13.0")

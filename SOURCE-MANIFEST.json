@@ -1,7 +1,7 @@
 {
   "formatVersion": 1,
-  "project": "Streaming Radio repository source inventory",
-  "gitHead": "0cb7a3c8d2086bc1e435cb492d734b9632529cd2",
+  "project": "Twinsen Radio independent source candidate",
+  "gitHead": "479acf26f50c96cd21a20a49611f8bc191f6b3af",
   "workingTree": "dirty",
   "hashAlgorithm": "SHA-256",
   "selfHashExcluded": true,
@@ -22,8 +22,8 @@
     },
     {
       "path": ".github/workflows/android-ci.yml",
-      "size": 1803,
-      "sha256": "aa97caf78aab7d5d5ec387ccf1d7d2bcbdd8eff30ae4de29644fe61d61cf75a4"
+      "size": 2628,
+      "sha256": "f577ad8b3019aec7d7d81c3be9f4b4696ad14dfc07a462394c61d4d5d68c1afc"
     },
     {
       "path": ".gitignore",
@@ -52,8 +52,8 @@
     },
     {
       "path": "README.md",
-      "size": 8094,
-      "sha256": "0b35cc1cb6c9b999c8357c7d46a6d776136ab7607f6eee8ebbec02a033930a13"
+      "size": 1267,
+      "sha256": "1364413cb2a4ac63d174e3dd1642b2607e76f84561ce93fd0b6054b35e8d73e3"
     },
     {
       "path": "SECURITY.md",
@@ -67,13 +67,13 @@
     },
     {
       "path": "UPSTREAM-README.md",
-      "size": 10980,
-      "sha256": "49a068ea5bfbaeadccb60cec50bf1b945b94e19a80740e6717b933ae078ca93c"
+      "size": 8094,
+      "sha256": "0b35cc1cb6c9b999c8357c7d46a6d776136ab7607f6eee8ebbec02a033930a13"
     },
     {
       "path": "app/build.gradle.kts",
-      "size": 6718,
-      "sha256": "2edad474366f4f1a2dac4f70a7bb19b8959dc6cadfcbc553c52c54a6b80518a5"
+      "size": 7756,
+      "sha256": "f1a8153ddcad6d2c66eb4c419324a98234bc6b31c89cf777d12026efebae61ed"
     },
     {
       "path": "app/src/androidTest/java/net/mspanc/twinsenradio/automotive/PrototypeSmokeInstrumentation.kt",
@@ -137,8 +137,8 @@
     },
     {
       "path": "app/src/automotive/java/net/mspanc/twinsenradio/automotive/RadioManagement.kt",
-      "size": 31051,
-      "sha256": "f1f03fd10ad2f472cbce163edf4247afb9f5c97ed567b3860646c16ae5489597"
+      "size": 38650,
+      "sha256": "ef0d2c9328900822a9e4071f74aa929ac92380f550a8bfcf99a8119a939ffdfe"
     },
     {
       "path": "app/src/automotive/java/net/mspanc/twinsenradio/automotive/StationImageDialog.kt",
@@ -232,8 +232,8 @@
     },
     {
       "path": "app/src/main/assets/legal/dependency-notices.txt",
-      "size": 2789,
-      "sha256": "09dff8502117b64e36181cedf709cc3c585c47a34ae5f41e7219275081c63929"
+      "size": 3304,
+      "sha256": "b39447ad759e089e987d59d9696c299ccbd86d5de1dc35f1a18acf81cca8bf4e"
     },
     {
       "path": "app/src/main/assets/legal/gpl-3.0.txt",
@@ -252,8 +252,8 @@
     },
     {
       "path": "app/src/main/assets/legal/privacy-policy.txt",
-      "size": 2447,
-      "sha256": "a8f1236235b6db95efba6f818d644c127ff7bd61a76ccaf6137a94da1fdcd0b7"
+      "size": 3320,
+      "sha256": "345062e05038b51c7bb778e5e497fab04f9e97cef1c04bde64f9efd2ad1fe999"
     },
     {
       "path": "app/src/main/assets/legal/runtime-dependency-notices.txt",
@@ -302,8 +302,8 @@
     },
     {
       "path": "app/src/main/java/net/mspanc/twinsenradio/data/PlaylistLibrary.kt",
-      "size": 6961,
-      "sha256": "73a905ab9bfb3717308169c42be07e028b3da2dd6bc9cae8c0366a5225f33322"
+      "size": 7098,
+      "sha256": "ff9420d6a4f810c99c4d491b65069613f8309581ccf7b815bfebb301e1f07d5c"
     },
     {
       "path": "app/src/main/java/net/mspanc/twinsenradio/data/PlaylistNames.kt",
@@ -342,8 +342,8 @@
     },
     {
       "path": "app/src/main/java/net/mspanc/twinsenradio/data/StationRepository.kt",
-      "size": 30333,
-      "sha256": "76d7385282ff421a4267c05cc74cbd43e69322fdb153f2f0e34d43d7e14ccb08"
+      "size": 32242,
+      "sha256": "e8cf55ce49b34e8eb1b0fd910ab26aae0ccaeedef2874a858ae0bf42d323a16e"
     },
     {
       "path": "app/src/main/java/net/mspanc/twinsenradio/data/StationText.kt",
@@ -452,8 +452,8 @@
     },
     {
       "path": "app/src/main/java/net/mspanc/twinsenradio/playback/KeepCurrentStreamPlayer.kt",
-      "size": 4407,
-      "sha256": "958ecbbc56b9b6d697acaea1bb72814515529a62a23b4a1a873e35b342a64b9f"
+      "size": 4395,
+      "sha256": "9d0038573429be085c52af8c0c87e778026d8d67ee017289c6a927a212068bb2"
     },
     {
       "path": "app/src/main/java/net/mspanc/twinsenradio/playback/LoadDiagnostics.kt",
@@ -507,8 +507,8 @@
     },
     {
       "path": "app/src/main/java/net/mspanc/twinsenradio/playback/RadioService.kt",
-      "size": 145413,
-      "sha256": "60eadcd1c7874b67dfedc3fd00a94fce19e094bdd484102a48e305f6b6526acb"
+      "size": 146564,
+      "sha256": "fab9f7fe8824329dd9bf432bb1d5ef2e50653e95387eaa7c36b37c7567d9fcb0"
     },
     {
       "path": "app/src/main/java/net/mspanc/twinsenradio/playback/ReconnectController.kt",
@@ -591,6 +591,21 @@
       "sha256": "0c161f807cc7c07d942560c4a5a6b7c4609ea5e0d293ce7ddd94950b6ca28ad0"
     },
     {
+      "path": "app/src/main/java/net/mspanc/twinsenradio/transfer/PhoneTransferClient.kt",
+      "size": 11825,
+      "sha256": "b3f9efe67fe44c72213ed18352512611c1db4732b677cb17a1495fd51a4ed0d3"
+    },
+    {
+      "path": "app/src/main/java/net/mspanc/twinsenradio/transfer/PrivateTransferStore.kt",
+      "size": 2715,
+      "sha256": "dc534ecd6c06a5210a6e7ea6beede37c83690e42dfff053099f0f83d23059c1d"
+    },
+    {
+      "path": "app/src/main/java/net/mspanc/twinsenradio/transfer/TransferTransport.kt",
+      "size": 3961,
+      "sha256": "a5a22e9ef8e8d47b97473a0f0b46138eaacbcfe1b3dc53fdadd58a2bd2fe5226"
+    },
+    {
       "path": "app/src/main/java/net/mspanc/twinsenradio/ui/ArtworkLoader.kt",
       "size": 10488,
       "sha256": "e1583c7a5a4366d0226f4990034f68d5e89e86eb95369ef48407e690570bbd3d"
@@ -607,8 +622,8 @@
     },
     {
       "path": "app/src/main/java/net/mspanc/twinsenradio/ui/NowPlayingActivity.kt",
-      "size": 11360,
-      "sha256": "949c14162e2a6f501d5dbf6f8928380bb6ed86d601bb7e8a4cdb1a06600e83fe"
+      "size": 11617,
+      "sha256": "840c3b589b2f69cbaebd12ff77357134c06089155c719a487af0e6dfc0de2666"
     },
     {
       "path": "app/src/main/java/net/mspanc/twinsenradio/ui/SettingsActivity.kt",
@@ -856,6 +871,106 @@
       "sha256": "0b6e23c337b983034ff69d8823b0c26a4ccd10665889e36ab33c581cfbf772ad"
     },
     {
+      "path": "app/src/phone/AndroidManifest.xml",
+      "size": 1377,
+      "sha256": "4e269dad7af48f860cfbfe8ca07ded4893e1ca6f5f83996917be6256d59263bb"
+    },
+    {
+      "path": "app/src/phone/assets/stations.json",
+      "size": 3,
+      "sha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570"
+    },
+    {
+      "path": "app/src/phone/java/net/mspanc/twinsenradio/phone/PhoneImportActivity.kt",
+      "size": 17864,
+      "sha256": "376c7faac9e0952bae97220ffb15021cda03eddb25e79249c9b57cd2c8950894"
+    },
+    {
+      "path": "app/src/phone/java/net/mspanc/twinsenradio/phone/PhoneLibraryActivity.kt",
+      "size": 14400,
+      "sha256": "d885227d5e92bbd78895f64ef951ab18fd3787b4ad5eea763487375fe27bccca"
+    },
+    {
+      "path": "app/src/phone/java/net/mspanc/twinsenradio/phone/PhoneM3uFile.kt",
+      "size": 1757,
+      "sha256": "21e5245ac78d5144ec77894e17b8800e2f8f3336a07217a54650845039b89fbf"
+    },
+    {
+      "path": "app/src/phone/java/net/mspanc/twinsenradio/phone/PhonePlaybackActivity.kt",
+      "size": 21666,
+      "sha256": "5038e67a1d30004320e8bd5069b65a75e1030af77ed86134282f3c789f478d90"
+    },
+    {
+      "path": "app/src/phone/java/net/mspanc/twinsenradio/phone/PhonePlayerActivity.kt",
+      "size": 3195,
+      "sha256": "30adb0260702908cb97722e26a847d4cc19508830508e5b335c62bd05d6d06dc"
+    },
+    {
+      "path": "app/src/phone/java/net/mspanc/twinsenradio/phone/PhonePlaylistActivity.kt",
+      "size": 4843,
+      "sha256": "04683b659bab0976076958bf1af2854dc715ee985a137d6dd61ebebc4bf9b247"
+    },
+    {
+      "path": "app/src/phone/java/net/mspanc/twinsenradio/phone/PhoneStationAdapter.kt",
+      "size": 5270,
+      "sha256": "3d1558e15e578cbd2a7fb1965e576409fe051773176853eea04ff32919e665ee"
+    },
+    {
+      "path": "app/src/phone/java/net/mspanc/twinsenradio/phone/PhoneUi.kt",
+      "size": 2645,
+      "sha256": "b2ca7cc01c909074dc27347daae267c7e228c167fe0fdde80feefb113a4104db"
+    },
+    {
+      "path": "app/src/phone/res/drawable-nodpi/phone_shuffle_off.png",
+      "size": 91505,
+      "sha256": "783e3b57b790d4067906038a77c509e7d4b70933976c0b6561007ca77c7838b8"
+    },
+    {
+      "path": "app/src/phone/res/drawable-nodpi/phone_shuffle_on.png",
+      "size": 106077,
+      "sha256": "b431a22813b224e68bc07b5362f79137fa7c063319a0c406a1cfc192e8a8d032"
+    },
+    {
+      "path": "app/src/phone/res/drawable/phone_cast.xml",
+      "size": 393,
+      "sha256": "d0331033702d1082449f1ca93df192c10ea54937965110a5b81c53b767741dc9"
+    },
+    {
+      "path": "app/src/phone/res/drawable/phone_ic_artwork_refresh.xml",
+      "size": 822,
+      "sha256": "ba5cbbcb0df987f3e019fa5121689ed6adbdc0aa9cc9f11647f5174cc65977f1"
+    },
+    {
+      "path": "app/src/phone/res/drawable/phone_ic_settings_gear.xml",
+      "size": 758,
+      "sha256": "b8b58bf6368a989d30d79e5752fb68bcf8fdeda0fba4028fe0a611dc3801d221"
+    },
+    {
+      "path": "app/src/phone/res/drawable/phone_ic_track_art_hide.xml",
+      "size": 850,
+      "sha256": "a599921077477a0f4b5303b92357345e02b5aa3f274a3e2419322ce413415325"
+    },
+    {
+      "path": "app/src/phone/res/drawable/phone_ic_view_expand.xml",
+      "size": 430,
+      "sha256": "d0da483d2b7ddeeea6bf596a05dccf4b6fe86d1e8d25cc4d8bc17a1776ded61c"
+    },
+    {
+      "path": "app/src/phone/res/drawable/phone_ic_view_restore.xml",
+      "size": 432,
+      "sha256": "313228c26f5b29693e9089caa3e8301d38a321f9b6b679ed8ec37c24c476b308"
+    },
+    {
+      "path": "app/src/phone/res/values-v27/themes.xml",
+      "size": 190,
+      "sha256": "f464a8d3fb73c7d5d8e449583ae76d736f07a6a939e6fba524caef0c327d05d3"
+    },
+    {
+      "path": "app/src/phone/res/values/themes.xml",
+      "size": 549,
+      "sha256": "b3c4c6775a23a6ecf3da2c493fd8fb554cf9808a2db180d79a71e37c95ddfc0a"
+    },
+    {
       "path": "app/src/test/java/net/mspanc/twinsenradio/ParkedUxPolicyTest.kt",
       "size": 2423,
       "sha256": "ac8cc360c7542dab3a604a764c1fdb9a937aefe2aa7e7a1bb2c00386a87e4975"
@@ -869,6 +984,11 @@
       "path": "app/src/test/java/net/mspanc/twinsenradio/data/CatalogLimitsTest.kt",
       "size": 6267,
       "sha256": "b8b08cfb6a22a0d99ac0f085c2c25f7e293d7169e3f5528c83304e775554a999"
+    },
+    {
+      "path": "app/src/test/java/net/mspanc/twinsenradio/data/ImportedPlaylistTest.kt",
+      "size": 3926,
+      "sha256": "fcc26b64a16db8d61d9735f3ce7898515eb266fcb9db62d76ce537b48cc65dca"
     },
     {
       "path": "app/src/test/java/net/mspanc/twinsenradio/data/LineContentTest.kt",
@@ -1056,6 +1176,11 @@
       "sha256": "2cf13217ecbf4ef15cc9e1901084f00cacd127a57c481d999e4a932d6ee71b1e"
     },
     {
+      "path": "app/src/test/java/net/mspanc/twinsenradio/playback/StartupResumptionServiceTest.kt",
+      "size": 27078,
+      "sha256": "3fcbb65d03362eb8fb1201bc8caccd523686fdb420b9acbff7c244db49e8c670"
+    },
+    {
       "path": "app/src/test/java/net/mspanc/twinsenradio/playback/StationArtworkStoreTest.kt",
       "size": 4815,
       "sha256": "064541ad344c39544a793031354707a2a05542b943770405d39ee0e6eb1e7247"
@@ -1111,6 +1236,26 @@
       "sha256": "fabe5f82ab415efdcc19a9b0012b8c6d4cf7e2083babaadfb11ef3938d90e256"
     },
     {
+      "path": "app/src/test/java/net/mspanc/twinsenradio/transfer/PairingQrTest.kt",
+      "size": 889,
+      "sha256": "8f50f486131942ce2a7729ede130e2875924e7e9c589c674b1278e362d39c7f6"
+    },
+    {
+      "path": "app/src/test/java/net/mspanc/twinsenradio/transfer/PhoneTransferClientTest.kt",
+      "size": 11245,
+      "sha256": "629fb0aaaf5448a9d78ff10a401d36bfda45a2251e66b4f621dae46d0cf034d2"
+    },
+    {
+      "path": "app/src/test/java/net/mspanc/twinsenradio/transfer/PrivateTransferStoreTest.kt",
+      "size": 2478,
+      "sha256": "b7edf48c24ea2dad9cd93e6fb016cdf564264a36f881e940fa194e0fcb0465aa"
+    },
+    {
+      "path": "app/src/test/java/net/mspanc/twinsenradio/transfer/TransferTransportTest.kt",
+      "size": 5735,
+      "sha256": "eaeb7f463a03ac5139df981fe88bbe6f952f9ebbb7f5caf6602d49c41c7926ca"
+    },
+    {
       "path": "app/src/test/resources/hls-artwork/HLS_ARTWORK.md",
       "size": 3195,
       "sha256": "dc3fb6c7f3e637ab253d01a43e65f88ae0457b5044ec58f1ae09b24cb9280a3b"
@@ -1151,6 +1296,36 @@
       "sha256": "2a488b2d306256334941196ddb2937b3a0ffc7b9c324a9b668622368b7a1eddb"
     },
     {
+      "path": "app/src/testPhone/java/net/mspanc/twinsenradio/phone/PhoneExpandedPlayerTest.kt",
+      "size": 4792,
+      "sha256": "d33b7c8a7501c4ba96a5cbe86eef6482d25311857a2cb95c9bb1ca8c170950c3"
+    },
+    {
+      "path": "app/src/testPhone/java/net/mspanc/twinsenradio/phone/PhoneFlowUiTest.kt",
+      "size": 12668,
+      "sha256": "1fe762d1b85eb924a843d66028b4c6ab289a7aa5e5d9d1fa749c809693196143"
+    },
+    {
+      "path": "app/src/testPhone/java/net/mspanc/twinsenradio/phone/PhoneImportFlowTest.kt",
+      "size": 14352,
+      "sha256": "65d0e712d0153b9be965349f8e6c94eefecaf0c933cdef1e7b5924835e0b9c7d"
+    },
+    {
+      "path": "app/src/testPhone/java/net/mspanc/twinsenradio/phone/PhoneM3uFileTest.kt",
+      "size": 2379,
+      "sha256": "839bcf9faaa9eea4d12a732f5320ebec7fb5687cbe876422aebc24417101e55d"
+    },
+    {
+      "path": "app/src/testPhone/java/net/mspanc/twinsenradio/phone/PhonePlayerRoutingTest.kt",
+      "size": 1565,
+      "sha256": "fe311bd718899ab813aded4a6fa577118d7031038b238eee47dcb419a4f7261b"
+    },
+    {
+      "path": "app/src/testPhone/resources/phone_shuffle_A_reference.png",
+      "size": 106077,
+      "sha256": "b431a22813b224e68bc07b5362f79137fa7c063319a0c406a1cfc192e8a8d032"
+    },
+    {
       "path": "build.gradle.kts",
       "size": 143,
       "sha256": "5b59a737f79aff3069b158e3716c6c89df8d01d1f43a9b369058d20e564f4dce"
@@ -1181,19 +1356,9 @@
       "sha256": "2a4f201ee2b10807966f6c626da7cc05d029b462a442ecfe1ed1f195227a637e"
     },
     {
-      "path": "docs/PLAYLIST-GUIDE.md",
-      "size": 3040,
-      "sha256": "d13e42169d3453cade904a621cc8d44947f702a9c339e5959a8d97540c4a235a"
-    },
-    {
-      "path": "docs/STREAMS-METADATA.md",
-      "size": 3112,
-      "sha256": "32312687cad49016285a2bede31dc730157140e9eb08485edb296669413dc131"
-    },
-    {
-      "path": "docs/examples/playlist-template.m3u",
-      "size": 250,
-      "sha256": "7fe87d6621ed1ab7a7642ede17539788b70e1b1160b80130e551adf7582267ca"
+      "path": "docs/WORKSTREAMS.md",
+      "size": 3772,
+      "sha256": "da812c5e6ca49c75cd17d86dd6d984306bd8352e30488865c85ccef51a462144"
     },
     {
       "path": "docs/privacy.html",
@@ -1221,11 +1386,6 @@
       "sha256": "e04e5485f1c34360bde331b2ce2c8a4f5f3386bc3cd0b45a93f3ae308b137c3d"
     },
     {
-      "path": "docs/screenshots/manage-playlists.png",
-      "size": 71504,
-      "sha256": "7bd3ac4ec68660f5bb7930122a358b96289882fe3f2caa086ad9c67734078bd8"
-    },
-    {
       "path": "gradle.properties",
       "size": 182,
       "sha256": "569d1fcab2fd35b08e46391d0098c1ecaa87d0b84da68893f072011dc3c1eab6"
@@ -1249,6 +1409,81 @@
       "path": "gradlew.bat",
       "size": 2843,
       "sha256": "94102713eb8fb22d032397924c0f38ab2da783ba60d07054339f1190a0c4e2cd"
+    },
+    {
+      "path": "phone-transfer/README.md",
+      "size": 5035,
+      "sha256": "7d83348a29a9e322fe551460d9ad75989a465712f9976358598ee71b45f41a0e"
+    },
+    {
+      "path": "phone-transfer/SETUP.md",
+      "size": 4969,
+      "sha256": "7f5e987e2d65874f6ec52bae983cdf50c9348844787b1108fe8266310e2bec0d"
+    },
+    {
+      "path": "phone-transfer/database.rules.json",
+      "size": 4450,
+      "sha256": "652661da6cfed68442709af915d2522bb025f09dcba508ce6c6b7bc43546c95e"
+    },
+    {
+      "path": "phone-transfer/firebase.json",
+      "size": 915,
+      "sha256": "36785c61a304fd2372e9560049de11fde88f2aa8f8d869910ec268e6ea1b26ed"
+    },
+    {
+      "path": "phone-transfer/generate-rules.mjs",
+      "size": 3820,
+      "sha256": "259874c74b2796358872f6efa2e9aabb9c21b7868c59c95d4625620c34a61668"
+    },
+    {
+      "path": "phone-transfer/package.json",
+      "size": 123,
+      "sha256": "e4140838864b9f1efa0f4a62eff423bdba05afad5025b1306469b6baff4f3168"
+    },
+    {
+      "path": "phone-transfer/public/app.mjs",
+      "size": 8892,
+      "sha256": "16a5b7d0e431ff82d77573c029d65d29eba84027996d4acff0884696d0897f16"
+    },
+    {
+      "path": "phone-transfer/public/config.mjs",
+      "size": 154,
+      "sha256": "4ba6a333d8ae9f66623df29bc93e977496a1a77817ec77e739cb631f0c1e1fd8"
+    },
+    {
+      "path": "phone-transfer/public/index.html",
+      "size": 1761,
+      "sha256": "b370f010fabae46e7ddd84b82a544d683f5ef887c78763bc4e97380d3bd0a654"
+    },
+    {
+      "path": "phone-transfer/public/privacy.html",
+      "size": 2807,
+      "sha256": "dfd9e90786e6984d0de1ce8da715788d128c82e17f85a5a904b9402a3fb1dde5"
+    },
+    {
+      "path": "phone-transfer/public/protocol.mjs",
+      "size": 3196,
+      "sha256": "d685ee4f20ba2b4aa21b9d616ea1340591a4d2ebcd83ad342715baf7da3f8b84"
+    },
+    {
+      "path": "phone-transfer/public/style.css",
+      "size": 1403,
+      "sha256": "3086f8415d786a0b0bca70cfdec2a442a1d200a2b3e07706fe044a14e6edd38c"
+    },
+    {
+      "path": "phone-transfer/tests/app.test.mjs",
+      "size": 7384,
+      "sha256": "7e6a416500de5712330dceb5487545f90c36478f8e10f1d38dc9f29f96777e1c"
+    },
+    {
+      "path": "phone-transfer/tests/protocol.test.mjs",
+      "size": 3325,
+      "sha256": "ad7b9e9e18e0e04b709729c8eca9a377786c136cf9f58d229248f7fad6f28238"
+    },
+    {
+      "path": "phone-transfer/tests/rules.emulator.mjs",
+      "size": 6033,
+      "sha256": "7bbe15eba061d20f6b683810e2beda50a161c80367e1ae9df35443c79bfe79a5"
     },
     {
       "path": "settings.gradle.kts",
@@ -1302,13 +1537,13 @@
     },
     {
       "path": "tools/export-public-source.cjs",
-      "size": 8691,
-      "sha256": "4fc806d201cc410022558ef5d85ad6a103565fd87c5920d404916c2108bdc46e"
+      "size": 9073,
+      "sha256": "f1b0ae5a0504a60dffd2d15a4736b270276033738913961d516c3a83192fd4f1"
     },
     {
       "path": "tools/export-public-source.test.cjs",
-      "size": 1667,
-      "sha256": "241ff1a13a0be933a92cf12c6a08d7b0ce380e4e914f1bdb3e33baf5e6852502"
+      "size": 2190,
+      "sha256": "46f35f686866bfd489f4c0eeff9dad0884064a5e1bd6f89075356ed9e6bbbd52"
     },
     {
       "path": "tools/install-and-root-state.test.cjs",
@@ -1322,16 +1557,34 @@
     },
     {
       "path": "tools/verify-automotive.cjs",
-      "size": 9069,
-      "sha256": "7db7aa267751633d08a04ae5958062c21f2822b5248c0e62bb4f601689d1c58f"
+      "size": 9201,
+      "sha256": "9a4b86540d146fa2e40dd9113ca2779637916af73ce3c659b8f3564a989074bc"
     },
     {
       "path": "tools/verify-automotive.test.cjs",
-      "size": 6088,
-      "sha256": "1f17d556430e7daf83a61248fedf567d4326f7179d633beccb7969664fa9f74a"
+      "size": 7724,
+      "sha256": "9e9319a265ea03573420835e32a2fbce82119bcb9b46c55fb898f465ecb2fae9"
     }
   ],
   "warnings": [
-    "Inventory hashes describe staged candidate contents; HEAD identifies its parent. Exported archives generate their own manifest."
-  ]
+    "Working tree is dirty; Git HEAD does not identify the exported file contents.",
+    "Local or emulator endpoint appears in tools/aaos-fixture-server.cjs.",
+    "Reviewed reserved-domain rejection fixture in app/src/test/java/net/mspanc/twinsenradio/data/PlaylistLibraryTest.kt:69",
+    "Reviewed reserved-domain rejection fixture in app/src/test/java/net/mspanc/twinsenradio/data/PlaylistNamesTest.kt:62",
+    "Reviewed reserved-domain rejection fixture in app/src/test/java/net/mspanc/twinsenradio/net/SafeHttpTest.kt:18",
+    "Reviewed reserved-domain rejection fixture in app/src/test/java/net/mspanc/twinsenradio/net/SafeHttpTest.kt:28",
+    "Local or emulator endpoint appears in app/src/test/java/net/mspanc/twinsenradio/net/SafeHttpTest.kt.",
+    "Local or emulator endpoint appears in app/src/test/java/net/mspanc/twinsenradio/net/StreamArtworkPolicyTest.kt.",
+    "Reviewed reserved-domain rejection fixture in app/src/test/java/net/mspanc/twinsenradio/playback/ArtworkAccessPolicyTest.kt:58",
+    "Reviewed reserved-domain rejection fixture in app/src/test/java/net/mspanc/twinsenradio/playback/DiagnosticUrlsTest.kt:10",
+    "Local or emulator endpoint appears in app/src/androidTest/java/net/mspanc/twinsenradio/automotive/PrototypeSmokeInstrumentation.kt.",
+    "Local or emulator endpoint appears in app/src/androidTest/java/net/mspanc/twinsenradio/data/PlaylistRefreshCancellationRegression.kt.",
+    "Secret-pattern scan is limited and is not a comprehensive secret, privacy, license, or security audit."
+  ],
+  "releasePreparation": {
+    "phoneApplicationId": "com.impostorlabs.streamingradio",
+    "phoneVersionCode": 12,
+    "phoneVersionName": "0.3.0-rc10",
+    "playMetadata": "Version 12 absent from tracks, bundles, apks on 2026-11-09"
+  }
 }

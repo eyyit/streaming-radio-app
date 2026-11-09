@@ -72,8 +72,7 @@ class KeepCurrentStreamPlayer(player: Player) : ForwardingPlayer(player) {
         startIndex: Int,
         startPositionMs: Long
     ) {
-        if (net.mspanc.twinsenradio.BuildConfig.IS_AUTOMOTIVE &&
-            startIndex in mediaItems.indices &&
+        if (startIndex in mediaItems.indices &&
             mediaItems[startIndex].mediaId == currentMediaItem?.mediaId &&
             playbackState != Player.STATE_IDLE && playbackState != Player.STATE_ENDED) {
             // Keep the current stream; only change its neighbors when choosing another browse context.
@@ -82,7 +81,7 @@ class KeepCurrentStreamPlayer(player: Player) : ForwardingPlayer(player) {
             super.removeMediaItems(0, index)
             super.addMediaItems(0, mediaItems.take(startIndex))
             super.addMediaItems(mediaItems.drop(startIndex + 1))
-            if (!playWhenReady) play()
+            if (net.mspanc.twinsenradio.BuildConfig.IS_AUTOMOTIVE && !playWhenReady) play()
             return
         }
         if (isAlreadyPlaying(mediaItems)) return

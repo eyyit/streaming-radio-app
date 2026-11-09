@@ -108,3 +108,28 @@ test('receipt writer preserves parseable JSON and newline termination', () => {
     assert.equal(JSON.parse(raw).status, 'preflight-passed');
   } finally { fs.rmSync(root, { recursive: true, force: true }); }
 });
+
+
+test('shared verification runs phone protocol tests and propagates their failure', () => {
+  const { toolTests } = require('./verify-automotive.cjs');
+  const childEnv = { ...process.env }; delete childEnv.NODE_TEST_CONTEXT;
+  assert.equal(typeof toolTests, 'function', 'shared protocol verification must be callable');
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'radio-protocol-gate-'));
+  try {
+    const tools = path.join(root, 'tools'); fs.mkdirSync(tools);
+    for (const file of ['check-dependencies.test.cjs', 'check-source-tree.test.cjs',
+      'verify-automotive.test.cjs', 'install-and-root-state.test.cjs',
+      'export-public-source.test.cjs', 'docker-build.test.cjs'])
+      fs.writeFileSync(path.join(tools, file), '');
+    const protocol = path.join(root, 'phone-transfer/tests/protocol.test.mjs');
+    fs.mkdirSync(path.dirname(protocol), { recursive: true });
+    const app = path.join(root, 'phone-transfer/tests/app.test.mjs');
+    fs.writeFileSync(app, '');
+    fs.writeFileSync(protocol, "import assert from 'node:assert/strict'; assert.fail('protocol regression fixture');\n");
+    assert.throws(() => toolTests(root, childEnv), e => e.code === 'TOOL_TESTS_FAILED');
+    fs.writeFileSync(protocol, "import assert from 'node:assert/strict'; assert.equal(1, 1);\n");
+    assert.doesNotThrow(() => toolTests(root, childEnv));
+    fs.writeFileSync(app, "import assert from 'node:assert/strict'; assert.fail('multi-tab regression fixture');\n");
+    assert.throws(() => toolTests(root, childEnv), e => e.code === 'TOOL_TESTS_FAILED');
+  } finally { fs.rmSync(root, { recursive: true, force: true }); }
+});

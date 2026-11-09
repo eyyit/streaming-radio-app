@@ -1,3 +1,22 @@
+# Phone version 12 source release prepared - 9 November 2026
+
+Native phone library, player, collection navigation and URL/local M3U import
+flows are approved and implemented. Phone release targets the existing package
+com.impostorlabs.streamingradio, version12 / 0.3.0-rc10; its debug package is
+com.impostorlabs.streamingradio.phone.debug. The approved A image and indicator
+are reused unchanged. No starter stations are bundled; phone transfer remains
+disabled by default and has not been deployed.
+
+The reviewed private snapshot passed all1580 JVM tests, both release lints with
+zero errors, source/tool checks and dependency scanning. Ten fresh independent
+logical review roles returned no findings after repairs. Exact public-commit
+verification and CI remain mandatory before a phone-only internal Play upload.
+AAOS version11 remains on automotive:internal; this source preparation does not
+publish or update any Play track. The owner authorized this source release and
+a one-time exception to the500-line upload-size limit on9 November2026.
+
+--- Earlier release and workstream history follows ---
+
 # Version10 HLS candidate ready locally; publication held - 5 November 2026
 
 Canonical /opt/repos/streaming-radio-app remains uncommitted on base381121c1859f402c09c083a46c8dd054cc7ef97a. Prepared code10 / 0.3.0-rc8 for future automotive:internal. NO commit, push, Play edit/upload, emulator launch, relay deployment/restart, idle origin activation or car action. Do not launch XC40/any emulator after the reported Windows hard lockup without fresh authorization.

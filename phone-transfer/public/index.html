@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="referrer" content="no-referrer"><title>Send a playlist</title>
+<link rel="stylesheet" href="style.css"><script type="module" src="app.mjs"></script></head>
+<body><main><p class="brand">Streaming Radio</p><h1 id="heading">Send a playlist</h1>
+<p id="status" role="status" aria-live="polite">Connecting…</p>
+<form id="form" hidden>
+<div id="url-fields"><label>Playlist URL<input id="url" type="url" maxlength="4096" placeholder="Paste https://…"></label></div>
+<div id="file-details" hidden><h2 id="filename"></h2><p id="filesize"></p></div>
+<label>Name (optional)<input id="name" maxlength="512"></label>
+<p id="file-note" hidden>Saved in the car.<br>Changes to this file will not automatically update the car.</p>
+<button id="send" type="submit">Send to car</button>
+<p id="or" class="or">or</p>
+<button id="choose" class="neutral" type="button">Choose M3U file</button>
+<input id="file" type="file" accept=".m3u,.m3u8,text/plain,audio/x-mpegurl" hidden>
+</form>
+<section id="sent" hidden><h2 id="sent-name"></h2><p>The car is checking the playlist.<br>It has not been added yet.</p></section>
+<section id="error" hidden><p id="error-detail"></p><button id="recover-file" type="button">Choose another file</button><button id="recover-url" class="neutral" type="button">Use a playlist URL</button></section>
+<button id="cancel" class="neutral" type="button" hidden>Cancel transfer</button>
+<p id="result-note" class="result-note" hidden></p>
+<footer id="privacy"><p>Temporary transfer through Firebase.<br>No signup or listening history.<br><a href="privacy.html">Privacy policy</a></p></footer>
+</main></body></html>

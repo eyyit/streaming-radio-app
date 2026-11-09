@@ -22,6 +22,14 @@ test('standalone source export has working privacy/docs links and can export its
     if(/^(https?:|#)/.test(ref))continue;
     assert.ok(fs.existsSync(path.join(first,ref.split(/[?#]/)[0])),`missing README target: ${ref}`);
   }
+  for (const sourceSet of ['phone', 'testPhone', 'testAutomotive']) {
+    const fixture = path.join(first, 'app/src', sourceSet, 'java/fixture/ExportFixture.kt');
+    fs.mkdirSync(path.dirname(fixture), { recursive: true });
+    fs.writeFileSync(fixture, '// Source-set export fixture only.\n');
+  }
   run(first,second);
+  for (const sourceSet of ['phone', 'testPhone', 'testAutomotive'])
+    assert.ok(fs.existsSync(path.join(second, 'app/src', sourceSet,
+      'java/fixture/ExportFixture.kt')), `missing optional source set: ${sourceSet}`);
   assert.ok(fs.existsSync(path.join(second,'docs/privacy.html')));
 });

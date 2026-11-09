@@ -13,6 +13,7 @@ function addFile(rel,dest=rel){const src=inside(root,path.join(root,rel)),st=fs.
 function addTree(rel){const base=inside(root,path.join(root,rel));if(!fs.statSync(base).isDirectory())fail('missing allowed tree: '+rel);function walk(d){for(const e of fs.readdirSync(d,{withFileTypes:true}).sort((a,b)=>a.name.localeCompare(b.name))){const p=inside(root,path.join(d,e.name)),s=fs.lstatSync(p);if(s.isSymbolicLink())fail('symlink in allowed tree: '+path.relative(root,p));if(s.isDirectory())walk(p);else if(s.isFile())included.set(path.relative(root,p).replace(/\\/g,'/'),{source:p});else fail('unsupported file type in allowed tree')}}walk(base)}
 for(const f of ['.gitignore','LICENSE','THIRD-PARTY-NOTICES.md','gradlew','gradlew.bat','gradle.properties','settings.gradle.kts','build.gradle.kts','app/build.gradle.kts','gradle/wrapper/gradle-wrapper.jar','gradle/wrapper/gradle-wrapper.properties','tools/aaos-fixture-server.cjs'])addFile(f);
 for(const d of ['main','automotive','debug','test','androidTest'])addTree('app/src/'+d);
+for(const flavor of ['phone','testPhone','testAutomotive'])if(fs.existsSync(path.join(root,'app/src/'+flavor)))addTree('app/src/'+flavor);
 for(const variant of ['automotiveDebug','automotiveRelease'])if(fs.existsSync(path.join(root,'app/src/'+variant)))addTree('app/src/'+variant);
 for(const f of ['README.md','BUILD.md','SECURITY.md','CHANGELOG.md']){addFile('docs/public/'+f,f);addFile('docs/public/'+f);}
 addFile('tools/export-public-source.cjs');
@@ -20,6 +21,10 @@ addFile('AGENTS.md');
 addFile('tools/check-source-tree.cjs');
 for(const f of ['tools/install-and-root-state.test.cjs','tools/install.ps1','tools/emulator-host-layout/Set-AAOS-pinned-player.ps1','tools/emulator-host-layout/Set-AAOS-wide-controls.ps1'])addFile(f);
 for(const f of ['tools/check-source-tree.test.cjs','tools/verify-automotive.cjs','tools/verify-automotive.test.cjs'])addFile(f);
+for(const f of ['README.md','SETUP.md','package.json','firebase.json','database.rules.json','generate-rules.mjs'])addFile('phone-transfer/'+f);
+addTree('phone-transfer/public');
+addTree('phone-transfer/tests');
+addFile('docs/WORKSTREAMS.md');
 addFile('docs/DESIGN-SYSTEM.md');
 addFile('docs/privacy.html');
 for(const f of ['docker/Dockerfile','docker/entrypoint.sh','docker/.dockerignore','tools/docker-build.sh','docs/DOCKER-BUILD.md','tools/export-public-source.test.cjs','tools/docker-build.test.cjs'])addFile(f);

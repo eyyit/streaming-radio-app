@@ -1,0 +1,11 @@
+<resources>
+    <style name="Theme.StreamingRadioPhone.Base" parent="Theme.TwinsenRadio">
+        <item name="android:windowBackground">#0d0e12</item>
+        <item name="android:statusBarColor">#0d0e12</item>
+        <item name="android:navigationBarColor">#0d0e12</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="colorPrimary">#159fe0</item>
+        <item name="colorOnPrimary">#07151d</item>
+    </style>
+    <style name="Theme.StreamingRadioPhone" parent="Theme.StreamingRadioPhone.Base" />
+</resources>

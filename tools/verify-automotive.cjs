@@ -81,7 +81,9 @@ function sourceCheck(root, env) {
 function toolTests(root, env) {
   run(process.execPath, ['--test', ...['check-dependencies.test.cjs',
     'check-source-tree.test.cjs', 'verify-automotive.test.cjs',
-    'install-and-root-state.test.cjs', 'export-public-source.test.cjs', 'docker-build.test.cjs'].map(x => path.join(root, 'tools', x))],
+    'install-and-root-state.test.cjs', 'export-public-source.test.cjs', 'docker-build.test.cjs'].map(x => path.join(root, 'tools', x)),
+    path.join(root, 'phone-transfer/tests/protocol.test.mjs'),
+    path.join(root, 'phone-transfer/tests/app.test.mjs')],
   root, env, 'TOOL_TESTS_FAILED');
 }
 function writeReceipt(root, data) {
@@ -154,4 +156,4 @@ function main(args = process.argv.slice(2), options = {}) {
   }
 }
 if (require.main === module) process.exitCode = main();
-module.exports = { VerificationError, cleanChildEnv, inspectPrerequisites, locateSdkManager, main, writeReceipt };
+module.exports = { VerificationError, cleanChildEnv, inspectPrerequisites, locateSdkManager, main, writeReceipt, toolTests };

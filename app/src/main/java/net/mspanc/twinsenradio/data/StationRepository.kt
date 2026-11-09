@@ -182,26 +182,62 @@ class StationRepository private constructor(private val appContext: Context) {
         return source
     }
 
+    /** Import a bounded file as its own local source; never fetch its stream URLs. */
+    suspend fun saveLocalPlaylist(name: String, body: String): PlaylistSource = withContext(Dispatchers.IO) {
+        val key = "local:imported:${java.util.UUID.randomUUID()}"
+        val stations = PlaylistLibrary.parseCachedPlaylist(body, key)
+        val label = name.trim().ifBlank { "Imported playlist" }
+        CatalogLimits.field(label, CatalogLimits.MAX_NAME, "Playlist name")
+        val source = PlaylistSource("pl_${java.util.UUID.randomUUID()}", key, label, stations.size)
+        refreshLock.withLock {
+            synchronized(sourceLock) {
+                val sources = playlists() + source
+                CatalogLimits.sources(sources)
+                CatalogLimits.catalog(sources.map {
+                    if (it.url == key) stations else activeCatalogs[it.url].orEmpty()
+                })
+                val file = playlistFile(key)
+                val output = file.startWrite()
+                try {
+                    output.write(body.toByteArray(Charsets.UTF_8))
+                    file.finishWrite(output)
+                } catch (error: Exception) {
+                    file.failWrite(output)
+                    throw error
+                }
+                try { writeSources(sources, synchronous = true) }
+                catch (error: Exception) { file.delete(); throw error }
+                parsedCatalogs[key] = stations
+                prefs.userM3uUrls = PlaylistLibrary.remoteSources(sources).map { it.url }
+                reloadPlaylistCache(sources)
+            }
+        }
+        source
+    }
+
     /** The internal saved catalog has no editable URL and never does network I/O. */
-    fun renameLocalPlaylist(name: String): Boolean = synchronized(sourceLock) {
+    fun renameLocalPlaylist(name: String, id: String? = null): Boolean = synchronized(sourceLock) {
         val normalized = name.trim()
         require(normalized.isNotEmpty()) { "Enter a playlist name" }
         CatalogLimits.field(normalized, CatalogLimits.MAX_NAME, "Playlist name")
         val current = playlists()
-        if (current.none { it.isLocal }) return@synchronized false
-        writeSources(current.map { if (it.isLocal) it.copy(name = normalized) else it })
+        val target = current.firstOrNull { it.isLocal && (id == null || it.id == id) }
+            ?: return@synchronized false
+        writeSources(current.map { if (it.id == target.id) it.copy(name = normalized) else it })
         revision.value += 1
         true
     }
 
     fun removePlaylist(id: String): Boolean = synchronized(sourceLock) {
         val current = playlists()
-        if (current.none { it.id == id }) return@synchronized false
+        val removed = current.firstOrNull { it.id == id } ?: return@synchronized false
+        val imported = removed.isLocal && removed.url != PlaylistLibrary.LOCAL_SNAPSHOT_URL
         val sources = current.filterNot { it.id == id }
         snapshotFavorites(allIncludingHidden())
-        writeSources(sources)
+        writeSources(sources, synchronous = imported)
         prefs.userM3uUrls = sources.map { it.url }
         reloadPlaylistCache(sources)
+        if (imported) playlistFile(removed.url).delete()
         true
     }
 

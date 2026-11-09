@@ -1,5 +1,15 @@
 # External Dependencies
 
+Streaming Radio addition (6 November 2026): ZXing Core 3.5.4, Apache-2.0,
+https://github.com/zxing/zxing. Used only to encode pairing QR codes locally.
+The Apache license text is bundled as legal/apache-2.0.txt.
+
+Optional phone transfer, when configured, uses Firebase Authentication
+(anonymous technical identities), Hosting and Realtime Database. Its public
+project configuration/API key is not a user password. No analytics SDK is added.
+The older upstream dependency summary below describes the original app.
+
+
 Twinsen Radio has no paid or closed-source dependencies. Everything below
 is free and open source, and none of these libraries require an API key
 or an account.

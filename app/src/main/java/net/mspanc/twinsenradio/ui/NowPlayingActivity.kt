@@ -44,6 +44,12 @@ class NowPlayingActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        if (!net.mspanc.twinsenradio.BuildConfig.IS_AUTOMOTIVE) {
+            startActivity(android.content.Intent().setClassName(
+                this, "net.mspanc.twinsenradio.phone.PhonePlayerActivity"))
+            finish()
+            return
+        }
         b = ActivityNowPlayingBinding.inflate(layoutInflater)
         setContentView(b.root)
 

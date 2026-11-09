@@ -302,6 +302,12 @@ class RadioService : MediaLibraryService() {
         }
     }
 
+    private fun sessionActivityIntent(): Intent =
+        Intent().setClassName(this,
+            if (net.mspanc.twinsenradio.BuildConfig.IS_AUTOMOTIVE)
+                "net.mspanc.twinsenradio.automotive.AutomotiveSettingsActivity"
+            else "net.mspanc.twinsenradio.phone.PhoneLibraryActivity")
+
     override fun onCreate() {
         super.onCreate()
         StationArtworkStore.beginServiceLaunch()
@@ -323,9 +329,7 @@ class RadioService : MediaLibraryService() {
         val sessionActivity = PendingIntent.getActivity(
             this,
             0,
-            if (net.mspanc.twinsenradio.BuildConfig.IS_AUTOMOTIVE)
-                Intent().setClassName(this, "net.mspanc.twinsenradio.automotive.AutomotiveSettingsActivity")
-            else Intent(this, MainActivity::class.java),
+            sessionActivityIntent(),
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
         )
 
@@ -551,6 +555,7 @@ class RadioService : MediaLibraryService() {
             .setLoadControl(loadControl)
             .setMediaSourceFactory(mediaSourceFactory)
             .setHandleAudioBecomingNoisy(true)
+            .setPauseAtEndOfMediaItems(!net.mspanc.twinsenradio.BuildConfig.IS_AUTOMOTIVE)
             .setWakeMode(C.WAKE_MODE_NETWORK)
             .build()
             .apply {
@@ -561,8 +566,8 @@ class RadioService : MediaLibraryService() {
                         .build(),
                     /* handleAudioFocus = */ true
                 )
-                repeatMode = if (net.mspanc.twinsenradio.BuildConfig.IS_AUTOMOTIVE)
-                    Player.REPEAT_MODE_ALL else Player.REPEAT_MODE_OFF
+                // Keep station skip commands available at either end, including one-item scopes.
+                repeatMode = Player.REPEAT_MODE_ALL
             }
     }
 
@@ -578,6 +583,8 @@ class RadioService : MediaLibraryService() {
             resetStationState()
             val id = mediaItem?.mediaId?.let { Station.idFromMediaId(it) }
             id?.let { stationTraversal.observe(it); saveStationTraversal() }
+            // Also prune a former outside item after an automatic stream transition.
+            if (!net.mspanc.twinsenradio.BuildConfig.IS_AUTOMOTIVE) refreshAutomotiveQueue()
             PlaybackStatusBus.setStation(id)
 
             Trace.station(id)
@@ -672,6 +679,12 @@ class RadioService : MediaLibraryService() {
          * costs, so carrying on is the better of the two.
          */
         override fun onPlayWhenReadyChanged(playWhenReady: Boolean, reason: Int) {
+            if (!net.mspanc.twinsenradio.BuildConfig.IS_AUTOMOTIVE && !playWhenReady &&
+                reason == Player.PLAY_WHEN_READY_CHANGE_REASON_END_OF_MEDIA_ITEM) {
+                // A clean EOF keeps this station paused. Explicit Play uses the existing IDLE revival.
+                player.stop()
+                player.seekToDefaultPosition()
+            }
             traceState("gra", playWhenReadyReason(reason))
             PlaybackStatusBus.setWantsToPlay(playWhenReady)
             publishPlayerStatus()
@@ -2545,8 +2558,7 @@ class RadioService : MediaLibraryService() {
                 TAG,
                 "wznawiam po podlaczeniu: ${station.name} ($skad, zlecil ${controller.packageName})"
             )
-            val queue = if (net.mspanc.twinsenradio.BuildConfig.IS_AUTOMOTIVE)
-                childrenOf(prefs.activeBrowseParent) else listOf(station)
+            val queue = childrenOf(prefs.activeBrowseParent)
             val resumeQueue = CollectionQueue.withSelected(queue, station) { it.id }
             return Futures.immediateFuture(
                 MediaSession.MediaItemsWithStartPosition(
@@ -2644,7 +2656,7 @@ class RadioService : MediaLibraryService() {
             startIndex: Int,
             startPositionMs: Long
         ): ListenableFuture<MediaSession.MediaItemsWithStartPosition> {
-            if (net.mspanc.twinsenradio.BuildConfig.IS_AUTOMOTIVE && mediaItems.size == 1) {
+            if (mediaItems.size == 1) {
                 val requested = mediaItems[0].mediaId
                 if (requested.startsWith(COLLECTION_PREFIX)) {
                     val parent = requested.removePrefix(COLLECTION_PREFIX)
@@ -2671,6 +2683,7 @@ class RadioService : MediaLibraryService() {
                 if (selected != null) {
                     val parent = CollectionQueue.stationScope(prefs.activeBrowseParent,
                         Station.parentFromMediaId(mediaItems[0].mediaId))
+                    prefs.activeBrowseParent = parent
                     val queue = CollectionQueue.withSelected(childrenOf(parent), selected) { it.id }
                     return Futures.immediateFuture(MediaSession.MediaItemsWithStartPosition(
                         queue.map(::playableItem), queue.indexOfFirst { it.id == selected.id }, C.TIME_UNSET))
@@ -2737,7 +2750,7 @@ class RadioService : MediaLibraryService() {
 
     /** Update neighbors without disconnecting the station currently playing. */
     private fun refreshAutomotiveQueue() {
-        if (!net.mspanc.twinsenradio.BuildConfig.IS_AUTOMOTIVE || player.currentMediaItem == null) return
+        if (player.currentMediaItem == null) return
         val id = Station.idFromMediaId(player.currentMediaItem!!.mediaId) ?: return
         val desired = childrenOf(prefs.activeBrowseParent)
         val desiredIndex = desired.indexOfFirst { it.id == id }
@@ -2808,11 +2821,21 @@ class RadioService : MediaLibraryService() {
     }
 
     private fun navigateStationOrder(delta: Int): Boolean {
-        if (!net.mspanc.twinsenradio.BuildConfig.IS_AUTOMOTIVE || !prefs.randomStationOrder) return false
+        val shuffled = prefs.randomStationOrder
+        if (net.mspanc.twinsenradio.BuildConfig.IS_AUTOMOTIVE && !shuffled) return false
         val current=Station.idFromMediaId(player.currentMediaItem?.mediaId.orEmpty())
         val allowed = childrenOf(prefs.activeBrowseParent).map { it.id }
-        val target=if(delta<0) stationTraversal.previous(allowed.toSet(),current)
-            else stationTraversal.next(allowed,current)
+        val target = if (shuffled) {
+            if (delta < 0) stationTraversal.previous(allowed.toSet(), current)
+            else stationTraversal.next(allowed, current)
+        } else {
+            val index = allowed.indexOf(current)
+            when {
+                allowed.isEmpty() -> null
+                index < 0 -> if (delta < 0) allowed.last() else allowed.first()
+                else -> allowed[Math.floorMod(index + delta, allowed.size)]
+            }
+        }
         saveStationTraversal()
         if(target==null || target==current) return true
         val wasPlaying=player.playWhenReady
@@ -2823,6 +2846,8 @@ class RadioService : MediaLibraryService() {
             val queue=listOf(station)+childrenOf(prefs.activeBrowseParent).filterNot { it.id==target }
             player.setMediaItems(queue.map(::playableItem),0,C.TIME_UNSET)
         }
+        // An outside station is retained only while current, never as a recurring neighbor.
+        if (!net.mspanc.twinsenradio.BuildConfig.IS_AUTOMOTIVE) refreshAutomotiveQueue()
         player.prepare(); player.playWhenReady=wasPlaying
         return true
     }
