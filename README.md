@@ -19,11 +19,19 @@ No station catalog is bundled. Screenshots and personal test libraries do not im
 ## A look inside
 
 <p>
-  <img src="docs/images/settings.png" width="350" alt="Android 13 API 33 emulator app-content capture of the Settings screen">
-  <img src="docs/screenshots/manage-playlists.png" width="350" alt="Android 13 API 33 emulator app-content capture of the Manage playlists screen">
+  <img src="docs/screenshots/api33-v11/native-player.png" width="320" alt="Android Automotive native media host showing the fictional playing station and its station logo">
+  <img src="docs/screenshots/api33-v11/native-stations.png" width="320" alt="Android Automotive native media host browse screen with the fictional station queue">
+</p>
+<p>
+  <img src="docs/screenshots/api33-v11/manage-playlists.png" width="320" alt="App-owned parked Manage playlists screen with isolated demo data">
+  <img src="docs/screenshots/api33-v11/manage-stations.png" width="320" alt="App-owned parked Manage stations screen with isolated demo data">
+</p>
+<p>
+  <img src="docs/screenshots/api33-v11/settings.png" width="320" alt="App-owned Settings screen">
+  <img src="docs/screenshots/api33-v11/station-image.png" width="320" alt="App-owned station image selection screen">
 </p>
 
-**Existing approved emulator captures, not fresh captures or Volvo photographs.** These existing 768 x 1024 images show the Android 13 / API 33 emulator. They show app-owned parked management screens; the vehicle host controls its own playback layout. No Volvo system interface is shown or simulated.
+**Fresh API 33 captures, 9 November 2026.** The native-player and native-stations images show the standard Android Automotive media-host template using six fictional stations and local demo metadata; the player shows a station logo, not album artwork. Their layout is not Volvo-specific and may differ from the vehicle interface. The remaining images show app-owned parked screens. All six are raw 1024 x 1365 emulator captures with no cropping, compositing, or image edits. They use isolated fixture data, not personal playlists or broadcaster content.
 
 ## Getting started
 

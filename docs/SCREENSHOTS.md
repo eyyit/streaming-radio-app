@@ -1,4 +1,26 @@
-# Screenshot provenance — 3 November 2026
+# Current README gallery provenance - 9 November 2026
+
+The six README images under screenshots/api33-v11/ are raw adb screencaps from the
+API 33 AVD named Eyyit, using the driver 10 configuration. They show the published
+v11 / 0.3.0-rc9 debug APK built from committed source. The app-owned debug
+ImpostorPlayerActivity was disabled for this read-only capture session so that
+com.android.car.media displayed its native Android Automotive media template.
+
+The player and stations screens are rendered by com.android.car.media, not by the
+app. They show the standard AAOS host layout, not a Volvo-specific layout. The player
+uses the fixture station logo; it does not show demo album artwork. Six fictional
+stations, fixture logos, a local silent MP3, and fictional ICY metadata (Paper
+Satellites / Midnight Colors) were used. The isolated app UID could reach only the
+local emulator host; no external providers or broadcasters were contacted.
+
+manage-playlists.png, manage-stations.png, settings.png, and station-image.png are
+app-owned screens from the same v11 build and isolated fixture. The AVD was set to
+1024 logical pixels wide at density 160 for capture because the default 768 x 1024
+window caused a host HVAC overlay to overlap the bottom controls. The images are
+unmodified 1024 x 1365 raw captures; no cropping or compositing was done. The
+capture session preserved original app data via read-only access and is closed.
+
+## Historical app-content-only captures - 3 November 2026
 
 Actual app-content view renders from the API33 Android13 emulator,768x852 pixels. Generic emulator system bars and bottom dock are excluded. These are not Volvo UI captures or composites.
 
