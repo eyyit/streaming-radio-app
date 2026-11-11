@@ -223,6 +223,12 @@ class RadioManagement(
     settingsView?.visibility=View.GONE
     ThemePicker.show(activity,changed,{ settingsView?.let { refreshDoneButtons(it); it.visibility=View.VISIBLE } },host=host)
    }
+   val accountAbout=activity.getString(R.string.account_about)
+   val showAccountAbout:()->Unit = {
+    show(accountAbout) { body,_ ->
+     body.addView(text(activity.getString(R.string.twinsen_attribution),16f,muted))
+    }
+   }
    if(fullArea) {
     settingsGroup { group ->
      settingsAction(group,"Theme",themeAction)
@@ -231,6 +237,7 @@ class RadioManagement(
      settingsAction(group,"Refresh playlists") { refreshPlaylists() }
     }
     settingsGroup { group ->
+     settingsAction(group,accountAbout,showAccountAbout)
      settingsAction(group,"Privacy policy") { legalDocument("Privacy policy",listOf("legal/privacy-policy.txt")) }
      settingsAction(group,"Open-source licenses") { legalDocument("Open-source licenses",listOf("legal/open-source-notices.txt","legal/gpl-3.0.txt","legal/dependency-notices.txt","legal/runtime-dependency-notices.txt","legal/apache-2.0.txt","legal/lucide-isc.txt")) }
     }
@@ -240,6 +247,7 @@ class RadioManagement(
     toggle(body,"Automatic track and station artwork",prefs.onlineArtworkEnabled) { prefs.onlineArtworkEnabled=it }
     if(includeArtworkTransitions) toggle(body,"Animate artwork changes",prefs.artworkTransitionsEnabled) { prefs.artworkTransitionsEnabled=it }
     settingsAction(body,"Refresh playlists") { refreshPlaylists() }
+    settingsAction(body,accountAbout,showAccountAbout)
     settingsAction(body,"Privacy policy") { legalDocument("Privacy policy",listOf("legal/privacy-policy.txt")) }
     settingsAction(body,"Open-source licenses") { legalDocument("Open-source licenses",listOf("legal/open-source-notices.txt","legal/gpl-3.0.txt","legal/dependency-notices.txt","legal/runtime-dependency-notices.txt","legal/apache-2.0.txt","legal/lucide-isc.txt")) }
    }

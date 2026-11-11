@@ -32,8 +32,8 @@
     },
     {
       "path": "AGENTS.md",
-      "size": 5186,
-      "sha256": "b3d6f36579dd4175ff51c627d7e99cb037ec20f2be4ffe041064e56d3739a849"
+      "size": 5899,
+      "sha256": "fc41f557e1a1e48a8788806ac95a8f0ddb4aa3c2d8c2b6911d188412d6a98618"
     },
     {
       "path": "BUILD.md",
@@ -52,8 +52,8 @@
     },
     {
       "path": "README.md",
-      "size": 1267,
-      "sha256": "1364413cb2a4ac63d174e3dd1642b2607e76f84561ce93fd0b6054b35e8d73e3"
+      "size": 7557,
+      "sha256": "96fce261b8bcb44643b8c362acaeacfb9e4d4d34b7e47539a65536992a918828"
     },
     {
       "path": "SECURITY.md",
@@ -137,8 +137,8 @@
     },
     {
       "path": "app/src/automotive/java/net/mspanc/twinsenradio/automotive/RadioManagement.kt",
-      "size": 38650,
-      "sha256": "ef0d2c9328900822a9e4071f74aa929ac92380f550a8bfcf99a8119a939ffdfe"
+      "size": 38992,
+      "sha256": "e971bf9801f321a4c302eae06a287fb24feb77c6e82d0da33104eda31003b6b1"
     },
     {
       "path": "app/src/automotive/java/net/mspanc/twinsenradio/automotive/StationImageDialog.kt",
@@ -247,8 +247,8 @@
     },
     {
       "path": "app/src/main/assets/legal/open-source-notices.txt",
-      "size": 1290,
-      "sha256": "13c899e50fb707cebc0a105cececff1bcab3c982beebc6b8e05ec232ea8d8207"
+      "size": 1292,
+      "sha256": "8255ce40da3d6a20d9d41f1cf5ebc48938915737696f4360b6b10098b1bc0126"
     },
     {
       "path": "app/src/main/assets/legal/privacy-policy.txt",
@@ -817,8 +817,8 @@
     },
     {
       "path": "app/src/main/res/layout/activity_settings.xml",
-      "size": 32198,
-      "sha256": "064b03f88babadfe6e9a9adcb6b59c9efd3c1d3c22752661df550ec80e3ac00d"
+      "size": 32722,
+      "sha256": "46b44700ccf7f8fbe06b785454d4c72325e5df1c24f2b6c6ed5a332fbf296540"
     },
     {
       "path": "app/src/main/res/layout/activity_station_info.xml",
@@ -857,8 +857,8 @@
     },
     {
       "path": "app/src/main/res/values/strings.xml",
-      "size": 10381,
-      "sha256": "aa7e54959316850e83dca4c31e925a4fa053e5e753907d35d7cad4add1a6cad1"
+      "size": 10621,
+      "sha256": "c00ec6c1d057d635ff8bea7fcf09c6bf24e6304c8af6f2ff5de05fb181c64a29"
     },
     {
       "path": "app/src/main/res/values/themes.xml",
@@ -1564,6 +1564,16 @@
       "path": "tools/verify-automotive.test.cjs",
       "size": 7724,
       "sha256": "9e9319a265ea03573420835e32a2fbce82119bcb9b46c55fb898f465ecb2fae9"
+    },
+    {
+      "path": ".cursor/rules/twinsen-attribution.mdc",
+      "size": 214,
+      "sha256": "4b230d8f1cc2be14419f4a2150f780cd60ab22cb89f1de4e25382cd42c5d1e23"
+    },
+    {
+      "path": "NOTICE",
+      "size": 146,
+      "sha256": "4b59a8c426cf08f5b759a08c40ee48766811d77c14166fda90e842a3ab47067e"
     }
   ],
   "warnings": [

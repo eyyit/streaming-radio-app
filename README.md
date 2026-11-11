@@ -96,6 +96,8 @@ Apple/iTunes artwork requests are disabled in release builds. Artwork availabili
 
 A modified **GPL-3.0-or-later** fork of [szczepl/twinsen-radio](https://github.com/szczepl/twinsen-radio), originally copyright © 2026 Leszek Szczepanowski. Impostor Labs contributors made the AAOS, playlist, player, artwork, and release-preparation changes. Original authors retain their copyrights.
 
+Based on Twinsen Radio by Leszek Szczepanowski. See [NOTICE](NOTICE) for attribution.
+
 See [LICENSE](LICENSE), [third-party notices](THIRD-PARTY-NOTICES.md), and the preserved [upstream README](UPSTREAM-README.md). Not affiliated with or endorsed by Volvo, Google, or any broadcaster.
 
 For contributors and future agents: [build notes](BUILD.md), [security status](SECURITY.md), [changelog](CHANGELOG.md), [design rules](docs/DESIGN-SYSTEM.md), and [current handoff](docs/HANDOFF-NEXT.md).

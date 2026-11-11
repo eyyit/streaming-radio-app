@@ -1,7 +1,8 @@
 Streaming Radio — Impostor Labs
 
-Modified version of Twinsen Radio, https://github.com/szczepl/twinsen-radio
-Original copyright (C) 2026 Leszek Szczepanowski.
+Based on Twinsen Radio by Leszek Szczepanowski
+https://github.com/szczepl/twinsen-radio
+Copyright (C) 2026 Leszek Szczepanowski
 AAOS, playlist, artwork and security modifications by Impostor Labs contributors,
 2026-10-30 through 2026-11-02. Upstream authors retain their copyrights.
 

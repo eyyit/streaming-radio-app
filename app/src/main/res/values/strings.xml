@@ -132,4 +132,6 @@
     <string name="opt_m3u">Własne listy M3U (po jednym URL w linii)</string>
     <string name="opt_save">Zapisz i przeładuj</string>
     <string name="opt_saved">Zapisano. Android Auto odświeży listę.</string>
+    <string name="account_about">Account &amp; About</string>
+    <string name="twinsen_attribution">Based on Twinsen Radio by Leszek Szczepanowski\nhttps://github.com/szczepl/twinsen-radio\nCopyright (C) 2026 Leszek Szczepanowski</string>
 </resources>

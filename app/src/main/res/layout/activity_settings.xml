@@ -595,6 +595,19 @@
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:text="@string/account_about"
+                android:textAppearance="?attr/textAppearanceTitleMedium"
+                android:accessibilityHeading="true" />
+
+            <TextView
+                style="@style/SettingNote"
+                android:autoLink="web"
+                android:text="@string/twinsen_attribution" />
+
             <View
                 android:layout_width="match_parent"
                 android:layout_height="8dp" />
