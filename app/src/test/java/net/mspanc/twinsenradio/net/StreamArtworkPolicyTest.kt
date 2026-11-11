@@ -43,6 +43,25 @@ class StreamArtworkPolicyTest {
         }
     }
 
+    @Test fun producerAssetOriginsRejectLookalikeAndUntrustedRedirects() {
+        val origins = net.mspanc.twinsenradio.playback.NovaProducerArtworkFixture
+            .trackAssets().distinctBy { it.host }
+        assertEquals(setOf("www.lesinrocks.com", "www.nova.fr"),
+            origins.map { it.host }.toSet())
+        for (asset in origins) {
+            val start = SafeHttp.checkedUrl(asset.url, false, hosts)
+            reject {
+                SafeHttp.redirectTarget(
+                    start, "https://${asset.host}.evil.example/cover.jpg", true, hosts
+                )
+            }
+            reject {
+                SafeHttp.redirectTarget(
+                    start, "https://untrusted.example/cover.jpg", true, hosts
+                )
+            }
+        }
+    }
     @Test fun ordinaryCallerPolicyIsUnchanged() {
         assertEquals("127.0.0.1", SafeHttp.checkedUrl("http://127.0.0.1/a", true).host)
     }

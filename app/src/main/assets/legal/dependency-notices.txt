@@ -6,13 +6,20 @@ The Apache license text is bundled as legal/apache-2.0.txt.
 
 Optional phone transfer, when configured, uses Firebase Authentication
 (anonymous technical identities), Hosting and Realtime Database. Its public
-project configuration/API key is not a user password. No analytics SDK is added.
-The older upstream dependency summary below describes the original app.
+project configuration/API key is not a user password. The phone Cast flavor
+adds Google's Cast Sender SDK. It sends anonymous encrypted Cast interaction
+telemetry as described in the privacy policy; the app has no separate
+analytics SDK.
+
+The Cast-enabled phone variant uses the Apache 2.0 option for covered
+Streaming Radio and Twinsen Radio code. The Google Cast SDK remains under
+Google's separate terms. Keep the upstream license texts and notices.
+The dependency summary below describes the original non-Cast app dependencies.
 
 
-Twinsen Radio has no paid or closed-source dependencies. Everything below
-is free and open source, and none of these libraries require an API key
-or an account.
+The original app dependencies below are open source. The phone-only Cast SDK
+is an additional Google Play services dependency and is excluded from that
+summary; its terms require separate distribution review.
 
 | Library | Version | License | Role in the project |
 |---|---|---|---|
@@ -51,3 +58,12 @@ The public release candidate disables the Apple/iTunes integration pending
 its promotional-content requirements. Radio Browser's directory-data license
 does not license the linked audio, branding or artwork. See the release privacy
 and license-compliance documents for external service disclosures.
+
+
+Phone gradient artwork loading indicator (10 November 2026)
+
+Native Android adaptation of OpenAI Apps SDK UI LoadingIndicator.
+Copyright 2025 OpenAI; MIT license. Reference:
+https://github.com/openai/apps-sdk-ui/blob/main/src/components/Indicator/LoadingIndicator.module.css
+This is a phone UI component; the AAOS indicator is unchanged.
+Full license: app/src/main/assets/legal/openai-loading-indicator-MIT.txt

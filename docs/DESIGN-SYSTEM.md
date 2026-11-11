@@ -109,3 +109,27 @@ M10-C/D and M11-01/02/03 are approved: Settings has a gap below its header, alig
 StreamArtwork is a custom ICY extension associated with StreamTitle. Prefer its safe downloaded image over catalog fallback, honor online-artwork settings and generation/cancellation guards, clear explicit empty artwork, and never reinterpret StreamUrl as artwork. The relay integration is a separate task; do not claim Nova end-to-end support until that relay actually emits the tag.
 
 Stream artwork trust boundary: broadcaster-supplied URLs use a separate HTTPS exact-host allowlist, including every redirect, and default HTTPS port only. Initial verified Nova artwork hosts are nova.fr and www.nova.fr. An unrecognized image host fails closed to the existing catalog fallback. Add hosts only with provider evidence and review; do not infer permission from an arbitrary metadata URL. Catalog and explicitly imported playlist network behavior are unchanged. This constrains source trust and is not a DNS-pinning transport guarantee.
+
+
+## Phone artwork loading - 10 November 2026
+
+The user selected a gradient ring for phone loading: a white leading tip and
+continuous opacity fade around a true circle, 800ms linear rotation and a
+150ms crossfade with the existing idle refresh glyph. Preserve the current
+32dp glyph bounds and 48dp touch target. Animate only while real work is
+active and the view is visible; honor system animation preferences. The
+exact A shuffle PNG/dot stays untouched. AAOS retains its existing RM01
+implementation; this phone selection does not change the AAOS indicator.
+
+## Phone Cast and Settings - 11 November 2026
+
+The approved first-time Cast tip highlights the existing Android Cast button in
+place. While casting, a compact station and receiver row above the playback
+dock opens the expanded player. The dock supplies transport controls. Settings
+uses the same Cast row with Play/Pause at the bottom. The expanded player shows
+the receiver with the station details.
+
+Phone Settings uses English labels for Artwork, Playback buffer, Account &
+About, and Privacy policy, with a themed Done action. Keep the full Twinsen
+Radio attribution, upstream link, and copyright notice in Account & About.
+Preserve the exact A shuffle asset and dot when changing the dock.

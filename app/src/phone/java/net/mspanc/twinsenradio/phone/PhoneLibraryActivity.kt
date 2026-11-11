@@ -19,6 +19,7 @@ import net.mspanc.twinsenradio.R
 import net.mspanc.twinsenradio.data.AppearanceTheme
 import net.mspanc.twinsenradio.data.PlaylistSource
 import net.mspanc.twinsenradio.playback.RadioService
+import net.mspanc.twinsenradio.playback.PlaybackStatusBus
 
 @UnstableApi
 class PhoneLibraryActivity : PhonePlaybackActivity() {
@@ -67,16 +68,16 @@ class PhoneLibraryActivity : PhonePlaybackActivity() {
         utilities = buildPlayerHeader(expanded = false); headerContent.addView(utilities)
         val summary = PhoneUi.row(this@PhoneLibraryActivity).apply { minimumHeight = dp(120) }
         art = ImageView(this@PhoneLibraryActivity).apply {
-            scaleType = ImageView.ScaleType.FIT_CENTER; background = PhoneUi.shape(context, PhoneUi.SURFACE, 12)
+            scaleType = ImageView.ScaleType.CENTER_CROP; background = PhoneUi.shape(context, PhoneUi.SURFACE, 12)
             clipToOutline = true; contentDescription = "Current track artwork or station image"
         }
         summary.addView(art, LinearLayout.LayoutParams(dp(118), dp(118)).apply {
             marginStart = dp(6); marginEnd = dp(22)
         })
         val text = PhoneUi.column(this@PhoneLibraryActivity)
-        title = PhoneUi.text(this@PhoneLibraryActivity, size = 22f).apply { setTypeface(typeface, Typeface.BOLD) }
-        artist = PhoneUi.text(this@PhoneLibraryActivity, size = 18f)
-        station = PhoneUi.text(this@PhoneLibraryActivity, size = 16f, muted = true)
+        title = PhoneUi.text(this@PhoneLibraryActivity, size = 22f).apply { setTypeface(typeface, Typeface.BOLD); maxLines = 2; ellipsize = android.text.TextUtils.TruncateAt.END }
+        artist = PhoneUi.text(this@PhoneLibraryActivity, size = 18f).apply { maxLines = 1; ellipsize = android.text.TextUtils.TruncateAt.END }
+        station = PhoneUi.text(this@PhoneLibraryActivity, size = 16f, muted = true).apply { maxLines = 1; ellipsize = android.text.TextUtils.TruncateAt.END }
         listOf(title, artist, station).forEach { text.addView(it) }
         summary.addView(text, LinearLayout.LayoutParams(0, -2, 1f)); headerContent.addView(summary)
         val selector = PhoneUi.row(this@PhoneLibraryActivity).apply {
@@ -130,12 +131,19 @@ class PhoneLibraryActivity : PhonePlaybackActivity() {
 
     override fun renderContent() {
         if (!::list.isInitialized) return
-        val shown = shownStation(); val text = trackText(); val theme = AppearanceTheme.current(this)
-        title.text = text.title.ifBlank { shown?.name ?: "Add a playlist to start" }
-        artist.text = text.artist; artist.visibility = if (text.artist.isBlank()) View.GONE else View.VISIBLE
-        station.text = shown?.name.orEmpty()
-        art.visibility = if (artworkHidden) View.GONE else View.VISIBLE
-        if (!artworkHidden) loadArt(art)
+        val cast = PhoneCastRouting.get(applicationContext).displaySnapshot()
+        val shown = if (cast != null) cast.stationId?.let(repo::byId) else shownStation()
+        val text = trackText(); val theme = AppearanceTheme.current(this)
+        val localMetadataMatchesCast = cast == null ||
+            (cast.stationId != null && cast.stationId == PlaybackStatusBus.stationId.value)
+        title.text = if (cast != null && !localMetadataMatchesCast) {
+            cast.title ?: shown?.name ?: "Casting"
+        } else text.title.ifBlank { shown?.name ?: cast?.title ?: "Add a playlist to start" }
+        val artistText = text.artist.takeIf { localMetadataMatchesCast }.orEmpty()
+        artist.text = artistText; artist.visibility = if (artistText.isBlank()) View.GONE else View.VISIBLE
+        station.text = (shown?.name ?: cast?.title).orEmpty()
+        art.visibility = View.VISIBLE
+        loadArt(art, shown, localMetadataMatchesCast, shown?.name ?: cast?.title)
         playingFrom.text = "Playing from: ${collectionLabel()}"
         utilities.visibility = if (picking) View.GONE else View.VISIBLE
         main.visibility = if (picking) View.GONE else View.VISIBLE

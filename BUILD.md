@@ -1,3 +1,5 @@
+*Modified for Streaming Radio by Impostor Labs.*
+
 ## Linux Docker builds (preferred)
 
 Use [the Docker build guide](docs/DOCKER-BUILD.md) for a containerized Linux

@@ -1,0 +1,12 @@
+<resources>
+    <string name="app_name">Streaming Radio</string>
+    <string name="phone_settings_title">Settings</string>
+    <string name="phone_settings_done">Done</string>
+    <string name="phone_settings_artwork">Artwork</string>
+    <string name="phone_settings_artwork_online">Online track and station artwork</string>
+    <string name="phone_settings_artwork_local">Local artwork only</string>
+    <string name="phone_settings_buffer">Playback buffer</string>
+    <string name="phone_settings_buffer_small">Small — starts in about 1 s, 20 s reserve</string>
+    <string name="phone_settings_buffer_medium">Medium — starts in about 2 s, 45 s reserve</string>
+    <string name="phone_settings_buffer_large">Large — starts in about 4 s, 120 s reserve</string>
+</resources>

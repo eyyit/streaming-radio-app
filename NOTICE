@@ -4,3 +4,6 @@ Based on Twinsen Radio by Leszek Szczepanowski
 https://github.com/szczepl/twinsen-radio
 
 Copyright (C) 2026 Leszek Szczepanowski
+
+Streaming Radio changed app/src/main/assets/stations.json to ship an empty
+starter catalog. This notice accompanies that file because JSON has no comments.

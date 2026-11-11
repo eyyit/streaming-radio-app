@@ -79,16 +79,22 @@ class IcyArtworkParserTest {
         assertEquals("Song", afterMalformedKnown.title)
     }
 
-    @Test fun capturedNovaSourceHostArtworkPassesDownloadPolicy() {
-        val capturedFormatUrl = "https://www.lesinrocks.com/wp-content/uploads/contract-cover.jpg"
-        val update = IcyArtworkParser.parse("StreamArtwork='$capturedFormatUrl'")
-        assertEquals(capturedFormatUrl, update.artworkUrl)
-        val checkedUrl = runCatching {
-            SafeHttp.checkedUrl(
+    @Test fun novaTrackAssetUrlsPassDownloadPolicy() {
+        val assets = NovaProducerArtworkFixture.trackAssets()
+        assertEquals(16, assets.size)
+        for (asset in assets) {
+            val update = IcyArtworkParser.parse(
+                "StreamArtwork='${asset.url}'"
+            )
+            assertEquals(asset.url, update.artworkUrl)
+            val checkedUrl = SafeHttp.checkedUrl(
                 update.artworkUrl!!, false, StreamArtworkPolicy.allowedHosts
             ).toString()
-        }.getOrNull()
-        assertEquals(capturedFormatUrl, checkedUrl)
+            assertEquals(asset.url, checkedUrl)
+            assertEquals(asset.host, SafeHttp.checkedUrl(
+                update.artworkUrl, false, StreamArtworkPolicy.allowedHosts
+            ).host)
+        }
     }
 
     @Test fun unrelatedTagsIncludingStreamUrlDoNotBecomeArtwork() {

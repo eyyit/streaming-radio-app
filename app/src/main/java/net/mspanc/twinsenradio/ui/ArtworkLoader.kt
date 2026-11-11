@@ -1,3 +1,4 @@
+// Modified for Streaming Radio by Impostor Labs.
 package net.mspanc.twinsenradio.ui
 
 import android.graphics.Bitmap
@@ -60,7 +61,8 @@ object ArtworkLoader {
         muted: Boolean = false,
         blank: Boolean = false,
         animate: Boolean = false,
-        slideDirection: Int = 0
+        slideDirection: Int = 0,
+        fallbackDrawable: Drawable? = null
     ) {
         fun show(key: String, drawable: Drawable) {
             if (target.getTag(DISPLAY_KEY) == key) return
@@ -93,14 +95,14 @@ object ArtworkLoader {
         if (blank) {
             // The picture isn't decided yet (see PlaybackStatusBus.join):
             // an empty slot now, the right picture once - not a logo first.
-            target.setTag(TAG_KEY, null)
+            invalidateRequest(target)
             target.setTag(DISPLAY_KEY, null)
             target.setImageDrawable(null)
             return
         }
         if (drawn != null) {
             // A cover still on its way must not land on top of the clock.
-            target.setTag(TAG_KEY, null)
+            invalidateRequest(target)
             target.setTag(DISPLAY_KEY, null)
             target.setImageBitmap(drawn)
             return
@@ -119,6 +121,7 @@ object ArtworkLoader {
         // frame: empty, logo, cover).
         fun resting() {
             if (localLogo != null) show(logoUri.toString(), BitmapDrawable(target.resources, localLogo))
+            else if (fallbackDrawable != null) show("fallback:${fallbackDrawable}", fallbackDrawable)
             else ContextCompat.getDrawable(target.context, fallbackRes)?.let { show("res:$fallbackRes", it) }
         }
 
@@ -131,19 +134,19 @@ object ArtworkLoader {
             it.scheme in listOf("http", "https") && !Prefs(target.context).onlineArtworkEnabled
         } ?: fallbackUri
         if (key == null) {
-            target.setTag(TAG_KEY, null)
+            invalidateRequest(target)
             resting()
             return
         }
         // A favorite/order update must not re-open the same provider image,
         // or enqueue another copy of a request that is already in flight.
         if (key.scheme != "file" && target.getTag(DISPLAY_KEY) == key.toString()) {
-            target.setTag(TAG_KEY, null) // Invalidate any request for a different image.
+            invalidateRequest(target) // Invalidate any request for a different image.
             return
         }
         if (target.getTag(TAG_KEY) == key.toString()) return
         (if (key.scheme == "file") null else cache.get(key.toString()))?.let {
-            target.setTag(TAG_KEY, null)
+            invalidateRequest(target)
             show(key.toString(), BitmapDrawable(target.resources, it))
             return
         }
@@ -151,7 +154,9 @@ object ArtworkLoader {
         // Not in the cache: what is showing stays until the picture arrives -
         // the empty slot after play, or the previous picture for the moment a
         // download takes - and the logo goes up only if the download fails.
+        val requestToken = Any()
         target.setTag(TAG_KEY, key.toString())
+        target.setTag(REQUEST_TOKEN_KEY, requestToken)
         val resolver = target.context.applicationContext.contentResolver
         scope.launch {
             val bitmap = withContext(ArtworkWorkScheduler.dispatcher) {
@@ -176,8 +181,10 @@ object ArtworkLoader {
                 }
             }
             // the track (or station) may have changed in the meantime
-            if (target.getTag(TAG_KEY) != key.toString()) return@launch
-            target.setTag(TAG_KEY, null)
+            if (target.getTag(TAG_KEY) != key.toString() ||
+                target.getTag(REQUEST_TOKEN_KEY) !== requestToken
+            ) return@launch
+            invalidateRequest(target)
             if (bitmap != null) {
                 if (key.scheme != "file") cache.put(key.toString(), bitmap)
                 // A custom logo can change while keeping its file URI.
@@ -213,4 +220,10 @@ object ArtworkLoader {
 
     private val TAG_KEY = "artwork_url".hashCode()
     private val DISPLAY_KEY = "artwork_displayed".hashCode()
+    private val REQUEST_TOKEN_KEY = "artwork_request_token".hashCode()
+
+    private fun invalidateRequest(target: ImageView) {
+        target.setTag(TAG_KEY, null)
+        target.setTag(REQUEST_TOKEN_KEY, null)
+    }
 }

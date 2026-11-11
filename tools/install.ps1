@@ -1,3 +1,4 @@
+# Modified for Streaming Radio by Impostor Labs.
 # Build and install the selected phone or automotive variant.
 #   .\tools\install.ps1                 -> phone debug
 #   .\tools\install.ps1 -Automotive   -> automotive debug

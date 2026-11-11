@@ -29,6 +29,9 @@ the original author in the root NOTICE, bundled legal notices, and the
 Account & About screen in both phone and AAOS builds. Use "Twinsen Radio"
 with a lowercase s and include https://github.com/szczepl/twinsen-radio.
 Check that both release artifacts preserve the credit before publishing.
+Preserve LICENSING.md, both license texts, and third-party notices in exports.
+Mark inherited files modified for Streaming Radio. For formats that cannot
+carry comments, identify the changed file in NOTICE.
 
 ## Mandatory UI change discipline
 The Preserve approved design / consistency section of docs/DESIGN-SYSTEM.md applies to EVERY view. Requested sizing fixes must not alter fonts, icons, labels, controls or layout elsewhere. Equivalent rows use shared typography and dimensions. Verify installed rendering against approved references before reporting completion. Approved native full-area Settings (S8 revision 2) uses36sp labels, equal minimum112dp rows scaled for font size, a36sp/80dp header, themed28sp/72dp Done, and a108x54dp switch with a44dp white thumb. Other existing settings layouts retain22sp labels/56dp rows and18sp action text. Approved P8 revision 3 keeps128dp station rows and112dp logos, with80dp action targets/56dp glyphs centered vertically on the right; reserve caption space to prevent overlaps. These are standing requirements, not optional per-task suggestions.

@@ -1,3 +1,4 @@
+// Modified for Streaming Radio by Impostor Labs.
 package net.mspanc.twinsenradio.playback
 
 import android.app.PendingIntent
@@ -2220,9 +2221,35 @@ class RadioService : MediaLibraryService() {
 
     private inner class LibraryCallback : MediaLibrarySession.Callback {
 
-        private fun access(controller: MediaSession.ControllerInfo) =
+        override fun onMediaButtonEvent(session: MediaSession,
+            controllerInfo: MediaSession.ControllerInfo, intent: Intent): Boolean {
+            if (intent.action != Intent.ACTION_MEDIA_BUTTON || !access(controllerInfo, verifiedLegacyMediaTrust(controllerInfo)).controlPlayback) return false
+            val event = androidx.core.content.IntentCompat.getParcelableExtra(intent,
+                Intent.EXTRA_KEY_EVENT, android.view.KeyEvent::class.java) ?: return false
+            return (application as? net.mspanc.twinsenradio.App)?.handleRemoteMediaButton(event) == true
+        }
+
+        private fun access(controller: MediaSession.ControllerInfo, legacyTrust: Boolean = false) =
             MediaControllerAccessPolicy.access(controller.uid, controller.packageName,
-                android.os.Process.myUid(), packageName, controller.isTrusted, prefs.diagnosticMode)
+                android.os.Process.myUid(), packageName, controller.isTrusted || legacyTrust, prefs.diagnosticMode)
+
+        private fun verifiedLegacyMediaTrust(controller: MediaSession.ControllerInfo): Boolean {
+            if (access(controller).controlPlayback || controller.uid < 0 ||
+                controller.controllerVersion != MediaSession.ControllerInfo.LEGACY_CONTROLLER_VERSION) return false
+            // Media3's legacy button adapter supplies trusted=false. Its public caller info has
+            // no PID; verify the package/UID before asking the compat manager with unknown PID.
+            return try {
+                packageManager.getApplicationInfo(controller.packageName, 0).uid == controller.uid &&
+                    androidx.media.MediaSessionManager.getSessionManager(this@RadioService)
+                        .isTrustedForMediaControl(androidx.media.MediaSessionManager.RemoteUserInfo(
+                            controller.packageName, -1, controller.uid))
+            } catch (_: android.content.pm.PackageManager.NameNotFoundException) {
+                false
+            } catch (error: RuntimeException) {
+                android.util.Log.w("RadioService", "Legacy media-button trust unavailable", error)
+                false
+            }
+        }
 
         override fun onConnect(
             session: MediaSession,
@@ -2852,7 +2879,6 @@ class RadioService : MediaLibraryService() {
         return true
     }
     private fun preloadStationArtwork() {
-        if (!net.mspanc.twinsenradio.BuildConfig.IS_AUTOMOTIVE) return
         if (!prefs.onlineArtworkEnabled) {
             stationArtworkJob?.cancel()
             return

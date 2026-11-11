@@ -11,7 +11,15 @@ test('standalone source export has working privacy/docs links and can export its
     const result=spawnSync(process.execPath,[path.join(source,'tools/export-public-source.cjs'),'--output',destination],{encoding:'utf8',windowsHide:true});
     assert.equal(result.status,0,result.stdout+result.stderr);
   }
-  run(path.resolve(__dirname,'..'),first);
+  const source=path.resolve(__dirname,'..');
+  const attributionFiles=['NOTICE','LICENSE','LICENSE-APACHE','LICENSING.md',
+    '.cursor/rules/twinsen-attribution.mdc'];
+  function checkAttribution(destination){
+    for(const file of attributionFiles)
+      assert.deepEqual(fs.readFileSync(path.join(destination,file)),fs.readFileSync(path.join(source,file)));
+  }
+  run(source,first);
+  checkAttribution(first);
   assert.ok(fs.existsSync(path.join(first,'docs/privacy.html')),'exported privacy page must exist');
   for(const file of ['app/src/automotiveRelease/AndroidManifest.xml', 'docker/Dockerfile',
     'docker/entrypoint.sh', 'tools/docker-build.sh', 'docs/DOCKER-BUILD.md'])
@@ -28,6 +36,7 @@ test('standalone source export has working privacy/docs links and can export its
     fs.writeFileSync(fixture, '// Source-set export fixture only.\n');
   }
   run(first,second);
+  checkAttribution(second);
   for (const sourceSet of ['phone', 'testPhone', 'testAutomotive'])
     assert.ok(fs.existsSync(path.join(second, 'app/src', sourceSet,
       'java/fixture/ExportFixture.kt')), `missing optional source set: ${sourceSet}`);

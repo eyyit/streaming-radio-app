@@ -1,7 +1,16 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
-    <application android:appCategory="audio" android:theme="@style/Theme.StreamingRadioPhone"
-        tools:replace="android:theme">
+    <application android:name=".phone.PhoneApp" android:appCategory="audio" android:theme="@style/Theme.StreamingRadioPhone"
+        tools:replace="android:name,android:theme">
+        <service android:name=".phone.PhoneCastPlaybackService" android:exported="false"
+            android:foregroundServiceType="mediaPlayback" />
+        <receiver android:name=".phone.PhoneCastNotificationReceiver" android:exported="false" />
+        <meta-data
+            android:name="com.google.android.gms.cast.framework.OPTIONS_PROVIDER_CLASS_NAME"
+            android:value="net.mspanc.twinsenradio.phone.PhoneCastOptionsProvider" />
+        <!-- Android 13 system volume needs a registered remote route. -->
+        <receiver android:name="androidx.mediarouter.media.MediaTransferReceiver"
+            android:exported="true" />
         <activity android:name=".ui.MainActivity" android:exported="false" tools:replace="android:exported">
             <intent-filter tools:node="removeAll" />
         </activity>
@@ -17,6 +26,8 @@
             </intent-filter>
         </activity>
         <activity android:name=".phone.PhonePlayerActivity" android:exported="false" />
+        <activity android:name=".phone.PhoneSettingsActivity" android:exported="false"
+            android:label="@string/phone_settings_title" />
         <activity android:name=".phone.PhoneImportActivity" android:exported="false"
             android:windowSoftInputMode="adjustResize" />
         <activity android:name=".phone.PhonePlaylistActivity" android:exported="false" />

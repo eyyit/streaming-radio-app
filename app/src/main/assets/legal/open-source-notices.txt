@@ -6,19 +6,47 @@ Copyright (C) 2026 Leszek Szczepanowski
 AAOS, playlist, artwork and security modifications by Impostor Labs contributors,
 2026-10-30 through 2026-11-02. Upstream authors retain their copyrights.
 
-This program is free software: you can redistribute it and/or modify it under
-the GNU General Public License as published by the Free Software Foundation,
-either version 3, or (at your option) any later version.
+Streaming Radio's original contributions are offered under Apache License 2.0
+alongside GPL-3.0-or-later to the extent Elliott Friedman holds rights in them.
+Leszek Szczepanowski granted Apache 2.0 permission for his upstream Twinsen
+Radio code alongside the GPL. The Cast-enabled phone variant uses the Apache
+2.0 option for those portions. The Google Cast SDK retains Google's terms.
 
 Distributed WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. The full license is
 included below. Dependency notices and the Lucide ISC license follow it.
 
-RELEASE-CANDIDATE SOURCE NOTICE: The public source repository and matching
-source-download URL have not yet been published. This build is not cleared
-for public distribution until its exact corresponding source is made available
-and linked from the distribution page. The local source archive is prepared
-separately, without signing keys or user data. Do not remove upstream notices.
+RELEASE-CANDIDATE SOURCE NOTICE: This build's matching source has not yet
+been published. The source archive is prepared separately, without signing
+keys or user data. Keep the upstream license texts and attribution.
 
 Station streams, station logos and album artwork remain the property of their
 respective rights holders. The software license does not license that content.
+
+
+Phone gradient artwork loading indicator (10 November 2026)
+
+Native Android adaptation of OpenAI Apps SDK UI LoadingIndicator.
+Copyright 2025 OpenAI; MIT license. Reference:
+https://github.com/openai/apps-sdk-ui/blob/main/src/components/Indicator/LoadingIndicator.module.css
+This is a phone UI component; the AAOS indicator is unchanged.
+
+Copyright 2025 OpenAI
+
+Permission is hereby granted, free of charge, to any person obtaining a copy of
+this software and associated documentation files (the “Software”), to deal in
+the Software without restriction, including without limitation the rights to
+use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of
+the Software, and to permit persons to whom the Software is furnished to do so,
+subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.

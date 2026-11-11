@@ -4,6 +4,7 @@ import android.content.Context
 import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageButton
+import androidx.mediarouter.app.MediaRouteButton
 import net.mspanc.twinsenradio.R
 import net.mspanc.twinsenradio.data.Prefs
 import org.junit.Assert.*
@@ -47,8 +48,14 @@ class PhoneExpandedPlayerTest {
             assertTrue("Primary touch width", it.width >= 48*density)
             assertTrue("Primary touch height", it.height >= 48*density)
         }
-        val cast = descendants(screen).first { it.contentDescription == "Cast unavailable" }
-        assertFalse("Do not advertise unimplemented Cast", cast.isEnabled)
+        val cast = descendants(screen).filterIsInstance<MediaRouteButton>().first()
+        assertTrue("Cast route target", cast.width >= 48 * density)
+        assertTrue("Cast route target height", cast.height >= 48 * density)
+        assertTrue(
+            "Cast route state is described",
+            cast.contentDescription == "Cast to a device" ||
+                cast.contentDescription.toString().startsWith("Cast unavailable:")
+        )
         val shuffle = descendants(actions).filterIsInstance<ImageButton>().first {
             it.contentDescription == "Shuffle stations unavailable" }
         assertFalse("Do not silently flip an ineffective shuffle preference", shuffle.isEnabled)
@@ -62,7 +69,8 @@ class PhoneExpandedPlayerTest {
         }
         withPlayer { activity ->
             val views = descendants(activity.findViewById(android.R.id.content))
-            assertEquals(View.GONE, views.first { it.contentDescription == "Current track artwork or station image" }.visibility)
+            assertEquals("Hiding album art must retain the station-image slot", View.VISIBLE,
+                views.first { it.contentDescription == "Current track artwork or station image" }.visibility)
             views.first { it.contentDescription == "Show artwork" }.performClick()
             assertEquals(View.VISIBLE, views.first { it.contentDescription == "Current track artwork or station image" }.visibility)
         }

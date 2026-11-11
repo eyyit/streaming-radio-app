@@ -18,6 +18,7 @@ import net.mspanc.twinsenradio.data.Prefs
 import net.mspanc.twinsenradio.data.StationRepository
 import net.mspanc.twinsenradio.playback.PlaybackStatusBus
 import net.mspanc.twinsenradio.playback.RadioService
+import net.mspanc.twinsenradio.ui.SettingsActivity
 import org.junit.Assert.*
 import org.junit.Before
 import org.junit.Test
@@ -26,6 +27,7 @@ import org.robolectric.Robolectric
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
 import org.robolectric.annotation.Config
+import org.robolectric.shadows.ShadowDialog
 import java.security.MessageDigest
 
 @UnstableApi
@@ -46,6 +48,26 @@ class PhoneFlowUiTest {
         PlaybackStatusBus.setStation(null); PlaybackStatusBus.setNowPlaying(null)
         PlaybackStatusBus.setWantsToPlay(false); PlaybackStatusBus.setLostAir(false)
         PlaybackStatusBus.setTrackArtworkLoading(false); PlaybackStatusBus.setCoverArt(null)
+    }
+
+    @Test fun phoneSettingsOpensTheBundledPrivacyPolicy() {
+        val host = Robolectric.buildActivity(SettingsActivity::class.java)
+        host.get().setTheme(R.style.Theme_TwinsenRadio)
+        try {
+            val activity = host.setup().get()
+            val content = activity.findViewById<View>(android.R.id.content)
+            val privacyButton = descendants(content).filterIsInstance<Button>()
+                .singleOrNull { it.text.toString() == "Privacy policy" }
+            assertNotNull("Phone Settings must expose its privacy policy", privacyButton)
+            assertTrue(privacyButton!!.performClick())
+            val dialog = ShadowDialog.getLatestDialog()
+            val shown = dialog.findViewById<TextView>(android.R.id.message).text.toString()
+            val bundled = activity.assets.open("legal/privacy-policy.txt")
+                .bufferedReader().use { it.readText() }
+            assertEquals(bundled, shown)
+        } finally {
+            host.pause().stop().destroy()
+        }
     }
 
     @Test fun packagedSelectedAssetPixelsMatchTheFrozenReference() {
@@ -188,6 +210,55 @@ class PhoneFlowUiTest {
                         list.height >= (72 * activity.resources.displayMetrics.density).toInt())
                 }
             } finally { RuntimeEnvironment.setFontScale(1f) }
+        }
+    }
+
+    @Test fun phoneBrandAndArtworkSlotStayStableWhenAlbumArtIsHidden() {
+        assertEquals("Streaming Radio", context.getString(R.string.app_name))
+        context.getSharedPreferences("phone_player", Context.MODE_PRIVATE).edit().putBoolean("hide_art", true).commit()
+        withActivity(PhonePlayerActivity::class.java) { _, root ->
+            val art = descendants(root).filterIsInstance<ImageView>().single {
+                it.contentDescription == "Current track artwork or station image"
+            }
+            assertEquals(View.VISIBLE, art.visibility)
+            art.measure(View.MeasureSpec.makeMeasureSpec(1100, View.MeasureSpec.EXACTLY),
+                View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED))
+            assertEquals("The artwork frame must be square on wide phones", art.measuredWidth, art.measuredHeight)
+        }
+    }
+
+    @Test fun playerMetadataHasBoundedLinesWithoutShrinkingText() {
+        withActivity(PhonePlayerActivity::class.java) { _, root ->
+            val texts = descendants(root).filterIsInstance<TextView>()
+            val title = texts.single { it.text == "Add a playlist to start" }
+            assertEquals(2, title.maxLines)
+            assertEquals(android.text.TextUtils.TruncateAt.END, title.ellipsize)
+            val artist = texts.single { kotlin.math.abs(it.textSize / context.resources.displayMetrics.scaledDensity - 22f) < .1f }
+            assertEquals(1, artist.maxLines)
+            assertEquals(android.text.TextUtils.TruncateAt.END, artist.ellipsize)
+        }
+    }
+
+    @Test fun longTrackingMetadataKeepsStationAndFormatAboveDock() {
+        runBlocking { repo.saveLocalPlaylist("Test list", "#EXTM3U\n#EXTINF:-1,Night Signal\nhttps://radio.example/a\n") }
+        PlaybackStatusBus.setStation(repo.all().single().id)
+        PlaybackStatusBus.setJoin(PlaybackStatusBus.Join.NONE)
+        val title = "Commercial Break - https://ads.example/banner/" + "tracking-field/".repeat(25)
+        PlaybackStatusBus.setNowPlaying(net.mspanc.twinsenradio.playback.NowPlaying(
+            title, "Artist " + "long name ".repeat(25), title))
+        PlaybackStatusBus.setQuality(net.mspanc.twinsenradio.playback.StreamQuality("AAC", 96, 48000, 2))
+        withActivity(PhonePlayerActivity::class.java) { _, root ->
+            val density = context.resources.displayMetrics.density
+            root.measure(View.MeasureSpec.makeMeasureSpec((320 * density).toInt(), View.MeasureSpec.EXACTLY),
+                View.MeasureSpec.makeMeasureSpec((520 * density).toInt(), View.MeasureSpec.EXACTLY))
+            root.layout(0, 0, root.measuredWidth, root.measuredHeight)
+            val dock = root.findViewWithTag<View>("phone_secondary_actions")
+            val text = descendants(root).filterIsInstance<TextView>()
+            val station = text.single { it.text == "Station: Night Signal" }
+            val format = text.single { it.text.contains("48.0 kHz") }
+            assertTrue(absoluteTop(station) + station.height <= absoluteTop(dock))
+            assertTrue("Long URL metadata cannot push stream details behind the dock",
+                absoluteTop(format) + format.height <= absoluteTop(dock))
         }
     }
 

@@ -1,3 +1,4 @@
+// Modified for Streaming Radio by Impostor Labs.
 package net.mspanc.twinsenradio.ui
 
 import android.os.Bundle
@@ -6,6 +7,7 @@ import android.widget.ArrayAdapter
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.textfield.MaterialAutoCompleteTextView
 import com.google.android.material.textfield.TextInputLayout
 import kotlinx.coroutines.launch
@@ -41,6 +43,15 @@ class SettingsActivity : AppCompatActivity() {
         prefs = Prefs(this)
 
         b.toolbar.setNavigationOnClickListener { finish() }
+        b.privacyPolicy.setOnClickListener {
+            val policy = assets.open("legal/privacy-policy.txt")
+                .bufferedReader().use { it.readText() }
+            MaterialAlertDialogBuilder(this)
+                .setTitle(R.string.privacy_policy)
+                .setMessage(policy)
+                .setPositiveButton(android.R.string.ok, null)
+                .show()
+        }
 
         // --- dashboard display -------------------------------------------------
         // Labels and hints come from the Line enum, so the row descriptions

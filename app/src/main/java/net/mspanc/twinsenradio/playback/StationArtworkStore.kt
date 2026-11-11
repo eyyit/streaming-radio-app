@@ -63,8 +63,8 @@ object StationArtworkStore {
     private val mutex = Mutex()
     private val fileLock = Any()
     private val sampleLocks = java.util.concurrent.ConcurrentHashMap<String, Any>()
-    private val automaticAttempts = AutomaticArtworkAttempts()
-    fun beginServiceLaunch() = automaticAttempts.reset()
+    private val automaticAttemptScopes = AutomaticArtworkAttemptScopes()
+    fun beginServiceLaunch() = automaticAttemptScopes.service.reset()
     private fun dir(context: Context) = File(context.filesDir, "station-art").apply { mkdirs() }
     private fun key(station: Station) = M3uParser.stableKey(station.id)
     private fun validDownloaded(context: Context, station: Station): Boolean {
@@ -338,7 +338,31 @@ object StationArtworkStore {
             "The image sources could not be downloaded. Your current image is unchanged."
         } }
     }
-    suspend fun preload(context: Context, stations: List<Station>, changed: suspend (Station) -> Unit) = withContext(ArtworkWorkScheduler.dispatcher) {
+    suspend fun preload(
+        context: Context,
+        stations: List<Station>,
+        pruneUnused: Boolean = true,
+        changed: suspend (Station) -> Unit
+    ) = preloadWithAttempts(
+        context, stations, automaticAttemptScopes.service, pruneUnused, changed
+    )
+
+    /** Preview work has a bounded, isolated attempt scope and never prunes cache files. */
+    suspend fun preloadPreview(
+        context: Context,
+        stations: List<Station>,
+        changed: suspend (Station) -> Unit
+    ) = preloadWithAttempts(
+        context, stations, automaticAttemptScopes.newPreview(), false, changed
+    )
+
+    private suspend fun preloadWithAttempts(
+        context: Context,
+        stations: List<Station>,
+        attempts: AutomaticArtworkAttempts,
+        pruneUnused: Boolean,
+        changed: suspend (Station) -> Unit
+    ) = withContext(ArtworkWorkScheduler.dispatcher) {
         val prefs = Prefs(context)
         val checked = context.getSharedPreferences("station_artwork_checks",Context.MODE_PRIVATE)
         if (checked.getInt("search-version",0) != 3) {
@@ -351,7 +375,7 @@ object StationArtworkStore {
             if (!prefs.onlineArtworkEnabled) break
             val id=key(station)
             if (isGeneric(context, station) || validDownloaded(context, station)) continue
-            if (!automaticAttempts.begin(id)) continue
+            if (!attempts.begin(id)) continue
             var finished = false
             try {
                 delay(75)
@@ -371,16 +395,32 @@ object StationArtworkStore {
                 if (saved) withContext(Dispatchers.Main) { changed(station) }
                 finished = true
             } finally {
-                if (finished) automaticAttempts.complete(id)
-                else automaticAttempts.release(id)
+                if (finished) attempts.complete(id)
+                else attempts.release(id)
             }
         }
-        val keep=stations.map { key(it) }.toSet()
-        dir(context).listFiles()?.filter { it.name.substringBefore('.').removeSuffix("-sample") !in keep }?.forEach { it.delete() }
+        pruneUnusedArtworkFiles(context, stations, pruneUnused)
+    }
+
+    internal fun pruneUnusedArtworkFiles(
+        context: Context,
+        stations: List<Station>,
+        pruneUnused: Boolean = true
+    ) {
+        if (!pruneUnused) return
+        val keep = stations.map { key(it) }.toSet()
+        dir(context).listFiles()
+            ?.filter { it.name.substringBefore('.').removeSuffix("-sample") !in keep }
+            ?.forEach { it.delete() }
     }
 
     internal fun automaticCandidateUrls(urls: List<String>): List<String> =
         urls.distinct().take(MAX_AUTOMATIC_CANDIDATES)
+}
+
+internal class AutomaticArtworkAttemptScopes {
+    val service = AutomaticArtworkAttempts()
+    fun newPreview() = AutomaticArtworkAttempts()
 }
 
 internal class AutomaticArtworkAttempts {

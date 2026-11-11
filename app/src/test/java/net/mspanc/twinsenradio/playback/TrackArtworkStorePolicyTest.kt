@@ -61,6 +61,43 @@ class TrackArtworkStorePolicyTest {
         assertEquals(downloads, TrackArtworkStore.downloadCalls.get())
     }
 
+    @Test fun novaTrackAssetsHitOnlyTheirRestrictedOfflineCache() = runBlocking {
+        val prefs = Prefs(context)
+        val wasEnabled = prefs.onlineArtworkEnabled
+        val assets = NovaProducerArtworkFixture.trackAssets()
+        val hosts = StreamArtworkPolicy.allowedHosts
+        val policy = hosts.map { it.lowercase(java.util.Locale.ROOT) }
+            .distinct().sorted().joinToString("") { "${it.length}:$it" }
+        val directory = File(context.cacheDir, "track-art").apply { mkdirs() }
+        directory.listFiles()?.forEach { it.delete() }
+        val downloads = TrackArtworkStore.downloadCalls.get()
+        prefs.onlineArtworkEnabled = true
+        try {
+            assertEquals(16, assets.size)
+            assertEquals(18, assets.sumOf { it.sourceFields.size })
+            for (asset in assets) {
+                val key = "restricted-artwork-v1\u0000$policy\u0000${asset.url}"
+                val name = M3uParser.stableKey(key) + ".jpg"
+                File(directory, name).writeText("offline policy-bound cache fixture")
+                val uri = TrackArtworkStore.fetch(
+                    context, asset.url, allowedHosts = hosts
+                )
+                assertEquals(name, uri?.lastPathSegment)
+            }
+
+            val lookalike = "https://www.lesinrocks.com.evil.example/cached.jpg"
+            val lookalikeKey = "restricted-artwork-v1\u0000$policy\u0000$lookalike"
+            val lookalikeName = M3uParser.stableKey(lookalikeKey) + ".jpg"
+            File(directory, lookalikeName).writeText("must not bypass URL policy")
+            assertNull(TrackArtworkStore.fetch(
+                context, lookalike, allowedHosts = hosts
+            ))
+            assertEquals("cache fixtures must never activate network downloads",
+                downloads, TrackArtworkStore.downloadCalls.get())
+        } finally {
+            prefs.onlineArtworkEnabled = wasEnabled
+        }
+    }
     private fun restrictedName(vararg hosts: String): String {
         val policy = hosts.sorted().joinToString("") { "${it.length}:$it" }
         return M3uParser.stableKey("restricted-artwork-v1\u0000$policy\u0000$url") + ".jpg"

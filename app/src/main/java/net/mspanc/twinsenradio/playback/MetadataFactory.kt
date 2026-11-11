@@ -1,3 +1,4 @@
+// Modified for Streaming Radio by Impostor Labs.
 package net.mspanc.twinsenradio.playback
 
 import android.content.Context
@@ -534,19 +535,32 @@ class MetadataFactory(private val context: Context, private val prefs: Prefs) {
     fun logoUri(station: Station): Uri {
         // The user's own custom artwork beats everything else
         customLogoFile(station)?.let { return LogoProvider.customUriFor(context, station, it) }
-        if (net.mspanc.twinsenradio.BuildConfig.IS_AUTOMOTIVE) return StationArtworkStore.uri(context, station)
-        station.logoUrl?.takeIf { prefs.onlineArtworkEnabled }?.let { return Uri.parse(it) }
-        return LogoProvider.uriFor(context, station, logoResId(station))
+        return StationArtworkStore.uri(context, station)
     }
 
     /**
-     * The logo URI to show on the phone. Unlike [logoUri] it may return a
-     * `file://` URI - local screens read the file directly, without a middleman.
+     * The logo URI to show on a phone UI. When online artwork is enabled and
+     * no approved image is cached, it may return the station's supplied URL.
      */
-    fun logoDisplayUri(station: Station): Uri? =
-        customLogoFile(station)?.let { Uri.fromFile(it) }
-            ?: if (net.mspanc.twinsenradio.BuildConfig.IS_AUTOMOTIVE) StationArtworkStore.uri(context, station)
-            else station.logoUrl?.takeIf { prefs.onlineArtworkEnabled }?.let { Uri.parse(it) }
+    fun logoDisplayUri(station: Station): Uri? {
+        customLogoFile(station)?.let { return Uri.fromFile(it) }
+        val stored = StationArtworkStore.uri(context, station)
+        if (net.mspanc.twinsenradio.BuildConfig.IS_AUTOMOTIVE ||
+            !prefs.onlineArtworkEnabled || StationArtworkStore.isGeneric(context, station) ||
+            StationArtworkStore.hasDownloaded(context, station)
+        ) return stored
+        val suppliedUrl = station.logoUrl?.takeIf { it.isNotBlank() }
+            ?: return stored
+        val checkedUrl = try {
+            net.mspanc.twinsenradio.net.SafeHttp.checkedUrl(
+                suppliedUrl,
+                allowHttp = net.mspanc.twinsenradio.BuildConfig.DEBUG
+            )
+        } catch (_: java.io.IOException) {
+            return stored
+        }
+        return Uri.parse(checkedUrl.toString())
+    }
 
     private fun customLogoFile(station: Station): java.io.File? =
         prefs.customLogo(station.id)?.let { java.io.File(it) }?.takeIf { it.exists() }

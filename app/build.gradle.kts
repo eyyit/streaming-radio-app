@@ -1,3 +1,4 @@
+// Modified for Streaming Radio by Impostor Labs.
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
@@ -82,8 +83,8 @@ android {
         create("phone") {
             dimension = "platform"
             applicationId = providers.gradleProperty("publicApplicationId").orElse("com.impostorlabs.streamingradio").get()
-            versionCode = 12
-            versionName = "0.3.0-rc10"
+            versionCode = 13
+            versionName = "0.3.0-rc11"
         }
         create("automotive") {
             dimension = "platform"
@@ -157,12 +158,17 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.10.2")
     implementation("com.google.guava:guava:33.7.2-android")
 
+    // Phone only: Cast sender UI and sessions are not part of the AAOS APK.
+    add("phoneImplementation", "com.google.android.gms:play-services-cast-framework:22.3.1")
+
     // Tekst od stacji i decyzje podejmowane na nim to czysta logika. Da sie ja
     // sprawdzic na JVM - bez telefonu i bez czekania, az radio zagra akurat ten
     // utwor, na ktorym cos sie wywalilo.
     testImplementation("junit:junit:4.13.2")
     // The real Media3 extractor uses Android platform utilities during JVM tests.
     testImplementation("org.robolectric:robolectric:4.17")
+    // Mockito 5 can mock the final Google Cast SDK client classes for JVM lifecycle tests.
+    testImplementation("org.mockito:mockito-core:5.24.0")
     // android.jar ma org.json tylko jako zaslepke - na JVM potrzebny prawdziwy (StationTitleApi)
     testImplementation("org.json:json:20240303")
 }

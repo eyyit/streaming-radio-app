@@ -12,6 +12,8 @@ import android.view.View
 import android.view.inputmethod.EditorInfo
 import android.widget.Button
 import android.widget.EditText
+import android.widget.FrameLayout
+import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
@@ -20,12 +22,19 @@ import androidx.activity.OnBackPressedCallback
 import androidx.core.widget.doAfterTextChanged
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.Lifecycle
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import net.mspanc.twinsenradio.data.AppearanceTheme
 import net.mspanc.twinsenradio.data.CatalogLimits
+import net.mspanc.twinsenradio.data.M3uParser
+import net.mspanc.twinsenradio.data.Prefs
+import net.mspanc.twinsenradio.playback.MetadataFactory
+import net.mspanc.twinsenradio.playback.StationArtworkStore
+import net.mspanc.twinsenradio.ui.ArtworkLoader
 import java.io.FileNotFoundException
 
 /** Add a remote station catalog or import a local M3U copy into the phone library. */
@@ -46,6 +55,10 @@ class PhoneImportActivity : PhonePlaybackActivity() {
     private lateinit var importFileButton: Button
     private lateinit var addUrlButton: Button
     private lateinit var cancelButton: TextView
+    private val previewArtwork = mutableListOf<ImageView>()
+    private val previewTargets = mutableListOf<Pair<net.mspanc.twinsenradio.data.Station, ImageView>>()
+    private var previewPreloadJob: Job? = null
+    private var previewPreloadSnapshot: ImportPreview? = null
     private val importState by lazy { androidx.lifecycle.ViewModelProvider(this)[PhoneImportState::class.java] }
     private var busy = false
     private var restoredUrl = ""
@@ -66,6 +79,16 @@ class PhoneImportActivity : PhonePlaybackActivity() {
                 if (!busy) finish()
             }
         })
+    }
+
+    override fun onStart() {
+        super.onStart()
+        startPreviewPreload()
+    }
+
+    override fun onStop() {
+        cancelPreviewPreload()
+        super.onStop()
     }
 
     override fun onSaveInstanceState(outState: Bundle) {
@@ -209,6 +232,7 @@ class PhoneImportActivity : PhonePlaybackActivity() {
 
     private fun readPickedFile(uri: Uri) {
         if (busy) return
+        cancelPreviewPreload()
         setBusy(true)
         message.text = "Reading file…"
         lifecycleScope.launch {
@@ -233,11 +257,23 @@ class PhoneImportActivity : PhonePlaybackActivity() {
                 message.text = error.message ?: "Could not read this M3U file. Choose another file."
             } finally {
                 if (!isFinishing && !isDestroyed) setBusy(false)
+                startPreviewPreload()
             }
         }
     }
 
     private fun renderSelectedFile() {
+        cancelPreviewPreload()
+        if (::previewRows.isInitialized) {
+            previewArtwork.forEach { image ->
+                ArtworkLoader.into(
+                    lifecycleScope, null, null, android.R.color.transparent, image
+                )
+            }
+            previewArtwork.clear()
+            previewTargets.clear()
+            previewRows.removeAllViews()
+        }
         val selected = importState.preview
         val hasFile = selected != null
         urlGroup.visibility = if (hasFile) View.GONE else View.VISIBLE
@@ -246,18 +282,111 @@ class PhoneImportActivity : PhonePlaybackActivity() {
         if (!hasFile) return
         fileName.text = selected.name
         fileSummary.text = "${selected.parsed.stations.size} stations found"
-        previewRows.removeAllViews()
+        val prefs = Prefs(this)
+        val metadata = MetadataFactory(this, prefs)
         selected.parsed.stations.take(3).forEachIndexed { index, station ->
-            previewRows.addView(label(station.name, 16f, TEXT).apply {
-                setPadding(dp(4), dp(10), dp(4), dp(10))
-                minimumHeight = dp(44)
-            }, LinearLayout.LayoutParams(-1, -2))
+            val row = LinearLayout(this).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.CENTER_VERTICAL
+                minimumHeight = dp(56)
+            }
+            val artwork = FrameLayout(this).apply {
+                background = PhoneUi.shape(this@PhoneImportActivity, SURFACE, 8)
+                clipToOutline = true
+            }
+            val initials = label(
+                station.name.split(Regex("\\s+")).mapNotNull { it.firstOrNull { char -> char.isLetter() } }
+                    .take(2).joinToString("").uppercase().ifBlank { "FM" },
+                14f, TEXT, true
+            ).apply { gravity = Gravity.CENTER }
+            val image = ImageView(this).apply { scaleType = ImageView.ScaleType.FIT_CENTER }
+            artwork.addView(initials, FrameLayout.LayoutParams(-1, -1))
+            artwork.addView(image, FrameLayout.LayoutParams(-1, -1))
+            row.addView(artwork, LinearLayout.LayoutParams(dp(40), dp(40)).apply {
+                marginStart = dp(4)
+                marginEnd = dp(12)
+            })
+            row.addView(label(station.name, 16f, TEXT).apply {
+                maxLines = 1
+                ellipsize = android.text.TextUtils.TruncateAt.END
+            }, LinearLayout.LayoutParams(0, -2, 1f))
+            previewRows.addView(row, LinearLayout.LayoutParams(-1, -2))
+            previewArtwork.add(image)
+            previewTargets.add(station to image)
+            val uri = previewLogoUri(station, prefs)
+            val fallback = metadata.logoResId(station)
+            val showInitials = uri == null && fallback == net.mspanc.twinsenradio.R.drawable.logo_placeholder
+            initials.visibility = if (showInitials) View.VISIBLE else View.GONE
+            image.visibility = if (uri != null || !showInitials) View.VISIBLE else View.GONE
+            if (uri != null) ArtworkLoader.into(
+                lifecycleScope, null, uri,
+                if (showInitials) android.R.color.transparent else fallback,
+                image,
+                fallbackDrawable = if (fallback == net.mspanc.twinsenradio.R.drawable.logo_placeholder)
+                    PhoneStationArtwork(station.name) else null
+            ) else if (!showInitials) image.setImageResource(fallback)
             if (index < minOf(2, selected.parsed.stations.lastIndex)) {
                 previewRows.addView(View(this).apply { setBackgroundColor(BORDER) },
                     LinearLayout.LayoutParams(-1, dp(1)))
             }
         }
         importFileButton.isEnabled = true
+        startPreviewPreload()
+    }
+
+    private fun startPreviewPreload() {
+        val selected = importState.preview ?: return
+        if (!lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)) return
+        if (previewPreloadSnapshot === selected && previewPreloadJob?.isActive == true) return
+        cancelPreviewPreload()
+        val visibleStations = selected.parsed.stations.take(3)
+        if (visibleStations.isEmpty()) return
+        previewPreloadSnapshot = selected
+        previewPreloadJob = lifecycleScope.launch {
+            StationArtworkStore.preloadPreview(
+                applicationContext, visibleStations
+            ) { changedStation ->
+                if (importState.preview !== selected || previewPreloadSnapshot !== selected ||
+                    isFinishing || isDestroyed
+                ) return@preloadPreview
+                val cached = StationArtworkStore.file(
+                    applicationContext, M3uParser.stableKey(changedStation.id)
+                ) ?: return@preloadPreview
+                val fallback = MetadataFactory(this@PhoneImportActivity, Prefs(this@PhoneImportActivity))
+                    .logoResId(changedStation)
+                previewTargets.filter { it.first.id == changedStation.id }.forEach { (_, image) ->
+                    image.visibility = View.VISIBLE
+                    (image.parent as? FrameLayout)?.getChildAt(0)?.visibility = View.GONE
+                    ArtworkLoader.into(
+                        lifecycleScope, null, Uri.fromFile(cached),
+                        if (fallback == net.mspanc.twinsenradio.R.drawable.logo_placeholder)
+                            android.R.color.transparent else fallback,
+                        image,
+                        fallbackDrawable = if (fallback == net.mspanc.twinsenradio.R.drawable.logo_placeholder)
+                            PhoneStationArtwork(changedStation.name) else null
+                    )
+                }
+            }
+        }
+    }
+
+    private fun cancelPreviewPreload() {
+        previewPreloadJob?.cancel()
+        previewPreloadJob = null
+        previewPreloadSnapshot = null
+    }
+
+    private fun previewLogoUri(station: net.mspanc.twinsenradio.data.Station, prefs: Prefs): Uri? {
+        prefs.customLogo(station.id)?.let { path ->
+            java.io.File(path).takeIf { it.isFile }?.let { return Uri.fromFile(it) }
+        }
+        if (!prefs.onlineArtworkEnabled) return null
+        if (StationArtworkStore.isGeneric(this, station)) return null
+        if (StationArtworkStore.hasDownloaded(this, station)) {
+            return StationArtworkStore.file(this, M3uParser.stableKey(station.id))?.let(Uri::fromFile)
+        }
+        station.logoUrl?.takeIf { it.isNotBlank() }?.let { return Uri.parse(it) }
+        return null
     }
 
     private fun displayName(uri: Uri): String? {

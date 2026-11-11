@@ -1,3 +1,5 @@
+*Modified for Streaming Radio by Impostor Labs.*
+
 # Streaming Radio
 
 **Your stations. Your playlists. Built for Android Automotive OS.**
@@ -94,7 +96,7 @@ Apple/iTunes artwork requests are disabled in release builds. Artwork availabili
 
 ## Open source
 
-A modified **GPL-3.0-or-later** fork of [szczepl/twinsen-radio](https://github.com/szczepl/twinsen-radio), originally copyright © 2026 Leszek Szczepanowski. Impostor Labs contributors made the AAOS, playlist, player, artwork, and release-preparation changes. Original authors retain their copyrights.
+A modified fork of [Twinsen Radio](https://github.com/szczepl/twinsen-radio), originally copyright © 2026 Leszek Szczepanowski. See [Licensing](LICENSING.md) for the Apache 2.0 and GPL options and the scope of the upstream permission.
 
 Based on Twinsen Radio by Leszek Szczepanowski. See [NOTICE](NOTICE) for attribution.
 

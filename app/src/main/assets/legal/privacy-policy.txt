@@ -1,24 +1,10 @@
-Streaming Radio privacy notice — release candidate
-Prepared 2 November 2026. Publisher brand: Impostor Labs.
+Streaming Radio privacy policy
+Updated 11 November 2026. Publisher brand: Impostor Labs.
 Contact: impostor.labs@gmail.com
 
-Optional phone playlist transfer (6 November 2026): When configured and selected,
-the phone and car use Firebase Authentication anonymous technical identities
-and Firebase Realtime Database to exchange a playlist URL or M3U contents and
-an optional name. Firebase receives connection information including IP address.
-HTTPS protects transmission; the content is not end-to-end encrypted. Pairing
-access expires after five minutes. Completed transfers are deleted; cancellation
-and returning clients attempt cleanup. If both clients disappear, physical
-deletion has no guaranteed deadline. Transfer credentials remain in app-private
-storage until cleanup succeeds. The feature collects no listening history and
-adds no analytics SDK. Manual playlist entry/playback does not require Firebase.
-The bundled default configuration disables this feature until a project is set.
+This policy describes Streaming Radio for Android and Android Automotive OS.
 
-
-This notice describes the local release candidate. A reviewed public policy
-URL and final release review are required before this app is published.
-
-The app has no app account, advertising or analytics SDK. It stores playlist
+The app has no user sign-in or advertising SDK. It stores playlist
 URLs, last-good playlist contents, station order, Favorites, stream selections,
 settings and chosen artwork on your device. Automotive backup is disabled.
 Uninstalling or clearing app storage removes that app-private data. Removing a
@@ -38,6 +24,37 @@ image search terms are sent to the station directory. Cached images are local.
 The local debug prototype may also use Apple/iTunes Search; that integration
 is disabled in the public candidate pending its promotional-content terms.
 
+Optional playlist transfer: When configured and used, this feature uses
+Firebase Authentication and Realtime Database to pair the phone and car.
+Firebase receives anonymous technical account identifiers, connection
+information such as your IP address, and the playlist URL or M3U contents
+and optional name you submit. HTTPS protects the transfer in transit. The
+playlist contents are not end-to-end encrypted. Manual playlist entry
+and radio playback do not require Firebase. The bundled default configuration
+keeps playlist transfer disabled until a Firebase project is configured.
+
+Pairing access expires after five minutes. The app tries to delete completed
+or cancelled transfers and retries cleanup when a client returns. Expiration
+blocks access but does not delete the data. If cleanup never succeeds, the
+server records may remain indefinitely. The phone browser and car may keep
+technical credentials and pending session details locally to retry cleanup.
+Anonymous Firebase accounts do not have a guaranteed deletion deadline.
+
+Google Cast is available only in the phone app. Its SDK may perform device
+discovery while the app is in use, as well as when you start a Cast session. It
+sends encrypted, anonymous Cast interaction and app activity data to Google,
+including generic discovery and session events and mobile-device/client-app information.
+Google says this information is not tied to an individual user, is used in
+aggregate to improve Cast, and is retained briefly before aggregation and
+deletion. This SDK collection cannot be disabled by the app or user, and the
+app developer cannot request deletion of those SDK records. The SDK does not
+send this telemetry to other apps or unrelated third parties. Google handles
+its own services under its privacy policy. Casting also sends the selected
+station's stream URL, name, station identifier and, if available, genre to
+the Cast receiver. The receiver fetches audio directly from the station
+host, which receives the receiver's ordinary network request
+information. Avoid casting streams whose URLs contain private credentials.
+
 Turning off automatic artwork stops new artwork/catalog requests; it does not
 stop playlist retrieval or playback you request. Requests already in progress
 may finish. Track-image cache is bounded; selected station images remain until
@@ -51,7 +68,10 @@ Third-party information:
 https://www.radio-browser.info/faq
 https://metabrainz.org/privacy
 https://coverartarchive.org/
+https://policies.google.com/privacy
+https://firebase.google.com/support/privacy
 https://www.apple.com/legal/privacy/ (debug prototype only)
 
-No app account is created, so there is no app-account deletion procedure.
+There is no user account to delete. See optional playlist transfer above
+for how its anonymous technical accounts and transfer data are handled.
 Questions or privacy requests: impostor.labs@gmail.com

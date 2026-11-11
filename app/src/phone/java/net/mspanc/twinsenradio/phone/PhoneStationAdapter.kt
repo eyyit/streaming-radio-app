@@ -6,7 +6,6 @@ import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
 import android.widget.*
-import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.lifecycleScope
 import androidx.media3.common.util.UnstableApi
@@ -30,7 +29,8 @@ internal class PhoneStationAdapter(
     private var signature = ""
     fun update(values: List<Station>) {
         val key = values.toString() + prefs.favourites + PlaybackStatusBus.stationId.value +
-            PlaybackStatusBus.nowPlaying.value + owner.lifecycle.currentState
+            PlaybackStatusBus.nowPlaying.value + owner.lifecycle.currentState +
+            net.mspanc.twinsenradio.playback.StationArtworkStore.loading.value + prefs.onlineArtworkEnabled
         stations = values
         if (key != signature) { signature = key; notifyDataSetChanged() }
     }
@@ -83,11 +83,39 @@ internal class PhoneStationAdapter(
         holder.row.setOnClickListener { play(station) }
         val factory = MetadataFactory(holder.row.context, prefs)
         val uri = factory.logoDisplayUri(station)
-        holder.logo.visibility = if (uri == null) View.GONE else View.VISIBLE
-        if (uri != null && owner.lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)) {
-            ArtworkLoader.into(owner.lifecycleScope, null, uri, R.drawable.logo_placeholder, holder.logo)
+        val fallback = factory.logoResId(station)
+        val showInitials = uri == null && fallback == R.drawable.logo_placeholder
+        val logoKey = uri?.toString() ?: if (showInitials) null else "res:$fallback"
+        if (holder.boundStationId != station.id || holder.boundLogoKey != logoKey) {
+            // Clear the old bitmap and invalidate its request before the new
+            // image starts, even while the owner is below STARTED.
+            ArtworkLoader.into(
+                owner.lifecycleScope, null, null, android.R.color.transparent, holder.logo
+            )
+            holder.boundStationId = station.id
+            holder.boundLogoKey = logoKey
         }
+        holder.initials.visibility = if (showInitials) View.VISIBLE else View.GONE
+        holder.logo.visibility = if (uri != null || !showInitials) View.VISIBLE else View.GONE
+        if (uri != null) ArtworkLoader.into(
+            owner.lifecycleScope, null, uri,
+            if (showInitials) android.R.color.transparent else fallback,
+            holder.logo,
+            fallbackDrawable = if (fallback == R.drawable.logo_placeholder) PhoneStationArtwork(station.name) else null
+        ) else if (!showInitials) holder.logo.setImageResource(fallback)
+    }
+
+    override fun onViewRecycled(holder: Holder) {
+        // Invalidate any in-flight load before this ImageView is reused.
+        ArtworkLoader.into(owner.lifecycleScope, null, null, android.R.color.transparent, holder.logo)
+        holder.boundStationId = null
+        holder.boundLogoKey = null
+        holder.initials.visibility = View.GONE
+        super.onViewRecycled(holder)
     }
     class Holder(root: View, val row: View, val selected: View, val title: TextView, val subtitle: TextView,
-        val initials: TextView, val logo: ImageView, val heart: ImageButton) : RecyclerView.ViewHolder(root)
+        val initials: TextView, val logo: ImageView, val heart: ImageButton) : RecyclerView.ViewHolder(root) {
+        var boundStationId: String? = null
+        var boundLogoKey: String? = null
+    }
 }

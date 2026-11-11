@@ -1,3 +1,4 @@
+// Modified for Streaming Radio by Impostor Labs.
 package net.mspanc.twinsenradio.ui
 
 import android.content.ComponentName

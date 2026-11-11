@@ -48,20 +48,22 @@ class HlsStreamsMetadataParserTest {
         assertTrue(update.hasArtwork)
     }
 
-    @Test fun capturedNovaSourceHostArtworkPassesDownloadPolicy() {
-        val capturedFormatUrl = "https://www.lesinrocks.com/wp-content/uploads/contract-cover.jpg"
-        val update = HlsStreamsMetadataParser.parse(id3(
-            frame("TIT2", "Nova Track"),
-            frame("TXXX", "StreamArtwork\u0000$capturedFormatUrl")
-        ))!!
-        assertEquals("Nova Track", update.title)
-        assertEquals(capturedFormatUrl, update.artworkUrl)
-        val checkedUrl = runCatching {
-            SafeHttp.checkedUrl(
+    @Test fun novaTrackAssetUrlsPassDownloadPolicy() {
+        val assets = NovaProducerArtworkFixture.trackAssets()
+        assertEquals(16, assets.size)
+        for (asset in assets) {
+            val update = HlsStreamsMetadataParser.parse(id3(
+                frame("TIT2", "Nova Track"),
+                frame("TXXX", "StreamArtwork\u0000${asset.url}")
+            ))!!
+            assertEquals("Nova Track", update.title)
+            assertEquals(asset.url, update.artworkUrl)
+            val checkedUrl = SafeHttp.checkedUrl(
                 update.artworkUrl!!, false, StreamArtworkPolicy.allowedHosts
-            ).toString()
-        }.getOrNull()
-        assertEquals(capturedFormatUrl, checkedUrl)
+            )
+            assertEquals(asset.url, checkedUrl.toString())
+            assertEquals(asset.host, checkedUrl.host)
+        }
     }
 
     @Test fun actualId3DecoderPreservesExplicitEmptyArtwork() {

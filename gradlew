@@ -1,4 +1,5 @@
 #!/bin/sh
+# Modified for Streaming Radio by Impostor Labs.
 
 #
 # Copyright © 2015-2021 the original authors.

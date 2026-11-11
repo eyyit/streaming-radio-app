@@ -4,7 +4,6 @@ import android.content.ComponentName
 import android.content.Intent
 import android.content.SharedPreferences
 import android.content.res.ColorStateList
-import android.graphics.drawable.Animatable
 import android.os.Bundle
 import android.os.SystemClock
 import android.view.Gravity
@@ -33,7 +32,6 @@ import net.mspanc.twinsenradio.R
 import net.mspanc.twinsenradio.data.*
 import net.mspanc.twinsenradio.playback.*
 import net.mspanc.twinsenradio.ui.ArtworkLoader
-import net.mspanc.twinsenradio.ui.SettingsActivity
 
 /** One phone media-session connection and one shared dock for every phone surface. */
 @UnstableApi
@@ -49,6 +47,7 @@ abstract class PhonePlaybackActivity : AppCompatActivity() {
     private var connection: ListenableFuture<MediaController>? = null
     private var ready = false
     private var connectionFailed = false
+    private lateinit var castController: PhoneCastController
     private lateinit var status: TextView
     private lateinit var previous: ImageButton
     private lateinit var play: ImageButton
@@ -62,7 +61,7 @@ abstract class PhonePlaybackActivity : AppCompatActivity() {
     private var mini: View? = null
     private var artVisibility: ImageButton? = null
     private var artRefresh: ImageButton? = null
-    private var artLoading: ImageView? = null
+    private var artLoading: PhoneGradientLoadingView? = null
     private val displayPreferences by lazy { getSharedPreferences("phone_player", MODE_PRIVATE) }
     protected val artworkHidden get() = displayPreferences.getBoolean("hide_art", false)
     private val settings by lazy { getSharedPreferences("twinsen_radio", MODE_PRIVATE) }
@@ -70,13 +69,17 @@ abstract class PhonePlaybackActivity : AppCompatActivity() {
         if (lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)) refreshPlaybackUi()
     }
     private val playerListener = object : Player.Listener {
-        override fun onEvents(player: Player, events: Player.Events) = refreshPlaybackUi()
+        override fun onEvents(player: Player, events: Player.Events) {
+            castController.onLocalPlaybackChanged()
+            refreshPlaybackUi()
+        }
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         WindowCompat.setDecorFitsSystemWindows(window, false)
         prefs = Prefs(this); repo = StationRepository.get(this); metadata = MetadataFactory(this, prefs)
+        castController = PhoneCastRouting.get(applicationContext).controller
         val root = PhoneUi.column(this).apply {
             setBackgroundColor(PhoneUi.CANVAS)
             setPadding(dp(16), 0, dp(16), dp(8))
@@ -87,6 +90,7 @@ abstract class PhonePlaybackActivity : AppCompatActivity() {
             minHeight = dp(24); visibility = View.GONE
         }
         root.addView(status)
+        if (this !is PhonePlayerActivity) root.addView(PhoneCastUi.dockRow(this))
         root.addView(buildDock())
         setContentView(root)
         ViewCompat.setOnApplyWindowInsetsListener(root) { v, insets ->
@@ -103,8 +107,15 @@ abstract class PhonePlaybackActivity : AppCompatActivity() {
                     PlaybackStatusBus.coverArtUrl, PlaybackStatusBus.trackInfo, PlaybackStatusBus.onAir,
                     PlaybackStatusBus.status, PlaybackStatusBus.wantsToPlay, PlaybackStatusBus.join,
                     PlaybackStatusBus.quality, PlaybackStatusBus.trackArtworkLoading,
-                    Prefs.favouritesFlow, repo.revisions).forEach { flow ->
-                    launch { flow.collect { refreshPlaybackUi() } }
+                    Prefs.favouritesFlow, repo.revisions, StationArtworkStore.loading).forEach { flow ->
+                    launch {
+                        flow.collect {
+                            if (flow === PlaybackStatusBus.stationId || flow === PlaybackStatusBus.quality) {
+                                castController.onLocalPlaybackChanged()
+                            }
+                            refreshPlaybackUi()
+                        }
+                    }
                 }
                 // Only the small factual notice is time-dependent; no artwork or network polling.
                 launch { while (isActive) { delay(1_000); renderStatus() } }
@@ -114,23 +125,25 @@ abstract class PhonePlaybackActivity : AppCompatActivity() {
     }
 
     override fun onStart() {
-        super.onStart(); settings.registerOnSharedPreferenceChangeListener(preferenceListener)
+        super.onStart(); artLoading?.resumeForActivity(); settings.registerOnSharedPreferenceChangeListener(preferenceListener)
+        PhoneCastRouting.get(applicationContext).listeners.add(::refreshPlaybackUi)
         connectionFailed = false
         val pending = MediaController.Builder(this,
             SessionToken(this, ComponentName(this, RadioService::class.java))).buildAsync()
         connection = pending
         pending.addListener({
             if (connection !== pending) return@addListener
-            try { controller = pending.get().also { it.addListener(playerListener) } }
+            try { controller = pending.get().also { it.addListener(playerListener) }; castController.onLocalPlaybackChanged() }
             catch (_: Exception) { connectionFailed = true }
             refreshPlaybackUi()
         }, ContextCompat.getMainExecutor(this))
     }
 
     override fun onStop() {
+        PhoneCastRouting.get(applicationContext).listeners.remove(::refreshPlaybackUi)
         settings.unregisterOnSharedPreferenceChangeListener(preferenceListener)
         controller?.removeListener(playerListener); controller = null
-        (artLoading?.drawable as? Animatable)?.stop()
+        artLoading?.stopForActivity()
         val pending = connection; connection = null
         if (pending != null) MediaController.releaseFuture(pending)
         super.onStop()
@@ -138,6 +151,7 @@ abstract class PhonePlaybackActivity : AppCompatActivity() {
 
     protected fun dp(value: Int) = PhoneUi.dp(this, value)
     protected fun shownStation(): Station? = PlaybackStatusBus.stationId.value?.let(repo::byId) ?: repo.resumeCandidate()
+    private fun activePlaybackStation(): Station? = controller?.currentMediaItem?.mediaId?.let(repo::byMediaId)
     protected fun trackText(): PhoneText = MetadataFactory.forPhone(
         PlaybackStatusBus.nowPlaying.value.takeUnless { PlaybackStatusBus.joining() },
         PlaybackStatusBus.trackInfo.value, PlaybackStatusBus.onAir.value, prefs.presentation, prefs.enrichWithYear)
@@ -153,12 +167,15 @@ abstract class PhonePlaybackActivity : AppCompatActivity() {
     }
     protected fun playStation(station: Station, browseParent: String) {
         val c = controller ?: return message("Playback is connecting. Try again.")
+        castController.onExplicitStationSelection(station.id)
         c.setMediaItem(MediaItem.Builder().setMediaId(Station.contextualMediaId(station.mediaId, browseParent)).build())
-        c.prepare(); c.play()
+        c.prepare()
+        if (!castController.isCasting()) c.play()
     }
     protected fun chooseCollection(parent: String): Boolean {
         if (collectionMembers(parent).isEmpty()) { message("${collectionLabel(parent)} has no stations. Current audio kept."); return false }
         val c = controller ?: run { message("Playback is connecting. Try again."); return false }
+        castController.onExplicitQueueNavigation()
         val wasPlaying = c.playWhenReady
         c.setMediaItem(MediaItem.Builder().setMediaId("/collection$parent").build())
         c.prepare(); c.playWhenReady = wasPlaying
@@ -201,16 +218,14 @@ abstract class PhonePlaybackActivity : AppCompatActivity() {
             setOnClickListener { refreshArtwork() }
         }
         refreshBox.addView(artRefresh)
-        artLoading = ImageView(this).apply {
-            setImageResource(R.drawable.avd_artwork_loading); visibility = View.GONE
-            contentDescription = "Loading artwork"
+        artLoading = PhoneGradientLoadingView(this).apply {
+            artRefresh?.let { bindIdleIndicator(it) }
+            importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
+            setLoading(false)
         }
-        refreshBox.addView(artLoading, FrameLayout.LayoutParams(dp(24), dp(24), Gravity.CENTER))
+        refreshBox.addView(artLoading, FrameLayout.LayoutParams(dp(32), dp(32), Gravity.CENTER))
         row.addView(refreshBox, LinearLayout.LayoutParams(dp(48), dp(48)))
-        row.addView(PhoneUi.icon(this, R.drawable.phone_cast, "Cast unavailable").apply {
-            setPadding(dp(8), dp(8), dp(8), dp(8))
-            isEnabled = false; alpha = .35f; tooltipText = "Cast unavailable"
-        })
+        PhoneCastUi.introduce(this, castController.createButton(row))
         return row
     }
 
@@ -227,17 +242,25 @@ abstract class PhonePlaybackActivity : AppCompatActivity() {
         }, ContextCompat.getMainExecutor(this))
     }
 
-    protected fun loadArt(target: ImageView) {
+    protected fun loadArt(
+        target: ImageView,
+        station: Station? = shownStation(),
+        useTrackArtwork: Boolean = true,
+        fallbackName: String? = station?.name
+    ) {
         if (!lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)) return
-        val station = shownStation()
         val now = PlaybackStatusBus.nowPlaying.value.takeUnless { PlaybackStatusBus.joining() }
+        val logo = station?.let(metadata::logoResId) ?: R.drawable.logo_placeholder
         ArtworkLoader.into(lifecycleScope,
-            if (prefs.onlineArtworkEnabled) metadata.phoneArtwork(now?.isRealSong == true,
+            if (useTrackArtwork && prefs.onlineArtworkEnabled && !artworkHidden) metadata.phoneArtwork(now?.isRealSong == true,
                 PlaybackStatusBus.coverArtUrl.value, PlaybackStatusBus.onAir.value) else null,
             station?.let { metadata.logoDisplayUri(it) }?.takeIf { prefs.onlineArtworkEnabled || it.scheme in listOf("file", "content") },
-            station?.let { metadata.logoResId(it) } ?: R.drawable.logo_placeholder,
-            target, blank = PlaybackStatusBus.artPending() && PlaybackStatusBus.stationId.value != null,
-            animate = prefs.artworkTransitionsEnabled)
+            logo,
+            target, blank = useTrackArtwork && !artworkHidden &&
+                PlaybackStatusBus.artPending() && PlaybackStatusBus.stationId.value != null,
+            animate = prefs.artworkTransitionsEnabled,
+            fallbackDrawable = fallbackName?.takeIf { logo == R.drawable.logo_placeholder }
+                ?.let(::PhoneStationArtwork))
     }
 
     private fun buildMiniPlayer(): View {
@@ -250,8 +273,8 @@ abstract class PhonePlaybackActivity : AppCompatActivity() {
         miniArt = ImageView(this).apply { scaleType = ImageView.ScaleType.FIT_CENTER }
         row.addView(miniArt, LinearLayout.LayoutParams(dp(64), dp(64)).apply { marginEnd = dp(12) })
         val text = PhoneUi.column(this)
-        miniTitle = PhoneUi.text(this, size = 18f)
-        miniArtist = PhoneUi.text(this, size = 16f)
+        miniTitle = PhoneUi.text(this, size = 18f).apply { maxLines = 2; ellipsize = android.text.TextUtils.TruncateAt.END }
+        miniArtist = PhoneUi.text(this, size = 16f).apply { maxLines = 1; ellipsize = android.text.TextUtils.TruncateAt.END }
         miniStation = PhoneUi.text(this, size = 14f, muted = true)
         listOf(miniTitle, miniArtist, miniStation).forEach { text.addView(it) }
         row.addView(text, LinearLayout.LayoutParams(0, -2, 1f)); mini = row
@@ -272,7 +295,7 @@ abstract class PhonePlaybackActivity : AppCompatActivity() {
             })
         }
         secondary.addView(action(R.drawable.phone_ic_settings_gear, "Settings") {
-            startActivity(Intent(this, SettingsActivity::class.java))
+            startActivity(Intent(this, PhoneSettingsActivity::class.java))
         }, LinearLayout.LayoutParams(0, -2, 1f))
         val shuffleAction = action(R.drawable.phone_shuffle_off, "Shuffle stations") { toggleShuffle() }
         shuffle = shuffleAction.getChildAt(0) as ImageButton
@@ -292,14 +315,20 @@ abstract class PhonePlaybackActivity : AppCompatActivity() {
         }
         previous = PhoneUi.icon(this, R.drawable.ic_transport_previous, "Previous station", 64).apply {
             setPadding(dp(16), dp(16), dp(16), dp(16))
-            setOnClickListener { controller?.seekToPreviousMediaItem() }
+            setOnClickListener {
+                castController.onExplicitQueueNavigation()
+                controller?.seekToPreviousMediaItem()
+            }
         }
         play = PhoneUi.icon(this, R.drawable.ic_transport_play, "Play", 88).apply {
             setPadding(dp(26), dp(26), dp(26), dp(26)); setOnClickListener { togglePlayback() }
         }
         next = PhoneUi.icon(this, R.drawable.ic_transport_next, "Next station", 64).apply {
             setPadding(dp(16), dp(16), dp(16), dp(16))
-            setOnClickListener { controller?.seekToNextMediaItem() }
+            setOnClickListener {
+                castController.onExplicitQueueNavigation()
+                controller?.seekToNextMediaItem()
+            }
         }
         listOf(previous, play, next).forEach { button -> transport.addView(FrameLayout(this).apply {
             addView(button, FrameLayout.LayoutParams(button.layoutParams.width, button.layoutParams.height, Gravity.CENTER))
@@ -320,6 +349,10 @@ abstract class PhonePlaybackActivity : AppCompatActivity() {
         }, ContextCompat.getMainExecutor(this))
     }
     private fun togglePlayback() {
+        if (castController.isCasting()) {
+            castController.toggleRemotePlayback()
+            return
+        }
         val c = controller ?: return
         when {
             c.playWhenReady -> c.pause()
@@ -345,9 +378,11 @@ abstract class PhonePlaybackActivity : AppCompatActivity() {
         }
         play.background = PhoneUi.shape(this, theme.accent, 80)
         play.imageTintList = ColorStateList.valueOf(PhoneUi.TEXT)
-        play.setImageResource(if (c?.playWhenReady == true) R.drawable.ic_transport_pause else R.drawable.ic_transport_play)
-        play.contentDescription = if (c?.playWhenReady == true) "Pause" else "Play"
-        play.isEnabled = c != null && (c.currentMediaItem != null || shown != null)
+        val isPlaying = if (castController.isCasting()) castController.isRemotePlaying() else c?.playWhenReady == true
+        play.setImageResource(if (isPlaying) R.drawable.ic_transport_pause else R.drawable.ic_transport_play)
+        play.contentDescription = if (isPlaying) "Pause" else "Play"
+        play.isEnabled = castController.isCasting() ||
+            (c != null && (c.currentMediaItem != null || shown != null))
         previous.isEnabled = c?.currentMediaItem != null && c.isCommandAvailable(Player.COMMAND_SEEK_TO_PREVIOUS_MEDIA_ITEM)
         next.isEnabled = c?.currentMediaItem != null && c.isCommandAvailable(Player.COMMAND_SEEK_TO_NEXT_MEDIA_ITEM)
         listOf(play, previous, next, shuffle, favorite).forEach { it.alpha = if (it.isEnabled) 1f else .35f }
@@ -357,23 +392,22 @@ abstract class PhonePlaybackActivity : AppCompatActivity() {
             alpha = if (artworkHidden) .55f else 1f
         }
         val busy = prefs.onlineArtworkEnabled && PlaybackStatusBus.trackArtworkLoading.value
-        artLoading?.visibility = if (busy) View.VISIBLE else View.GONE
-        (artLoading?.drawable as? Animatable)?.let { if (busy) it.start() else it.stop() }
+        artRefresh?.contentDescription = if (busy) "Loading artwork" else "Refresh track artwork"
         artRefresh?.apply {
-            visibility = if (busy) View.INVISIBLE else View.VISIBLE
+            visibility = View.VISIBLE
             val now = PlaybackStatusBus.nowPlaying.value
             isEnabled = c?.isSessionCommandAvailable(RadioService.CMD_REFRESH_ARTWORK) == true &&
                 PlaybackStatusBus.stationId.value != null && prefs.onlineArtworkEnabled && !busy &&
                 now?.isRealSong == true && !now.artist.isNullOrBlank() && !now.songTitle.isNullOrBlank()
-            alpha = if (isEnabled) 1f else .35f
         }
-        mini?.visibility = if (shown == null) View.GONE else View.VISIBLE
+        artLoading?.setLoading(busy, if (artRefresh?.isEnabled == true) 1f else .35f)
+        mini?.visibility = if (shown == null || castController.isCasting()) View.GONE else View.VISIBLE
         val text = trackText()
         miniTitle?.text = text.title.ifBlank { shown?.name.orEmpty() }
         miniArtist?.text = text.artist
         miniArtist?.visibility = if (text.artist.isBlank()) View.GONE else View.VISIBLE
         miniStation?.text = shown?.name.orEmpty()
-        miniArt?.let(::loadArt)
+        miniArt?.let { loadArt(it) }
         renderContent()
     }
     private fun renderStatus() {

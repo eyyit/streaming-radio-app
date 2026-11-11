@@ -1,3 +1,82 @@
+# Phone version 13 corrections - private candidate
+
+Phone version 13 / 0.3.0-rc11 targets the existing Streaming Radio package;
+automotive remains version 11 / 0.3.0-rc9. The approved shuffle A PNG is locked
+at SHA256 b431a22813b224e68bc07b5362f79137fa7c063319a0c406a1cfc192e8a8d032
+and must not be redrawn.
+
+The private source includes the native Cast volume foundation, general media-key
+bridge and receiver-backed legacy volume dialog. The Cast button opens the app's
+receiver-backed dialog because the Android System Output Switcher showed a
+seekbar change from 32% to 18% while the receiver stayed at 32% after 45 seconds.
+That observation came from the selected controls candidate APK
+SHA256 a8e63c22215846163006ac1d61aacfb42f2f7bc8074c50d20d409116c20ac5c6.
+On that candidate, global media controls, volume key changes from 32% to 34%
+and back, and owned-session cold resume passed. No acoustic confirmation is
+claimed. The final integrated artifact still needs device verification of the
+receiver-backed dialog; the earlier candidate checks do not certify it.
+
+Native Cast volume uses Android's public framework APIs. On Android 8.0, the
+phone session uses the app's key handler so only the initial headset play/pause
+press changes playback. The final native controls still need device verification.
+
+The approved artwork, import-preview, layout, naming and loading-ring changes
+have private build receipts. Required release gates include the exact-source
+four-variant matrix, screenshots from the final artifact, fresh local review,
+required CI and manual publication approval. Leszek's Apache 2.0 grant covers
+his upstream Twinsen Radio code. Elliott authorized Apache 2.0 for the fork's
+original contributions to the extent he holds rights in them. Verify Cast SDK
+distribution terms separately. Preserve the NOTICE and the Account & About
+credit in both apps. Earlier version 12 publication authorization is historical.
+
+No commit, push, signing, Play upload or canonical server write is authorized by
+this handoff. Private evidence lives under corrections-20261110. Notes below are
+historical and do not report the current candidate's readiness.
+
+The web and bundled privacy policies now share the same text, covering optional
+Firebase playlist transfer and phone Cast. Verify the public policy URL before
+submitting to Play. The phone Cast notification now shows the receiver,
+opens the expanded player when tapped, and offers Disconnect to request
+that the sender session end while the receiver keeps playing. Android 13 media
+controls receive the same action through the platform media session.
+The separate Stop media command still stops receiver playback.
+
+Pixel 4a hardware check (11 November): Android 13 showed Kids Speaker on
+the media card, and tapping the card opened the expanded phone player.
+Disconnect removed the phone Cast session, but Kids Speaker also lost its
+receiver app and media session on both the piano HLS and Groove Salad MP3
+tests. The app calls endCurrentSession(false), the same call used by the
+SDK's Disconnect action. Continued playback after disconnect is unverified
+and this hardware check failed. The built-in Cast dialog on Kids Speaker
+offered only Stop casting. A separate build then used AndroidX MediaRouter
+UNSELECT_REASON_DISCONNECTED. The Pixel logged reason 1, but the receiver
+app and session again disappeared while Groove Salad was playing. The
+experimental change was reverted. AndroidX documents keep-playing as a
+route capability that is normally available with multiple sources. No
+second sender was connected for these tests. Do not treat a passing unit
+test or either Android disconnect call as proof of continued playback.
+
+Two-sender retest (11 November): installed the same debug APK on a second
+Pixel 4a and joined the first Pixel's existing Groove Salad Cast session
+without starting playback on the second phone. The receiver and media
+session IDs matched before join, after join, and after the first Pixel
+tapped Disconnect. The first Pixel disconnected, the second stayed
+connected, and Kids Speaker reported PLAYING as playback advanced.
+The single-sender failure above still applies.
+
+The notification now uses the route's advertised capability to choose
+Disconnect or Stop casting. Neither notification action force-stops the
+receiver. On Kids Speaker the provider displayed Stop casting even with both
+Pixels joined. The first Pixel's Stop casting action removed its controls
+while the second stayed joined and receiver playback advanced.
+
+A separate rejoin defect remains: when the first Pixel joined while it had
+a saved local selection, the receiver app stayed open but Groove Salad
+reloaded with a new media session and paused. Joining an already-playing
+session must preserve that receiver playback before this candidate ships.
+
+---
+
 # Phone version 12 source release prepared - 9 November 2026
 
 Native phone library, player, collection navigation and URL/local M3U import
@@ -150,3 +229,20 @@ The vehicle controls native media layout, action placement and text truncation.
 Artwork depends on metadata, matching catalogs and available licensed sources.
 System-wide vehicle audio distortion remains unresolved; no fix is claimed.
 Emulator checks do not establish physical-vehicle acceptance or Play approval.
+
+## Phone release source preparation - 10 November 2026
+
+The phone artwork and import source stack is being prepared from public Git
+baseline 76d86cc5e9b4ba2d57b7c5df6585c64f6f43f89f. Core units 1-4 passed
+phone and automotive debug unit tests where applicable, and each unit passed
+the prepared-source inventory check. Candidate source remains local and
+unpublished. Phone version 13 / 0.3.0-rc11 remains a later Cast wiring gate;
+AAOS version 11 remains unchanged.
+
+## Phone Cast source preparation - 10 November 2026
+
+The phone Cast sender SDK is pinned to 22.3.1 for the existing Android Gradle
+Plugin toolchain. Version 23.0.0 was rejected by AAR metadata requiring AGP
+9.1; no toolchain upgrade was made. SDK policy, options and privacy/Data
+Safety preparation are staged. Receiver device testing and distribution
+remain separate gates.

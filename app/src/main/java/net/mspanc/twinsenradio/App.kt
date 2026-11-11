@@ -1,3 +1,4 @@
+// Modified for Streaming Radio by Impostor Labs.
 package net.mspanc.twinsenradio
 
 import android.app.Application
@@ -7,7 +8,9 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import net.mspanc.twinsenradio.data.StationRepository
 
-class App : Application() {
+open class App : Application() {
+
+    open fun handleRemoteMediaButton(event: android.view.KeyEvent): Boolean = false
 
     override fun onCreate() {
         super.onCreate()

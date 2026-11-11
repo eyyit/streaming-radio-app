@@ -1,8 +1,18 @@
+*Modified for Streaming Radio by Impostor Labs.*
+
 # External Dependencies
 
-Twinsen Radio has no paid or closed-source dependencies. Everything below
-is free and open source, and none of these libraries require an API key
-or an account.
+The original dependencies listed below are free and open source. The phone
+candidate additionally links Google Cast Framework 22.3.1 under Google's SDK
+terms; it is not covered by that open-source claim.
+
+The Cast Framework Maven POM identifies the Android Software Development Kit
+License: https://developer.android.com/studio/terms.html. Cast also has
+additional terms: https://developers.google.com/cast/docs/terms.
+Leszek Szczepanowski granted Elliott Apache 2.0 permission for the upstream
+Twinsen Radio code alongside GPLv3. See NOTICE for original-author credit.
+Before shipping a Cast build, verify the rights to the fork's additions and
+the terms for distributing the bundled SDK.
 
 | Library | Version | License | Role in the project |
 |---|---|---|---|
@@ -41,3 +51,12 @@ The public release candidate disables the Apple/iTunes integration pending
 its promotional-content requirements. Radio Browser's directory-data license
 does not license the linked audio, branding or artwork. See the release privacy
 and license-compliance documents for external service disclosures.
+
+
+Phone gradient artwork loading indicator (10 November 2026)
+
+Native Android adaptation of OpenAI Apps SDK UI LoadingIndicator.
+Copyright 2025 OpenAI; MIT license. Reference:
+https://github.com/openai/apps-sdk-ui/blob/main/src/components/Indicator/LoadingIndicator.module.css
+This is a phone UI component; the AAOS indicator is unchanged.
+Full license: app/src/main/assets/legal/openai-loading-indicator-MIT.txt
