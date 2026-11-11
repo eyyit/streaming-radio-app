@@ -1,10 +1,10 @@
 <!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Streaming Radio Privacy Policy — Impostor Labs</title><style>body{font:18px/1.6 system-ui,sans-serif;max-width:760px;margin:40px auto;padding:0 24px;color:#20252b}pre{font:inherit;white-space:pre-wrap;overflow-wrap:anywhere}</style><main><pre>Streaming Radio privacy policy
-Prepared 2 November 2026. Publisher brand: Impostor Labs.
+Updated 11 November 2026. Publisher brand: Impostor Labs.
 Contact: impostor.labs@gmail.com
 
-This policy describes Streaming Radio for Android Automotive OS.
+This policy describes Streaming Radio for Android and Android Automotive OS.
 
-The app has no app account, advertising or analytics SDK. It stores playlist
+The app has no user sign-in or advertising SDK. It stores playlist
 URLs, last-good playlist contents, station order, Favorites, stream selections,
 settings and chosen artwork on your device. Automotive backup is disabled.
 Uninstalling or clearing app storage removes that app-private data. Removing a
@@ -24,6 +24,37 @@ image search terms are sent to the station directory. Cached images are local.
 The local debug prototype may also use Apple/iTunes Search; that integration
 is disabled in the public candidate pending its promotional-content terms.
 
+Optional playlist transfer: When configured and used, this feature uses
+Firebase Authentication and Realtime Database to pair the phone and car.
+Firebase receives anonymous technical account identifiers, connection
+information such as your IP address, and the playlist URL or M3U contents
+and optional name you submit. HTTPS protects the transfer in transit. The
+playlist contents are not end-to-end encrypted. Manual playlist entry
+and radio playback do not require Firebase. The bundled default configuration
+keeps playlist transfer disabled until a Firebase project is configured.
+
+Pairing access expires after five minutes. The app tries to delete completed
+or cancelled transfers and retries cleanup when a client returns. Expiration
+blocks access but does not delete the data. If cleanup never succeeds, the
+server records may remain indefinitely. The phone browser and car may keep
+technical credentials and pending session details locally to retry cleanup.
+Anonymous Firebase accounts do not have a guaranteed deletion deadline.
+
+Google Cast is available only in the phone app. Its SDK may perform device
+discovery while the app is in use, as well as when you start a Cast session. It
+sends encrypted, anonymous Cast interaction and app activity data to Google,
+including generic discovery and session events and mobile-device/client-app information.
+Google says this information is not tied to an individual user, is used in
+aggregate to improve Cast, and is retained briefly before aggregation and
+deletion. This SDK collection cannot be disabled by the app or user, and the
+app developer cannot request deletion of those SDK records. The SDK does not
+send this telemetry to other apps or unrelated third parties. Google handles
+its own services under its privacy policy. Casting also sends the selected
+station's stream URL, name, station identifier and, if available, genre to
+the Cast receiver. The receiver fetches audio directly from the station
+host, which receives the receiver's ordinary network request
+information. Avoid casting streams whose URLs contain private credentials.
+
 Turning off automatic artwork stops new artwork/catalog requests; it does not
 stop playlist retrieval or playback you request. Requests already in progress
 may finish. Track-image cache is bounded; selected station images remain until
@@ -37,8 +68,11 @@ Third-party information:
 https://www.radio-browser.info/faq
 https://metabrainz.org/privacy
 https://coverartarchive.org/
+https://policies.google.com/privacy
+https://firebase.google.com/support/privacy
 https://www.apple.com/legal/privacy/ (debug prototype only)
 
-No app account is created, so there is no app-account deletion procedure.
+There is no user account to delete. See optional playlist transfer above
+for how its anonymous technical accounts and transfer data are handled.
 Questions or privacy requests: impostor.labs@gmail.com
 </pre></main></html>
