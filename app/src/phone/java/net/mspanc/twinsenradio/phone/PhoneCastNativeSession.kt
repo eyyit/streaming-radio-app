@@ -161,11 +161,8 @@ class PhoneCastNativeSession(
             .putString(MediaMetadata.METADATA_KEY_DISPLAY_SUBTITLE, receiverName)
             .build())
         media.setSessionActivity(playerActivityPendingIntent())
-        val routeAction = routeAction(cast)
         val state = PlaybackState.Builder().setActions(
             PlaybackState.ACTION_PLAY or PlaybackState.ACTION_PAUSE or PlaybackState.ACTION_STOP)
-            .addCustomAction(routeAction, routeActionLabel(routeAction),
-                android.R.drawable.ic_menu_close_clear_cancel)
             .setState(if (playing()) PlaybackState.STATE_PLAYING else PlaybackState.STATE_PAUSED,
                 PlaybackState.PLAYBACK_POSITION_UNKNOWN, 1f).build()
         media.setPlaybackState(state)
@@ -256,9 +253,6 @@ class PhoneCastNativeSession(
     private fun routeAction(cast: CastSession): String =
         if (canDisconnectAndKeepPlaying(cast)) "disconnect" else "stop_casting"
 
-    private fun routeActionLabel(action: String): String =
-        if (action == "disconnect") "Disconnect" else "Stop casting"
-
     fun notification(): Notification {
         context.getSystemService(NotificationManager::class.java).createNotificationChannel(
             NotificationChannel("cast_playback", "Casting", NotificationManager.IMPORTANCE_LOW))
@@ -268,10 +262,6 @@ class PhoneCastNativeSession(
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
         val actionIcon = Icon.createWithResource(context,
             if (playing()) R.drawable.ic_transport_pause else R.drawable.ic_transport_play)
-        val routeAction = currentOwned()?.let(::routeAction) ?: "stop_casting"
-        val routeCommand = PendingIntent.getBroadcast(context, 1,
-            Intent(context, PhoneCastNotificationReceiver::class.java).setAction(routeAction),
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
         val receiverName = currentOwned()?.castDevice?.friendlyName ?: "Casting"
         return Notification.Builder(context, "cast_playback").setSmallIcon(R.drawable.ic_transport_play)
             .setContentTitle(session?.controller?.metadata?.getString(MediaMetadata.METADATA_KEY_TITLE)
@@ -279,10 +269,7 @@ class PhoneCastNativeSession(
             .setContentIntent(playerActivityPendingIntent())
             .setOngoing(playing()).setOnlyAlertOnce(true)
             .addAction(Notification.Action.Builder(actionIcon, if (playing()) "Pause" else "Play", intent).build())
-            .addAction(Notification.Action.Builder(
-                Icon.createWithResource(context, android.R.drawable.ic_menu_close_clear_cancel),
-                routeActionLabel(routeAction), routeCommand).build())
             .setStyle(Notification.MediaStyle()
-                .setMediaSession(session?.sessionToken).setShowActionsInCompactView(0, 1)).build()
+                .setMediaSession(session?.sessionToken).setShowActionsInCompactView(0)).build()
     }
 }

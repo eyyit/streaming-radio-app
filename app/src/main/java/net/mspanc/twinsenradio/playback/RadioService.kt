@@ -328,6 +328,9 @@ class RadioService : MediaLibraryService() {
         if (prefs.traceEnabled) startTrace()
 
         player = buildPlayer()
+        if (!net.mspanc.twinsenradio.BuildConfig.IS_AUTOMOTIVE) {
+            PlaybackStatusBus.phoneStationNeighbor = { stationNavigationTarget(it, preview = true) }
+        }
         player.addListener(PlayerEvents())
         player.addAnalyticsListener(
             LoadDiagnostics { format ->
@@ -444,6 +447,7 @@ class RadioService : MediaLibraryService() {
     override fun onGetSession(controllerInfo: MediaSession.ControllerInfo): MediaLibrarySession = session
 
     override fun onDestroy() {
+        if (!net.mspanc.twinsenradio.BuildConfig.IS_AUTOMOTIVE) PlaybackStatusBus.phoneStationNeighbor = null
         PlaybackStatusBus.setActuallyPlaying(false)
         PlaybackStatusBus.resetMissingTrackInfo()
         clockTick?.let { clockHandler.removeCallbacks(it) }
@@ -2128,12 +2132,14 @@ class RadioService : MediaLibraryService() {
             .setSessionCommand(CMD_TOGGLE_SHUFFLE)
             .setDisplayName(if (enabled) "Shuffle stations on" else "Shuffle stations off")
             .setIconResId(
-                if (enabled) net.mspanc.twinsenradio.R.drawable.ic_shuffle_on_aa
-                else net.mspanc.twinsenradio.R.drawable.ic_shuffle_off_aa
+                if (enabled) net.mspanc.twinsenradio.R.drawable.ic_session_shuffle_on
+                else net.mspanc.twinsenradio.R.drawable.ic_session_shuffle_off
             )
             .setExtras(
                 Bundle().apply {
-                    putInt(MediaConstants.EXTRAS_KEY_COMMAND_BUTTON_ICON_COMPAT, icon)
+                    if (net.mspanc.twinsenradio.BuildConfig.IS_AUTOMOTIVE) {
+                        putInt(MediaConstants.EXTRAS_KEY_COMMAND_BUTTON_ICON_COMPAT, icon)
+                    }
                 }
             )
             .build()
@@ -2294,6 +2300,8 @@ class RadioService : MediaLibraryService() {
             // connection result. The post puts it after that.
             clockHandler.post { checkStale("klient") }
             val access = access(controller)
+            val phoneNotification = !net.mspanc.twinsenradio.BuildConfig.IS_AUTOMOTIVE &&
+                session.isMediaNotificationController(controller)
             // Mirror Media3's controller-aware security defaults. The deprecated
             // session-only builder used here previously granted every caller
             // all playback commands, including untrusted third-party apps.
@@ -2305,17 +2313,22 @@ class RadioService : MediaLibraryService() {
                     // Keep the trusted host's existing turn-off shortcut ready
                     // if the user enables diagnostics after this connection.
                     // The invocation guard still forbids external enabling.
-                    if (access.controlPlayback) add(CMD_TOGGLE_DIAG)
+                    if (access.controlPlayback && !phoneNotification) add(CMD_TOGGLE_DIAG)
                     if (access.editFavorites) add(CMD_TOGGLE_FAV)
-                    if (access.refreshArtwork) add(CMD_REFRESH_ARTWORK)
+                    if (access.refreshArtwork && !phoneNotification) add(CMD_REFRESH_ARTWORK)
                     if (access.controlPlayback) add(CMD_TOGGLE_SHUFFLE)
                 }
                 .build()
+            val playerCommands = if (access.controlPlayback)
+                MediaSession.ConnectionResult.DEFAULT_PLAYER_COMMANDS
+            else MediaSession.ConnectionResult.DEFAULT_UNTRUSTED_PLAYER_COMMANDS
             return MediaSession.ConnectionResult.AcceptedResultBuilder(session, controller)
                 .setAvailableSessionCommands(commands)
-                .setAvailablePlayerCommands(if (access.controlPlayback)
-                    MediaSession.ConnectionResult.DEFAULT_PLAYER_COMMANDS
-                else MediaSession.ConnectionResult.DEFAULT_UNTRUSTED_PLAYER_COMMANDS)
+                .setAvailablePlayerCommands(if (phoneNotification) playerCommands.buildUpon()
+                    .remove(Player.COMMAND_SEEK_BACK)
+                    .remove(Player.COMMAND_SEEK_FORWARD)
+                    .remove(Player.COMMAND_SEEK_IN_CURRENT_MEDIA_ITEM)
+                    .build() else playerCommands)
                 // A freshly connected controller must get the current star state
                 .setCustomLayout(customLayout())
                 .build()
@@ -2717,8 +2730,18 @@ class RadioService : MediaLibraryService() {
                 val selected = repo.byMediaId(mediaItems[0].mediaId)
                     ?: mediaItems[0].requestMetadata.searchQuery?.let { repo.search(it).firstOrNull() }
                 if (selected != null) {
-                    val parent = CollectionQueue.stationScope(prefs.activeBrowseParent,
-                        Station.parentFromMediaId(mediaItems[0].mediaId))
+                    val routedParent = Station.parentFromMediaId(mediaItems[0].mediaId)
+                    val phoneSelection = !net.mspanc.twinsenradio.BuildConfig.IS_AUTOMOTIVE &&
+                        routedParent?.startsWith(PHONE_SELECTION_PREFIX) == true
+                    val selectedParent = if (phoneSelection) {
+                        routedParent?.removePrefix(PHONE_SELECTION_PREFIX)
+                    } else routedParent
+                    val parent = CollectionQueue.stationScope(
+                        prefs.activeBrowseParent,
+                        selectedParent,
+                        phoneSelection
+                    )
+                    if (parent != prefs.activeBrowseParent) stationTraversal.invalidateOrder()
                     prefs.activeBrowseParent = parent
                     val queue = CollectionQueue.withSelected(childrenOf(parent), selected) { it.id }
                     return Futures.immediateFuture(MediaSession.MediaItemsWithStartPosition(
@@ -2860,18 +2883,7 @@ class RadioService : MediaLibraryService() {
         val shuffled = prefs.randomStationOrder
         if (net.mspanc.twinsenradio.BuildConfig.IS_AUTOMOTIVE && !shuffled) return false
         val current=Station.idFromMediaId(player.currentMediaItem?.mediaId.orEmpty())
-        val allowed = childrenOf(prefs.activeBrowseParent).map { it.id }
-        val target = if (shuffled) {
-            if (delta < 0) stationTraversal.previous(allowed.toSet(), current)
-            else stationTraversal.next(allowed, current)
-        } else {
-            val index = allowed.indexOf(current)
-            when {
-                allowed.isEmpty() -> null
-                index < 0 -> if (delta < 0) allowed.last() else allowed.first()
-                else -> allowed[Math.floorMod(index + delta, allowed.size)]
-            }
-        }
+        val target = stationNavigationTarget(delta, preview = false)
         saveStationTraversal()
         if(target==null || target==current) return true
         val wasPlaying=player.playWhenReady
@@ -2886,6 +2898,24 @@ class RadioService : MediaLibraryService() {
         if (!net.mspanc.twinsenradio.BuildConfig.IS_AUTOMOTIVE) refreshAutomotiveQueue()
         player.prepare(); player.playWhenReady=wasPlaying
         return true
+    }
+
+    private fun stationNavigationTarget(delta: Int, preview: Boolean): String? {
+        val current = Station.idFromMediaId(player.currentMediaItem?.mediaId.orEmpty())
+        val allowed = childrenOf(prefs.activeBrowseParent).map { it.id }
+        if (!prefs.randomStationOrder) {
+            val index = allowed.indexOf(current)
+            return when {
+                allowed.isEmpty() -> null
+                index < 0 -> if (delta < 0) allowed.last() else allowed.first()
+                else -> allowed[Math.floorMod(index + delta, allowed.size)]
+            }
+        }
+        return if (delta < 0) {
+            if (preview) stationTraversal.peekPrevious(allowed.toSet(), current)
+            else stationTraversal.previous(allowed.toSet(), current)
+        } else if (preview) stationTraversal.peekNext(allowed, current)
+        else stationTraversal.next(allowed, current)
     }
     private fun preloadStationArtwork() {
         if (!prefs.onlineArtworkEnabled) {
@@ -2940,6 +2970,7 @@ class RadioService : MediaLibraryService() {
 
     companion object {
         private const val COLLECTION_PREFIX = "/collection"
+        internal const val PHONE_SELECTION_PREFIX = "/phone-select"
         private const val TAG = "RadioService"
         private const val TAG_ICY = "IcyMeta"
         private const val TAG_DUMP = "MetaDump"

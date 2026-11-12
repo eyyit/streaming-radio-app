@@ -17,7 +17,6 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import net.mspanc.twinsenradio.R
 import net.mspanc.twinsenradio.data.AppearanceTheme
-import net.mspanc.twinsenradio.data.PlaylistSource
 import net.mspanc.twinsenradio.playback.RadioService
 import net.mspanc.twinsenradio.playback.PlaybackStatusBus
 
@@ -28,7 +27,7 @@ class PhoneLibraryActivity : PhonePlaybackActivity() {
     private var picking = false
     private var restoredListState: Parcelable? = null
     private lateinit var utilities: View
-    private lateinit var art: ImageView
+    private lateinit var art: PhoneCarouselArtwork
     private lateinit var title: TextView
     private lateinit var artist: TextView
     private lateinit var station: TextView
@@ -39,9 +38,8 @@ class PhoneLibraryActivity : PhonePlaybackActivity() {
     private lateinit var main: LinearLayout
     private lateinit var list: RecyclerView
     private lateinit var empty: TextView
-    private lateinit var add: Button
     private lateinit var stations: PhoneStationAdapter
-    private lateinit var sources: SourcesAdapter
+    private val stationFollow = PhoneStationFollow()
     private var chooserSignature = ""
     private val positions = mutableMapOf<String, Parcelable?>()
     private val notifications = registerForActivityResult(ActivityResultContracts.RequestPermission()) { }
@@ -50,13 +48,24 @@ class PhoneLibraryActivity : PhonePlaybackActivity() {
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        browse = savedInstanceState?.getString("browse") ?: "all"
+        browse = savedInstanceState?.getString("browse")?.takeIf { it == "favorites" } ?: "all"
         picking = savedInstanceState?.getBoolean("picking") ?: false
         restoredListState = savedInstanceState?.getParcelable("list_position")
         super.onCreate(savedInstanceState)
         onBackPressedDispatcher.addCallback(this, closeChooser)
         closeChooser.isEnabled = picking
         if (Build.VERSION.SDK_INT >= 33) notifications.launch(Manifest.permission.POST_NOTIFICATIONS)
+    }
+    override fun onStop() {
+        stationFollow.reset()
+        super.onStop()
+    }
+
+    override fun stationAreaReady() = !stationFollow.isCentering
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        showChooser(false)
     }
     override fun onSaveInstanceState(outState: Bundle) {
         outState.putString("browse", browse); outState.putBoolean("picking", picking)
@@ -65,12 +74,17 @@ class PhoneLibraryActivity : PhonePlaybackActivity() {
     }
 
     override fun buildBody(): View = LibraryBody(this).apply {
-        utilities = buildPlayerHeader(expanded = false); headerContent.addView(utilities)
-        val summary = PhoneUi.row(this@PhoneLibraryActivity).apply { minimumHeight = dp(120) }
-        art = ImageView(this@PhoneLibraryActivity).apply {
+        utilities = buildPlayerHeader(); headerContent.addView(utilities)
+        val summary = PhoneUi.row(this@PhoneLibraryActivity).apply {
+            minimumHeight = dp(120)
+            isFocusable = true
+            setOnClickListener { openExpandedPlayer() }
+        }
+        art = PhoneCarouselArtwork(this@PhoneLibraryActivity).apply {
             scaleType = ImageView.ScaleType.CENTER_CROP; background = PhoneUi.shape(context, PhoneUi.SURFACE, 12)
             clipToOutline = true; contentDescription = "Current track artwork or station image"
         }
+        enableArtworkStationSwipe(art, expandOnTap = true)
         summary.addView(art, LinearLayout.LayoutParams(dp(118), dp(118)).apply {
             marginStart = dp(6); marginEnd = dp(22)
         })
@@ -79,7 +93,10 @@ class PhoneLibraryActivity : PhonePlaybackActivity() {
         artist = PhoneUi.text(this@PhoneLibraryActivity, size = 18f).apply { maxLines = 1; ellipsize = android.text.TextUtils.TruncateAt.END }
         station = PhoneUi.text(this@PhoneLibraryActivity, size = 16f, muted = true).apply { maxLines = 1; ellipsize = android.text.TextUtils.TruncateAt.END }
         listOf(title, artist, station).forEach { text.addView(it) }
-        summary.addView(text, LinearLayout.LayoutParams(0, -2, 1f)); headerContent.addView(summary)
+        art.attachDetails(title, artist, station)
+        playerTransitionViews = listOf(art, title, artist, station)
+        summary.addView(text, LinearLayout.LayoutParams(0, -2, 1f))
+        headerContent.addView(summary, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(12) })
         val selector = PhoneUi.row(this@PhoneLibraryActivity).apply {
             minimumHeight = dp(48); background = PhoneUi.shape(context, PhoneUi.CONTROL)
             setPadding(dp(12), 0, dp(8), 0); isClickable = true; isFocusable = true
@@ -91,27 +108,28 @@ class PhoneLibraryActivity : PhonePlaybackActivity() {
             importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO; isFocusable = false
             setOnClickListener { showChooser(!picking) }
         })
-        headerContent.addView(selector); headerContent.addView(PhoneUi.gap(this@PhoneLibraryActivity, 12))
+        val browseControls = PhoneUi.column(this@PhoneLibraryActivity)
+        browseControls.addView(selector)
+        browseControls.addView(PhoneUi.gap(this@PhoneLibraryActivity, 12))
         browseHeader = PhoneUi.text(this@PhoneLibraryActivity, "Browse library", 14f, true)
-        headerContent.addView(browseHeader)
+        browseControls.addView(browseHeader)
         tabs = PhoneUi.row(this@PhoneLibraryActivity)
-        listOf("all" to "All stations", "favorites" to "Favorites", "playlists" to "Playlists").forEach { (id, caption) ->
+        listOf("all" to "All stations", "favorites" to "Favorites").forEach { (id, caption) ->
             tabs.addView(PhoneUi.button(this@PhoneLibraryActivity, caption) { changeBrowse(id) }.apply {
                 tag = id; textSize = 14f; setPadding(dp(4), 0, dp(4), 0)
             }, LinearLayout.LayoutParams(0, -2, 1f))
         }
-        headerContent.addView(tabs)
+        browseControls.addView(tabs)
+        headerContent.addView(browseControls)
         main = PhoneUi.column(this@PhoneLibraryActivity)
-        add = PhoneUi.button(this@PhoneLibraryActivity, "+ Add playlist", true) { openImport() }
-        main.addView(add)
         empty = PhoneUi.text(this@PhoneLibraryActivity, size = 16f, muted = true)
         main.addView(empty)
         list = RecyclerView(this@PhoneLibraryActivity).apply { layoutManager = LinearLayoutManager(context) }
         stations = PhoneStationAdapter(this@PhoneLibraryActivity, prefs, repo) { selected ->
             playStation(selected, if (browse == "favorites") RadioService.NODE_FAVOURITES else RadioService.NODE_ALL)
         }
-        sources = SourcesAdapter()
         main.addView(list, LinearLayout.LayoutParams(-1, 0, 1f))
+        animateStationArea(main, browseControls)
         addView(main, LinearLayout.LayoutParams(-1, 0, 1f))
         chooser = PhoneUi.column(this@PhoneLibraryActivity)
         val scroller = ScrollView(this@PhoneLibraryActivity).apply { addView(chooser) }
@@ -120,14 +138,15 @@ class PhoneLibraryActivity : PhonePlaybackActivity() {
     }
 
     private fun changeBrowse(id: String) {
+        if (browse == id) return
         positions[browse] = list.layoutManager?.onSaveInstanceState()
-        browse = id; renderContent()
-        positions[id]?.let { state -> list.post { list.layoutManager?.onRestoreInstanceState(state) } }
+        browse = id
+        restoredListState = positions[id]
+        renderContent()
     }
     private fun showChooser(value: Boolean) {
         picking = value; closeChooser.isEnabled = value; renderContent()
     }
-    private fun openImport() { startActivity(Intent(this, PhoneImportActivity::class.java)) }
 
     override fun renderContent() {
         if (!::list.isInitialized) return
@@ -136,15 +155,25 @@ class PhoneLibraryActivity : PhonePlaybackActivity() {
         val text = trackText(); val theme = AppearanceTheme.current(this)
         val localMetadataMatchesCast = cast == null ||
             (cast.stationId != null && cast.stationId == PlaybackStatusBus.stationId.value)
-        title.text = if (cast != null && !localMetadataMatchesCast) {
+        val artistText = text.artist.takeIf { localMetadataMatchesCast }.orEmpty()
+        loadArt(art, shown, localMetadataMatchesCast, shown?.name ?: cast?.title)
+        val titleText = if (cast != null && !localMetadataMatchesCast) {
             cast.title ?: shown?.name ?: "Casting"
         } else text.title.ifBlank { shown?.name ?: cast?.title ?: "Add a playlist to start" }
-        val artistText = text.artist.takeIf { localMetadataMatchesCast }.orEmpty()
-        artist.text = artistText; artist.visibility = if (artistText.isBlank()) View.GONE else View.VISIBLE
-        station.text = (shown?.name ?: cast?.title).orEmpty()
-        art.visibility = View.VISIBLE
-        loadArt(art, shown, localMetadataMatchesCast, shown?.name ?: cast?.title)
+        val stationText = (shown?.name ?: cast?.title).orEmpty()
+        art.displayDetails(listOf(titleText, artistText, stationText)) {
+            title.text = titleText
+            artist.text = artistText
+            artist.visibility = if (artistText.isBlank()) View.GONE else View.VISIBLE
+            station.text = stationText
+        }
         playingFrom.text = "Playing from: ${collectionLabel()}"
+        val centerActive = intent.getBooleanExtra(PhonePlayerActivity.CENTER_ACTIVE_STATION, false)
+        val activeStation = if (cast == null) PlaybackStatusBus.stationId.value else cast.stationId
+        if (centerActive && activeStation != null && browse == "favorites" &&
+            repo.favourites().none { it.id == activeStation }) {
+            browse = "all"
+        }
         utilities.visibility = if (picking) View.GONE else View.VISIBLE
         main.visibility = if (picking) View.GONE else View.VISIBLE
         tabs.visibility = if (picking) View.GONE else View.VISIBLE
@@ -158,20 +187,26 @@ class PhoneLibraryActivity : PhonePlaybackActivity() {
                 0, dp(8), 0, dp(8))
             setTextColor(PhoneUi.TEXT); isSelected = selected
         }
-        val playlistMode = browse == "playlists"
-        if (list.adapter !== if (playlistMode) sources else stations) list.adapter = if (playlistMode) sources else stations
+        if (list.adapter !== stations) list.adapter = stations
         val values = if (browse == "favorites") repo.favourites() else repo.all()
-        if (playlistMode) sources.update(repo.playlists()) else stations.update(values)
-        val isEmpty = if (playlistMode) repo.playlists().isEmpty() else values.isEmpty()
+        stations.update(values)
+        restoredListState?.let { state ->
+            list.layoutManager?.onRestoreInstanceState(state)
+            restoredListState = null
+        }
+        if (!picking) {
+            if (centerActive) {
+                intent.removeExtra(PhonePlayerActivity.CENTER_ACTIVE_STATION)
+                stationFollow.centerBeforeDraw(list, stations, browse, activeStation)
+            } else stationFollow.reveal(list, stations, browse, activeStation)
+        }
+        val isEmpty = values.isEmpty()
         empty.visibility = if (isEmpty) View.VISIBLE else View.GONE
         empty.text = when (browse) {
             "favorites" -> "No favorites yet. Tap a station heart to add one."
-            "playlists" -> "No playlists yet. Add a hosted URL or import an M3U file."
-            else -> "Your library is empty. Add a playlist to start."
+            else -> "Your library is empty. Open Settings > Playlists to add a playlist."
         }
-        add.visibility = if (playlistMode || repo.all().isEmpty()) View.VISIBLE else View.GONE
-        restoredListState?.let { state -> list.post { list.layoutManager?.onRestoreInstanceState(state) }; restoredListState = null }
-        val key = repo.playlists().toString() + prefs.favourites + prefs.activeBrowseParent + repo.revisions.value
+        val key = "${prefs.favourites}${prefs.activeBrowseParent}${repo.revisions.value}"
         if (key != chooserSignature) { chooserSignature = key; rebuildChooser() }
     }
 
@@ -183,9 +218,7 @@ class PhoneLibraryActivity : PhonePlaybackActivity() {
         header.addView(PhoneUi.button(this, "Cancel") { showChooser(false) })
         chooser.addView(header); chooser.addView(PhoneUi.text(this, "Choose what plays next", 14f, true))
         val entries = listOf(RadioService.NODE_ALL to "${repo.all().size} stations",
-            RadioService.NODE_FAVOURITES to "${repo.favourites().size} stations") + repo.playlists().map {
-            "/playlist/${it.id}" to "${repo.sourceStations(it.id).size} stations · ${if (it.isLocal) "Local import" else "Hosted playlist"}"
-        }
+            RadioService.NODE_FAVOURITES to "${repo.favourites().size} stations")
         entries.forEach { (parent, detail) ->
             val selected = parent == prefs.activeBrowseParent || (parent == RadioService.NODE_ALL && prefs.activeBrowseParent.isBlank())
             val row = PhoneUi.row(this).apply {
@@ -203,32 +236,9 @@ class PhoneLibraryActivity : PhonePlaybackActivity() {
             })
             chooser.addView(row); chooser.addView(PhoneUi.divider(this))
         }
-        chooser.addView(PhoneUi.button(this, "+ Add playlist") { openImport() })
         chooser.addView(PhoneUi.text(this, "Your current station stays when it is in the collection.", 14f, true))
     }
 
-    private inner class SourcesAdapter : RecyclerView.Adapter<SourceHolder>() {
-        private var values = emptyList<PlaylistSource>()
-        fun update(next: List<PlaylistSource>) { if (next != values) { values = next; notifyDataSetChanged() } }
-        override fun getItemCount() = values.size
-        override fun onCreateViewHolder(parent: ViewGroup, type: Int): SourceHolder {
-            val row = PhoneUi.column(this@PhoneLibraryActivity).apply {
-                minimumHeight = dp(72); setPadding(dp(8), dp(8), dp(8), dp(8)); isClickable = true; isFocusable = true
-            }
-            val title = PhoneUi.text(this@PhoneLibraryActivity, size = 18f)
-            val detail = PhoneUi.text(this@PhoneLibraryActivity, size = 14f, muted = true)
-            row.addView(title); row.addView(detail); row.addView(PhoneUi.divider(this@PhoneLibraryActivity))
-            return SourceHolder(row, title, detail)
-        }
-        override fun onBindViewHolder(holder: SourceHolder, position: Int) {
-            val source = values[position]
-            holder.title.text = source.name
-            holder.detail.text = "${repo.sourceStations(source.id).size} stations · ${if (source.isLocal) "Local import" else "Hosted playlist"}"
-            holder.itemView.setOnClickListener {
-                startActivity(Intent(this@PhoneLibraryActivity, PhonePlaylistActivity::class.java).putExtra("source_id", source.id))
-            }
-        }
-    }
     /** Preserve a usable list viewport when text or a short display enlarges the header. */
     private class LibraryBody(context: android.content.Context) : LinearLayout(context) {
         val headerContent = PhoneUi.column(context)
@@ -245,5 +255,4 @@ class PhoneLibraryActivity : PhonePlaybackActivity() {
             super.onMeasure(widthMeasureSpec, heightMeasureSpec)
         }
     }
-    private class SourceHolder(view: View, val title: TextView, val detail: TextView) : RecyclerView.ViewHolder(view)
 }

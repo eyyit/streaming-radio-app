@@ -1,0 +1,4 @@
+<resources>
+    <item name="ic_session_shuffle_on" type="drawable">@drawable/phone_shuffle_on</item>
+    <item name="ic_session_shuffle_off" type="drawable">@drawable/phone_shuffle_off</item>
+</resources>

@@ -75,6 +75,21 @@ class StartupResumptionServiceTest {
         assertResume(expectedParent, selected, repo.sourceStations("startup"))
     }
 
+    @Test fun explicitPhonePlaylistSelectionReplacesAnExistingAllStationsScope() {
+        prefs.activeBrowseParent = RadioService.NODE_ALL
+        val selected = repo.sourceStations("startup").last()
+        withService { _, _, callback, session ->
+            val result = callback.onSetMediaItems(session, controller, mutableListOf(
+                MediaItem.Builder().setMediaId(Station.contextualMediaId(
+                    selected.mediaId, RadioService.PHONE_SELECTION_PREFIX + imported
+                )).build()), 0, 0).get()
+            val expectedParent = if (net.mspanc.twinsenradio.BuildConfig.IS_AUTOMOTIVE)
+                RadioService.NODE_ALL else imported
+            assertEquals(expectedParent, Prefs(context).activeBrowseParent)
+            assertEquals(selected.mediaId, result.mediaItems[result.startIndex].mediaId)
+        }
+    }
+
     @Test fun coldResumeRestoresAllFavoritesAndImportedWithoutAutoplay() {
         val stations = repo.all()
         prefs.favourites = setOf(stations.last().id)

@@ -24,5 +24,18 @@ class StationTraversalTest {
   val nav=StationTraversal(Random(5)); assertNull(nav.next(emptyList(),null)); assertEquals("a",nav.next(listOf("a"),"a"))
   assertEquals("b",nav.next(listOf("b"),"a")); assertEquals("a",nav.previous(setOf("a","b"),"b"))
  }
+ @Test fun previewReservesTheNextShuffleStationWithoutMovingTheCursor() {
+  val nav = StationTraversal(Random(13))
+  val ids = listOf("a", "b", "c")
+  nav.observe("a")
+  val upcoming = nav.peekNext(ids, "a")!!
+  assertEquals(listOf("a"), nav.snapshot().history)
+  assertEquals(upcoming, nav.peekNext(ids, "a"))
+  assertEquals(upcoming, nav.next(ids, "a"))
+  assertEquals("a", nav.peekPrevious(ids.toSet(), upcoming))
+  assertEquals(upcoming, nav.snapshot().history[nav.snapshot().cursor])
+  assertEquals("a", nav.previous(ids.toSet(), upcoming))
+  assertEquals(upcoming, nav.peekNext(ids, "a"))
+ }
 }
 

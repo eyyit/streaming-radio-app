@@ -80,12 +80,6 @@ class PhoneCastNotificationTest {
             return value.value
         }
 
-        fun callback(): MediaSession.Callback {
-            val value = ArgumentCaptor.forClass(MediaSession.Callback::class.java)
-            verify(session()).setCallback(value.capture())
-            return value.value
-        }
-
         override fun close() = sessions.close()
     }
 
@@ -148,44 +142,18 @@ class PhoneCastNotificationTest {
 
     @Config(sdk = [28, 33])
     @Test
-    fun disconnectActionIsPublishedWhenRouteCanKeepPlaying() {
+    fun castNotificationExposesOnlyPauseRegardlessOfRouteCapability() {
         Rig().use { rig ->
             rig.native.sync()
-            val notificationAction = rig.native.notification().actions.single { it.title == "Disconnect" }
-            val broadcast = shadowOf(notificationAction.actionIntent).savedIntent
-            assertEquals("disconnect", broadcast.action)
-            assertEquals(
-                PhoneCastNotificationReceiver::class.java.name,
-                broadcast.component?.className
-            )
-
-            val disconnect = rig.playbackState().customActions
-                ?.firstOrNull { it.action == "disconnect" }
-            assertNotNull("Media controls should expose a distinct Disconnect action", disconnect)
-            rig.callback().onCustomAction("disconnect", null)
-
-            assertEquals(listOf(false), rig.endedSessions)
-        }
-    }
-
-    @Config(sdk = [28, 33])
-    @Test
-    fun singleSenderRouteOffersStopCastingInBothControlSurfaces() {
-        Rig().use { rig ->
-            rig.canDisconnect = false
-            rig.native.sync()
-
-            val notificationAction = rig.native.notification().actions.single {
-                it.title == "Stop casting"
+            for (canDisconnect in listOf(true, false)) {
+                rig.canDisconnect = canDisconnect
+                val action = rig.native.notification().actions.single()
+                assertEquals("Pause", action.title)
+                val broadcast = shadowOf(action.actionIntent).savedIntent
+                assertEquals("pause", broadcast.action)
+                assertEquals(PhoneCastNotificationReceiver::class.java.name, broadcast.component?.className)
             }
-            val broadcast = shadowOf(notificationAction.actionIntent).savedIntent
-            assertEquals("stop_casting", broadcast.action)
-            val mediaAction = rig.playbackState().customActions?.single()
-            assertEquals("stop_casting", mediaAction?.action)
-            assertEquals("Stop casting", mediaAction?.name)
-
-            rig.callback().onCustomAction("stop_casting", null)
-            assertEquals(listOf(false), rig.endedSessions)
+            assertTrue(rig.playbackState().customActions.isNullOrEmpty())
         }
     }
 

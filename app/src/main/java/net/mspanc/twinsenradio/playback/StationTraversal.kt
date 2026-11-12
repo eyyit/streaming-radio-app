@@ -24,23 +24,43 @@ class StationTraversal(private val random: Random = Random.Default) {
     }
     fun invalidateOrder() { pool=emptyList(); remaining.clear() }
     fun next(ids: List<String>, current: String?): String? {
+        val target = peekNext(ids, current) ?: return null
+        val forward = forwardIndex(ids.toSet())
+        if (forward != null) {
+            cursor = forward
+        } else {
+            cursor = history.lastIndex
+            remaining.removeAt(0)
+            observe(target)
+        }
+        return target
+    }
+
+    /** Prepare the same upcoming station that [next] will consume, keeping it on the deck. */
+    fun peekNext(ids: List<String>, current: String?): String? {
         val allowed=ids.distinct(); if(allowed.isEmpty()) return null
         current?.let(::observe)
-        while(cursor+1<history.size) {
-            cursor++
-            if(history[cursor] in allowed) return history[cursor]
-        }
-        if(pool.toSet()!=allowed.toSet()) {
+        val validIds = allowed.toSet()
+        forwardIndex(validIds)?.let { return history[it] }
+        if(pool.toSet()!=validIds) {
             pool=allowed; remaining.clear(); remaining.addAll(allowed.filter { it!=current }.shuffled(random))
         }
-        remaining.retainAll(allowed.toSet())
+        remaining.retainAll(validIds)
         if(remaining.isEmpty()) {
             remaining.addAll(allowed.shuffled(random))
             if(remaining.size>1 && remaining[0]==current) {
                 val first=remaining[0]; remaining[0]=remaining[1]; remaining[1]=first
             }
         }
-        val result=remaining.removeAt(0); observe(result); return result
+        return remaining.first()
+    }
+
+    private fun forwardIndex(validIds: Set<String>): Int? =
+        (cursor + 1..history.lastIndex).firstOrNull { history[it] in validIds }
+
+    fun peekPrevious(validIds: Set<String>, current: String?): String? {
+        val start = if (current != null && history.getOrNull(cursor) != current) cursor else cursor - 1
+        return (start downTo 0).firstNotNullOfOrNull { history[it].takeIf(validIds::contains) }
     }
     fun previous(validIds: Set<String>, current: String?): String? {
         current?.let(::observe)

@@ -18,6 +18,7 @@ import net.mspanc.twinsenradio.data.Prefs
 import net.mspanc.twinsenradio.data.StationRepository
 import net.mspanc.twinsenradio.playback.PlaybackStatusBus
 import net.mspanc.twinsenradio.playback.RadioService
+import net.mspanc.twinsenradio.playback.StreamQuality
 import net.mspanc.twinsenradio.ui.SettingsActivity
 import org.junit.Assert.*
 import org.junit.Before
@@ -48,6 +49,65 @@ class PhoneFlowUiTest {
         PlaybackStatusBus.setStation(null); PlaybackStatusBus.setNowPlaying(null)
         PlaybackStatusBus.setWantsToPlay(false); PlaybackStatusBus.setLostAir(false)
         PlaybackStatusBus.setTrackArtworkLoading(false); PlaybackStatusBus.setCoverArt(null)
+    }
+
+    @Test fun phonePlaybackStatusUsesCurrentStreamEvidence() {
+        val startupBuffer = phonePlaybackStatusLabel(
+            PlaybackStatusBus.Status.BUFFERING, hasCurrentStreamFormat = false
+        )
+        val delayedConnecting = phonePlaybackStatusLabel(
+            PlaybackStatusBus.Status.CONNECTING, hasCurrentStreamFormat = false
+        )
+        val streamRefill = phonePlaybackStatusLabel(
+            PlaybackStatusBus.Status.BUFFERING, hasCurrentStreamFormat = true
+        )
+
+        assertEquals("Connecting…", startupBuffer)
+        assertEquals("Connecting…", delayedConnecting)
+        assertEquals("Buffering…", streamRefill)
+        assertEquals(
+            "Reconnecting…",
+            phonePlaybackStatusLabel(
+                PlaybackStatusBus.Status.RECONNECTING, hasCurrentStreamFormat = false
+            )
+        )
+
+        PlaybackStatusBus.setStation("phone-status-a")
+        PlaybackStatusBus.setQuality(StreamQuality("MP3", 128, 44100, 2))
+        PlaybackStatusBus.setStation("phone-status-b")
+        assertNull("A prior station's decoder format must not end the new station's connecting state",
+            PlaybackStatusBus.quality.value)
+        PlaybackStatusBus.setStation(null)
+    }
+
+    @Test fun libraryStatusFloatsAboveTheDockWithoutMovingTheList() {
+        fun layoutAt(state: PlaybackStatusBus.Status, label: String): List<Rect> {
+            PlaybackStatusBus.setPlayerStatus(state)
+            var layout = emptyList<Rect>()
+            withActivity(PhoneLibraryActivity::class.java) { _, root ->
+                measureCompact(root)
+                val status = root.findViewWithTag<TextView>("phone_playback_status")
+                val dock = root.findViewWithTag<View>("phone_secondary_actions")
+                val list = descendants(root).filterIsInstance<RecyclerView>().single()
+                assertEquals(label, status.text.toString())
+                assertEquals(if (label.isEmpty()) View.INVISIBLE else View.VISIBLE, status.visibility)
+                assertTrue(absoluteTop(status) + status.height < absoluteTop(dock))
+                layout = listOf(list, dock).map { view ->
+                    Rect(view.left, absoluteTop(view), view.right, absoluteTop(view) + view.height)
+                }
+            }
+            return layout
+        }
+        PlaybackStatusBus.setNetworkStatus(null)
+        try {
+            val idle = layoutAt(PlaybackStatusBus.Status.IDLE, "")
+            assertEquals(idle, layoutAt(PlaybackStatusBus.Status.CONNECTING, "Connecting…"))
+            PlaybackStatusBus.setQuality(StreamQuality("MP3", 128, 44100, 2))
+            assertEquals(idle, layoutAt(PlaybackStatusBus.Status.BUFFERING, "Buffering…"))
+        } finally {
+            PlaybackStatusBus.setPlayerStatus(PlaybackStatusBus.Status.IDLE)
+            PlaybackStatusBus.setQuality(null)
+        }
     }
 
     @Test fun phoneSettingsOpensTheBundledPrivacyPolicy() {
@@ -104,7 +164,7 @@ class PhoneFlowUiTest {
         assertTrue(selectedDotPixels > 0)
     }
 
-    @Test fun browsingFavoritesAndPlaylistsDoesNotChangeChosenCollectionOrStation() {
+    @Test fun browsingFavoritesKeepsPlaybackScopeAndPlaylistsOpenFromSettings() {
         runBlocking { repo.saveLocalPlaylist("Test list", "#EXTM3U\n#EXTINF:-1,Alpha\nhttps://radio.example/a\n#EXTINF:-1,Beta\nhttps://radio.example/b\n") }
         val chosen = "/playlist/${repo.playlists().single().id}"
         prefs.activeBrowseParent = chosen
@@ -115,11 +175,22 @@ class PhoneFlowUiTest {
             assertEquals(chosen, Prefs(context).activeBrowseParent)
             assertEquals(current.id, PlaybackStatusBus.stationId.value)
             assertEquals(0, descendants(root).filterIsInstance<RecyclerView>().single().adapter!!.itemCount)
-            descendants(root).filterIsInstance<Button>().single { it.text == "Playlists" }.performClick()
-            assertEquals(chosen, Prefs(context).activeBrowseParent)
-            assertEquals(1, descendants(root).filterIsInstance<RecyclerView>().single().adapter!!.itemCount)
+            assertFalse(descendants(root).filterIsInstance<Button>().any { it.text == "Playlists" })
             assertTrue(descendants(root).filterIsInstance<TextView>().any { it.text == "Playing from: Test list" })
+            descendants(root).first { it.contentDescription == "Choose playback collection" }.performClick()
+            val chooser = root.findViewWithTag<View>("phone_collection_chooser")
+            assertEquals(listOf("All stations", "Favorites"), descendants(chooser)
+                .mapNotNull { it.contentDescription?.toString()?.substringBefore(", ") }
+                .filter { it.isNotBlank() })
             assertFalse(activity.isFinishing)
+        }
+        withActivity(PhoneSettingsActivity::class.java) { activity, root ->
+            val playlists = descendants(root).filterIsInstance<TextView>().single { it.text == "Playlists" }
+            (playlists.parent as View).performClick()
+            val destination = org.robolectric.Shadows.shadowOf(activity).nextStartedActivity
+            assertEquals(PhonePlaylistCatalogActivity::class.java.name, destination.component?.className)
+            assertEquals(chosen, Prefs(context).activeBrowseParent)
+            assertEquals(current.id, PlaybackStatusBus.stationId.value)
         }
     }
 
@@ -239,6 +310,91 @@ class PhoneFlowUiTest {
         }
     }
 
+    @Test fun expandedCoverSizeStaysStableWhenMetadataChangesLineCount() {
+        withActivity(PhonePlayerActivity::class.java) { activity, root ->
+            val width = View.MeasureSpec.makeMeasureSpec(PhoneUi.dp(activity, 360), View.MeasureSpec.EXACTLY)
+            val height = View.MeasureSpec.makeMeasureSpec(PhoneUi.dp(activity, 560), View.MeasureSpec.EXACTLY)
+            val art = descendants(root).filterIsInstance<ImageView>().single {
+                it.contentDescription == "Current track artwork or station image"
+            }
+            val title = descendants(root).filterIsInstance<TextView>().single { it.text == "Add a playlist to start" }
+            title.text = "Short title"
+            root.measure(width, height)
+            val short = art.measuredWidth
+            title.text = "A title long enough to wrap onto the second line on this narrow phone"
+            root.measure(width, height)
+            assertTrue(short > 0)
+            assertEquals(short, art.measuredWidth)
+            assertEquals(short, art.measuredHeight)
+        }
+    }
+
+    @Test fun joiningStationKeepsItsArtworkFallbackVisible() {
+        runBlocking {
+            repo.saveLocalPlaylist("Test list", "#EXTM3U\n#EXTINF:-1,Night Signal\nhttps://radio.example/a\n")
+        }
+        PlaybackStatusBus.setStation(repo.all().single().id)
+        val host = Robolectric.buildActivity(PhonePlayerActivity::class.java)
+        host.get().setTheme(R.style.Theme_StreamingRadioPhone)
+        try {
+            val activity = host.create().get()
+            (activity.lifecycle as androidx.lifecycle.LifecycleRegistry).currentState = Lifecycle.State.STARTED
+            org.robolectric.shadows.ShadowLooper.idleMainLooper()
+            val art = descendants(activity.findViewById(android.R.id.content)).filterIsInstance<ImageView>()
+                .single { it.contentDescription == "Current track artwork or station image" }
+            assertTrue(PlaybackStatusBus.artPending())
+            assertEquals("station-initials:NS", art.drawable.toString())
+        } finally {
+            (host.get().lifecycle as androidx.lifecycle.LifecycleRegistry).currentState = Lifecycle.State.CREATED
+            host.destroy()
+            PlaybackStatusBus.setJoin(PlaybackStatusBus.Join.NONE)
+        }
+    }
+
+    @Test fun coverWheelHoldsStationDetailsUntilTheFaceSettles() {
+        val cover = PhoneCarouselArtwork(context)
+        val title = TextView(context).apply { text = "Previous station" }
+        val artist = TextView(context).apply { visibility = View.GONE }
+        cover.attachDetails(title, artist)
+        cover.setPanelMoving(true)
+        cover.displayDetails { title.text = "Intermediate update" }
+        cover.displayDetails { title.text = "Incoming station" }
+        assertEquals(View.INVISIBLE, title.visibility)
+        assertEquals("Previous station", title.text)
+        assertEquals(View.GONE, artist.visibility)
+        cover.setPanelMoving(false)
+        assertEquals(View.VISIBLE, title.visibility)
+        assertEquals("Incoming station", title.text)
+        assertEquals(View.GONE, artist.visibility)
+    }
+
+    @Test fun tappingPlayerTitleCentersTheLibraryWithAPlaylistPlaying() {
+        runBlocking {
+            repo.saveLocalPlaylist("Test list", "#EXTM3U\n#EXTINF:-1,Night Signal\nhttps://radio.example/a\n")
+        }
+        val source = repo.playlists().single()
+        prefs.activeBrowseParent = "/playlist/${source.id}"
+        PlaybackStatusBus.setStation(repo.sourceStations(source.id).single().id)
+        withActivity(PhonePlayerActivity::class.java) { activity, root ->
+            val title = descendants(root).filterIsInstance<TextView>().single { it.text == "Night Signal" }
+            assertTrue(title.performClick())
+            val destination = org.robolectric.Shadows.shadowOf(activity).nextStartedActivity
+            assertEquals(PhoneLibraryActivity::class.java.name, destination.component?.className)
+            assertTrue(destination.getBooleanExtra(PhonePlayerActivity.CENTER_ACTIVE_STATION, false))
+            assertEquals("/playlist/${source.id}", Prefs(context).activeBrowseParent)
+        }
+    }
+
+    @Test fun playerLibraryButtonReturnsToLibraryWithAPlaylistPlaying() {
+        prefs.activeBrowseParent = "/playlist/saved-source"
+        withActivity(PhonePlayerActivity::class.java) { activity, root ->
+            descendants(root).single { it.contentDescription == "Restore station library" }.performClick()
+            val destination = org.robolectric.Shadows.shadowOf(activity).nextStartedActivity
+            assertEquals(PhoneLibraryActivity::class.java.name, destination.component?.className)
+            assertFalse(destination.getBooleanExtra(PhonePlayerActivity.CENTER_ACTIVE_STATION, false))
+        }
+    }
+
     @Test fun longTrackingMetadataKeepsStationAndFormatAboveDock() {
         runBlocking { repo.saveLocalPlaylist("Test list", "#EXTM3U\n#EXTINF:-1,Night Signal\nhttps://radio.example/a\n") }
         PlaybackStatusBus.setStation(repo.all().single().id)
@@ -269,7 +425,7 @@ class PhoneFlowUiTest {
         root.layout(0, 0, root.measuredWidth, root.measuredHeight)
     }
     private fun absoluteTop(view: View): Int = view.top + ((view.parent as? View)?.let { absoluteTop(it) - it.scrollY } ?: 0)
-    private fun <T : PhonePlaybackActivity> withActivity(type: Class<T>, check: (T, View) -> Unit) {
+    private fun <T : androidx.appcompat.app.AppCompatActivity> withActivity(type: Class<T>, check: (T, View) -> Unit) {
         val host = Robolectric.buildActivity(type)
         host.get().setTheme(R.style.Theme_StreamingRadioPhone)
         try {

@@ -1,8 +1,16 @@
 package net.mspanc.twinsenradio.phone
 
+import android.content.res.ColorStateList
 import android.graphics.Typeface
 import android.os.Bundle
+import android.text.SpannableString
+import android.text.Spanned
+import android.text.style.ForegroundColorSpan
+import android.text.style.RelativeSizeSpan
+import android.text.style.StyleSpan
 import android.view.View
+import android.view.ViewGroup
+import android.widget.ArrayAdapter
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
@@ -87,6 +95,10 @@ class PhoneSettingsActivity : AppCompatActivity() {
             showBufferChoices()
         }
         content.addView(PhoneUi.divider(this))
+        addPreferenceRow(content, R.string.phone_settings_playlists) {
+            startActivity(android.content.Intent(this, PhonePlaylistCatalogActivity::class.java))
+        }
+        content.addView(PhoneUi.divider(this))
 
         content.addView(PhoneUi.gap(this, 12))
         content.addView(PhoneUi.text(this, getString(R.string.account_about), 16f).apply {
@@ -136,15 +148,42 @@ class PhoneSettingsActivity : AppCompatActivity() {
     }
 
     private fun showBufferChoices() {
-        val choices = arrayOf(
-            getString(R.string.phone_settings_buffer_small),
-            getString(R.string.phone_settings_buffer_medium),
-            getString(R.string.phone_settings_buffer_large)
-        )
+        val choices = listOf(
+            R.string.phone_settings_buffer_small,
+            R.string.phone_settings_buffer_medium,
+            R.string.phone_settings_buffer_large
+        ).map { resource ->
+            SpannableString(getText(resource)).apply {
+                val titleEnd = indexOf('\n')
+                if (titleEnd < 0) return@apply
+                val descriptionStart = titleEnd + 1
+                setSpan(StyleSpan(Typeface.BOLD), 0, titleEnd, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+                setSpan(RelativeSizeSpan(0.875f), descriptionStart, length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+                setSpan(ForegroundColorSpan(PhoneUi.MUTED), descriptionStart, length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+            }
+        }
         val selected = prefs.bufferProfile.coerceIn(BufferProfile.ALL.indices)
-        MaterialAlertDialogBuilder(this)
+        val builder = MaterialAlertDialogBuilder(this, R.style.ThemeOverlay_StreamingRadioPhone_BufferDialog)
+        val indicatorTint = ColorStateList(
+            arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf()),
+            intArrayOf(AppearanceTheme.current(this).accent, PhoneUi.MUTED)
+        )
+        val adapter = object : ArrayAdapter<CharSequence>(
+            builder.context,
+            com.google.android.material.R.layout.mtrl_alert_select_dialog_singlechoice,
+            choices
+        ) {
+            override fun getView(position: Int, convertView: View?, parent: ViewGroup): View =
+                (super.getView(position, convertView, parent) as TextView).apply {
+                    minimumHeight = dp(64)
+                    setPaddingRelative(paddingStart, dp(8), paddingEnd, dp(8))
+                    setTextColor(PhoneUi.TEXT)
+                    compoundDrawableTintList = indicatorTint
+                }
+        }
+        builder
             .setTitle(R.string.phone_settings_buffer)
-            .setSingleChoiceItems(choices, selected) { dialog, which ->
+            .setSingleChoiceItems(adapter, selected) { dialog, which ->
                 prefs.bufferProfile = which
                 dialog.dismiss()
             }

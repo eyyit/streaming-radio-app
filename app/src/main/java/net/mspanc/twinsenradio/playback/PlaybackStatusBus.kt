@@ -12,6 +12,9 @@ import kotlinx.coroutines.flow.StateFlow
  */
 object PlaybackStatusBus {
 
+    // Registered by the in-process service. Read on the main thread by the phone UI.
+    internal var phoneStationNeighbor: ((Int) -> String?)? = null
+
     private val missingTrackGrace = MissingTrackInfoGrace()
     private var actuallyPlaying = false
 

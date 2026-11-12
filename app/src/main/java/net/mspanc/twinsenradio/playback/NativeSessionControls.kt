@@ -17,7 +17,7 @@ internal object NativeSessionControls {
         diagnosticMode: Boolean
     ): List<PlayerAction> = buildList {
         add(PlayerAction.FAVOURITE)
-        if (automotive) add(PlayerAction.SHUFFLE)
+        add(PlayerAction.SHUFFLE)
         if (automotive && artworkEnabled) add(PlayerAction.TRACK_ART)
         if (diagnosticMode) add(PlayerAction.DIAGNOSTIC)
     }

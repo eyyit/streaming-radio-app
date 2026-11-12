@@ -6,7 +6,8 @@
     <string name="phone_settings_artwork_online">Online track and station artwork</string>
     <string name="phone_settings_artwork_local">Local artwork only</string>
     <string name="phone_settings_buffer">Playback buffer</string>
-    <string name="phone_settings_buffer_small">Small — starts in about 1 s, 20 s reserve</string>
-    <string name="phone_settings_buffer_medium">Medium — starts in about 2 s, 45 s reserve</string>
-    <string name="phone_settings_buffer_large">Large — starts in about 4 s, 120 s reserve</string>
+    <string name="phone_settings_playlists">Playlists</string>
+    <string name="phone_settings_buffer_small">Small\nStarts in about 1s, 20s reserve</string>
+    <string name="phone_settings_buffer_medium">Medium\nStarts in about 2s, 45s reserve</string>
+    <string name="phone_settings_buffer_large">Large\nStarts in about 4s, 120s reserve</string>
 </resources>

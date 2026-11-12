@@ -13,6 +13,12 @@ class CollectionQueueTest {
             CollectionQueue.withSelected(collections.getValue(scope), "shared") { it })
     }
 
+    @Test fun phonePlaylistRowSelectionUsesItsPlaylistWithoutChangingBrowseSemantics() {
+        assertEquals("/playlist/source",
+            CollectionQueue.stationScope("/all", "/playlist/source", explicitSelection = true))
+        assertEquals("/all", CollectionQueue.stationScope("/all", "/playlist/source"))
+    }
+
     @Test fun explicitlyClickedOutsideStationDoesNotBroadenSelectedCollection() {
         val scope = CollectionQueue.stationScope("/fav", "/all")
         assertEquals("/fav", scope)

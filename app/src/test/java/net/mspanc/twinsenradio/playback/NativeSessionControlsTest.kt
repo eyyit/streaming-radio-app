@@ -53,9 +53,10 @@ class NativeSessionControlsTest {
     }
 
     @Test
-    fun phoneActionsDoNotGainAutomotiveControls() {
+    fun phoneActionsIncludeShuffleAndOmitAutomotiveArtworkControl() {
         assertEquals(
             listOf(NativeSessionControls.PlayerAction.FAVOURITE,
+                NativeSessionControls.PlayerAction.SHUFFLE,
                 NativeSessionControls.PlayerAction.DIAGNOSTIC),
             NativeSessionControls.playerActions(
                 automotive = false,

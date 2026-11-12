@@ -31,5 +31,6 @@
         <activity android:name=".phone.PhoneImportActivity" android:exported="false"
             android:windowSoftInputMode="adjustResize" />
         <activity android:name=".phone.PhonePlaylistActivity" android:exported="false" />
+        <activity android:name=".phone.PhonePlaylistCatalogActivity" android:exported="false" />
     </application>
 </manifest>

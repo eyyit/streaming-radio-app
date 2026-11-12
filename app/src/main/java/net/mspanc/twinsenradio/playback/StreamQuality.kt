@@ -22,15 +22,21 @@ data class StreamQuality(
     val codec: String,
     val bitrateKbps: Int,
     val sampleRateHz: Int,
-    val channels: Int
+    val channels: Int,
+    /** More precise AAC profile detail for the phone's technical readout. */
+    val technicalCodec: String = codec
 ) {
-    fun compactLabel(): String = listOf(codec, bitrateKbps.takeIf { it > 0 }?.let { "$it kbps" }.orEmpty())
-        .filter { it.isNotBlank() }.joinToString(" · ")
+    fun compactLabel(): String = codecAndBitrateLabel(codec)
 
     fun technicalLabel(): String = listOf(
-        compactLabel(),
+        codecAndBitrateLabel(technicalCodec),
         sampleRateHz.takeIf { it > 0 }?.let { String.format(java.util.Locale.US, "%.1f kHz", it / 1000.0) }.orEmpty(),
         when (channels) { 1 -> "mono"; 2 -> "stereo"; in 3..Int.MAX_VALUE -> "$channels channels"; else -> "" }
+    ).filter { it.isNotBlank() }.joinToString(" · ")
+
+    private fun codecAndBitrateLabel(displayCodec: String): String = listOf(
+        displayCodec,
+        bitrateKbps.takeIf { it > 0 }?.let { "$it kbps" }.orEmpty()
     ).filter { it.isNotBlank() }.joinToString(" · ")
 
     /**
@@ -79,9 +85,30 @@ data class StreamQuality(
                 bitrateKbps = bitrate,
                 // With SBR the decoder reports twice what the header declares
                 sampleRateHz = if (sbr) rate * 2 else rate,
-                channels = format.channelCount.takeIf { it > 0 } ?: 0
+                channels = format.channelCount.takeIf { it > 0 } ?: 0,
+                technicalCodec = technicalCodecName(format, sbr)
             )
         }
+
+        private fun technicalCodecName(format: Format, inferredSbr: Boolean): String {
+            val isAac = format.sampleMimeType in setOf("audio/mp4a-latm", "audio/aac", "audio/aacp")
+            if (!isAac) return codecName(format)
+            val profile = aacProfile(format.codecs)
+            val name = when (profile) {
+                2 -> "AAC-LC"
+                5 -> "HE-AAC"
+                29 -> "HE-AAC v2"
+                else -> "AAC"
+            }
+            return if (inferredSbr) "$name (HE-AAC inferred)" else name
+        }
+
+        private fun aacProfile(codecs: String?): Int? {
+            val match = codecs?.let { AAC_CODEC.matchEntire(it) } ?: return null
+            return match.groupValues[1].toIntOrNull()
+        }
+
+        private val AAC_CODEC = Regex("(?i)mp4a\\.40\\.(\\d+)")
 
         /**
          * Whether this is HE-AAC signaled implicitly.
@@ -104,7 +131,7 @@ data class StreamQuality(
         private fun looksLikeSbr(format: Format): Boolean {
             val isAac = format.sampleMimeType in setOf("audio/mp4a-latm", "audio/aac", "audio/aacp")
             if (!isAac) return false
-            val profile = format.codecs?.substringAfterLast('.')?.toIntOrNull()
+            val profile = aacProfile(format.codecs)
             if (profile != null && profile != 2) return false
             return format.sampleRate in 1..24_000 && format.channelCount >= 2
         }
@@ -116,7 +143,7 @@ data class StreamQuality(
          * (mp4a.40.<profile>).
          */
         private fun codecName(format: Format): String {
-            val profile = format.codecs?.substringAfterLast('.')?.toIntOrNull()
+            val profile = aacProfile(format.codecs)
             return when (format.sampleMimeType) {
                 "audio/mpeg", "audio/mpeg-L1", "audio/mpeg-L2" -> "MP3"
                 "audio/mp4a-latm", "audio/aac", "audio/aacp" -> when (profile) {

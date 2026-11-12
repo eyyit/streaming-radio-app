@@ -18,6 +18,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 import net.mspanc.twinsenradio.data.PlaylistSource
 import net.mspanc.twinsenradio.data.StationRepository
+import net.mspanc.twinsenradio.playback.PlaybackStatusBus
 
 /** A source-order view; opening it does not choose a playback collection. */
 @UnstableApi
@@ -29,6 +30,7 @@ class PhonePlaylistActivity : PhonePlaybackActivity() {
     private lateinit var refresh: Button
     private lateinit var list: RecyclerView
     private lateinit var adapter: PhoneStationAdapter
+    private val stationFollow = PhoneStationFollow()
     private val model by lazy { ViewModelProvider(this)[RefreshModel::class.java] }
     private val sourceId get() = intent.getStringExtra("source_id").orEmpty()
 
@@ -39,6 +41,19 @@ class PhonePlaylistActivity : PhonePlaybackActivity() {
                 model.state.collect { renderContent() }
             }
         }
+    }
+
+    override fun onStop() {
+        stationFollow.reset()
+        super.onStop()
+    }
+
+    override fun stationAreaReady() = !stationFollow.isCentering
+
+    override fun onNewIntent(intent: android.content.Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        renderContent()
     }
 
     override fun buildBody(): View = PhoneUi.column(this).apply {
@@ -59,9 +74,10 @@ class PhonePlaylistActivity : PhonePlaybackActivity() {
         addView(refresh)
         list = RecyclerView(this@PhonePlaylistActivity).apply { layoutManager = LinearLayoutManager(context) }
         adapter = PhoneStationAdapter(this@PhonePlaylistActivity, prefs, repo) { station ->
-            playStation(station, "/playlist/$sourceId")
+            playStation(station, "/playlist/$sourceId", explicitCollectionSelection = true)
         }
         list.adapter = adapter; addView(list, LinearLayout.LayoutParams(-1, 0, 1f))
+        animateStationArea(list)
     }
 
     override fun renderContent() {
@@ -73,6 +89,12 @@ class PhonePlaylistActivity : PhonePlaybackActivity() {
         val stations = if (source == null) emptyList() else repo.sourceStations(sourceId)
         count.text = "${stations.size} saved stations"
         adapter.update(stations)
+        val cast = PhoneCastRouting.get(applicationContext).displaySnapshot()
+        val activeStation = if (cast == null) PlaybackStatusBus.stationId.value else cast.stationId
+        if (intent.getBooleanExtra(PhonePlayerActivity.CENTER_ACTIVE_STATION, false)) {
+            intent.removeExtra(PhonePlayerActivity.CENTER_ACTIVE_STATION)
+            stationFollow.centerBeforeDraw(list, adapter, sourceId, activeStation)
+        } else stationFollow.reveal(list, adapter, sourceId, activeStation)
         val state = model.state.value
         error.text = when {
             source == null -> "This playlist is no longer available."

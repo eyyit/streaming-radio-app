@@ -3,6 +3,7 @@ package net.mspanc.twinsenradio.ui
 
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.content.Context
 import android.net.Uri
 import android.util.LruCache
 import android.widget.ImageView
@@ -31,6 +32,20 @@ object ArtworkLoader {
 
     private val cache = object : LruCache<String, Bitmap>(12 * 1024 * 1024) {
         override fun sizeOf(key: String, value: Bitmap) = value.allocationByteCount
+    }
+
+    internal fun cachedImage(context: Context, uri: Uri?): Drawable? =
+        uri?.let { cache.get(it.toString()) }?.let { BitmapDrawable(context.resources, it) }
+
+    internal fun hasCachedImage(uri: Uri): Boolean = cache.get(uri.toString()) != null
+
+    internal suspend fun loadStationPreview(context: Context, uri: Uri): Drawable? {
+        cachedImage(context, uri)?.let { return it }
+        val bitmap = withContext(ArtworkWorkScheduler.dispatcher) {
+            load(context.applicationContext, uri)
+        } ?: return null
+        if (uri.scheme != "file") cache.put(uri.toString(), bitmap)
+        return BitmapDrawable(context.resources, bitmap)
     }
 
     /**
@@ -62,12 +77,13 @@ object ArtworkLoader {
         blank: Boolean = false,
         animate: Boolean = false,
         slideDirection: Int = 0,
-        fallbackDrawable: Drawable? = null
+        fallbackDrawable: Drawable? = null,
+        showFallbackWhileLoading: Boolean = false
     ) {
-        fun show(key: String, drawable: Drawable) {
-            if (target.getTag(DISPLAY_KEY) == key) return
+        fun show(key: String, drawable: Drawable, transition: Boolean = animate) {
+            if (target.getTag(DISPLAY_KEY) == key && target.drawable != null) return
             target.setTag(DISPLAY_KEY, key)
-            if (animate && slideDirection != 0 && target.width > 0) {
+            if (transition && slideDirection != 0 && target.width > 0) {
                 val distance = target.width.toFloat() * slideDirection
                 target.animate().cancel()
                 target.animate().translationX(-distance).setDuration(120).withEndAction {
@@ -77,12 +93,12 @@ object ArtworkLoader {
                         target.animate().translationX(0f).setDuration(180).start()
                     }
                 }.start()
-            } else if (animate) {
+            } else if (transition) {
                 val previous = target.drawable.let {
                     if (it is TransitionDrawable) it.getDrawable(it.numberOfLayers - 1) else it
                 } ?: ColorDrawable(android.graphics.Color.TRANSPARENT)
                 target.setImageDrawable(TransitionDrawable(arrayOf(previous, drawable)).apply {
-                    isCrossFadeEnabled = true
+                    isCrossFadeEnabled = !showFallbackWhileLoading
                     startTransition(220)
                 })
             } else {
@@ -119,10 +135,10 @@ object ArtworkLoader {
         // the half second the download took - exactly the flash the empty slot
         // after play exists to prevent (seen 30.10.2026 on the phone, frame by
         // frame: empty, logo, cover).
-        fun resting() {
-            if (localLogo != null) show(logoUri.toString(), BitmapDrawable(target.resources, localLogo))
-            else if (fallbackDrawable != null) show("fallback:${fallbackDrawable}", fallbackDrawable)
-            else ContextCompat.getDrawable(target.context, fallbackRes)?.let { show("res:$fallbackRes", it) }
+        fun resting(transition: Boolean = animate) {
+            if (localLogo != null) show(logoUri.toString(), BitmapDrawable(target.resources, localLogo), transition)
+            else if (fallbackDrawable != null) show("fallback:${fallbackDrawable}", fallbackDrawable, transition)
+            else ContextCompat.getDrawable(target.context, fallbackRes)?.let { show("res:$fallbackRes", it, transition) }
         }
 
         // What has to be fetched: the presenter's photo (ours already, behind
@@ -135,7 +151,7 @@ object ArtworkLoader {
         } ?: fallbackUri
         if (key == null) {
             invalidateRequest(target)
-            resting()
+            resting(transition = animate && !showFallbackWhileLoading)
             return
         }
         // A favorite/order update must not re-open the same provider image,
@@ -147,35 +163,27 @@ object ArtworkLoader {
         if (target.getTag(TAG_KEY) == key.toString()) return
         (if (key.scheme == "file") null else cache.get(key.toString()))?.let {
             invalidateRequest(target)
-            show(key.toString(), BitmapDrawable(target.resources, it))
+            show(key.toString(), BitmapDrawable(target.resources, it),
+                transition = animate && (!showFallbackWhileLoading || target.drawable != null))
             return
         }
 
-        // Not in the cache: what is showing stays until the picture arrives -
-        // the empty slot after play, or the previous picture for the moment a
-        // download takes - and the logo goes up only if the download fails.
+        if (showFallbackWhileLoading &&
+            (target.drawable == null || target.getTag(DISPLAY_KEY) != fallbackUri?.toString())) {
+            localLogo = fallbackUri?.takeUnless { it.scheme == "file" }?.let { cache.get(it.toString()) }
+            resting(transition = false)
+        }
         val requestToken = Any()
         target.setTag(TAG_KEY, key.toString())
         target.setTag(REQUEST_TOKEN_KEY, requestToken)
-        val resolver = target.context.applicationContext.contentResolver
+        val context = target.context.applicationContext
         scope.launch {
             val bitmap = withContext(ArtworkWorkScheduler.dispatcher) {
-                fun load(uri: Uri): Bitmap? = runCatching {
-                    when (uri.scheme) {
-                        "content" -> resolver.openInputStream(uri)?.use { input ->
-                            ArtworkAccessPolicy.readBounded(input)?.let(::decodeBounded)
-                        }
-                        "file" -> java.io.File(uri.path ?: return@runCatching null)
-                            .inputStream().use { input ->
-                                ArtworkAccessPolicy.readBounded(input)?.let(::decodeBounded)
-                            }
-                        else -> fetch(uri.toString())
-                    }
-                }.getOrNull()
-                load(key).also { bitmap ->
+                load(context, key).also { bitmap ->
                     // AAOS station logos use content URIs, not just file URIs.
                     if (bitmap == null && fallbackUri != null && fallbackUri != key) {
-                        localLogo = (if (fallbackUri.scheme == "file") null else cache.get(fallbackUri.toString())) ?: load(fallbackUri)
+                        localLogo = (if (fallbackUri.scheme == "file") null else cache.get(fallbackUri.toString()))
+                            ?: load(context, fallbackUri)
                         localLogo?.let { if (fallbackUri.scheme != "file") cache.put(fallbackUri.toString(), it) }
                     }
                 }
@@ -195,6 +203,19 @@ object ArtworkLoader {
             }
         }
     }
+
+    private fun load(context: Context, uri: Uri): Bitmap? = runCatching {
+        when (uri.scheme) {
+            "content" -> context.contentResolver.openInputStream(uri)?.use { input ->
+                ArtworkAccessPolicy.readBounded(input)?.let(::decodeBounded)
+            }
+            "file" -> java.io.File(uri.path ?: return@runCatching null).inputStream().use { input ->
+                ArtworkAccessPolicy.readBounded(input)?.let(::decodeBounded)
+            }
+            "http", "https" -> fetch(uri.toString())
+            else -> null
+        }
+    }.getOrNull()
 
     private fun fetch(url: String): Bitmap? = runCatching {
         decodeBounded(SafeHttp.getBytes(url, ArtworkAccessPolicy.MAX_BYTES,
