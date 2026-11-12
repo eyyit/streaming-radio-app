@@ -89,6 +89,9 @@ android {
         create("automotive") {
             dimension = "platform"
             applicationId = providers.gradleProperty("publicApplicationId").orElse("com.impostorlabs.streamingradio").get()
+            // The car must be able to update in place from the phone's higher shared-package build.
+            versionCode = 14
+            versionName = "0.3.0-rc12"
             minSdk = 28
             buildConfigField("boolean", "IS_AUTOMOTIVE", "true")
         }

@@ -137,10 +137,18 @@ class StartupResumptionServiceTest {
     @Test fun collectionChoicePersistsButBrowsingDoesNotChoosePlayback() {
         prefs.activeBrowseParent = "/all"
         withService { _, _, callback, session ->
+            if (net.mspanc.twinsenradio.BuildConfig.IS_AUTOMOTIVE) {
+                val root = callback.onGetLibraryRoot(session, controller, null).get().value!!
+                val folders = callback.onGetChildren(session, controller, root.mediaId, 0, 100, null)
+                    .get().value!!
+                assertTrue(folders.any { it.mediaId == RadioService.NODE_PLAYLISTS })
+            }
+            val saved = callback.onGetChildren(session, controller, RadioService.NODE_PLAYLISTS, 0, 100, null)
+                .get().value!!.single { it.mediaId == "/collection" + imported }
             callback.onGetChildren(session, controller, imported, 0, 100, null).get()
             assertEquals("/all", Prefs(context).activeBrowseParent)
             val result = callback.onSetMediaItems(session, controller, mutableListOf(
-                MediaItem.Builder().setMediaId("/collection" + imported).build()), 0, 0).get()
+                saved), 0, 0).get()
             assertEquals(imported, Prefs(context).activeBrowseParent)
             assertEquals(repo.sourceStations("startup").map { it.mediaId },
                 result.mediaItems.map { it.mediaId })
@@ -278,15 +286,35 @@ class StartupResumptionServiceTest {
         }
     }
 
-    @Test fun sessionActivityRoutesToFlavorEntryPoint() {
+    @Test fun sessionActivityNeverFallsBackToParkedSettings() {
         val service = Robolectric.buildService(RadioService::class.java).get()
-        val intent = RadioService::class.java.getDeclaredMethod("sessionActivityIntent")
-            .apply { isAccessible = true }.invoke(service) as android.content.Intent
-        val expected = if (net.mspanc.twinsenradio.BuildConfig.IS_AUTOMOTIVE)
-            "net.mspanc.twinsenradio.automotive.AutomotiveSettingsActivity"
-        else "net.mspanc.twinsenradio.phone.PhoneLibraryActivity"
-        assertEquals(expected, intent.component!!.className)
-        assertEquals(context.packageName, intent.component!!.packageName)
+        val route = RadioService::class.java.getDeclaredMethod("sessionActivityIntent")
+            .apply { isAccessible = true }
+        val intent = route.invoke(service) as android.content.Intent?
+        if (net.mspanc.twinsenradio.BuildConfig.IS_AUTOMOTIVE) {
+            assertNull(intent)
+            val action = "android.car.intent.action.MEDIA_TEMPLATE"
+            val host = android.content.pm.ActivityInfo().apply {
+                packageName = "example.car.media"
+                name = "example.car.media.MediaActivity"
+                exported = true
+                applicationInfo = android.content.pm.ApplicationInfo().apply {
+                    flags = android.content.pm.ApplicationInfo.FLAG_SYSTEM
+                }
+            }
+            org.robolectric.Shadows.shadowOf(service.packageManager).addResolveInfoForIntent(
+                android.content.Intent(action),
+                android.content.pm.ResolveInfo().apply { activityInfo = host; isDefault = true }
+            )
+            val native = route.invoke(service) as android.content.Intent
+            assertEquals(action, native.action)
+            assertEquals(host.name, native.component?.className)
+            assertEquals(android.content.ComponentName(service, RadioService::class.java).flattenToString(),
+                native.getStringExtra("android.car.intent.extra.MEDIA_COMPONENT"))
+        } else {
+            assertEquals("net.mspanc.twinsenradio.phone.PhoneLibraryActivity", intent?.component?.className)
+            assertEquals(context.packageName, intent?.component?.packageName)
+        }
         (field(service, "scope") as CoroutineScope).cancel()
     }
 

@@ -3,8 +3,10 @@ package net.mspanc.twinsenradio.playback
 
 import android.app.PendingIntent
 import android.app.usage.UsageStatsManager
+import android.content.ComponentName
 import android.content.Intent
 import android.content.SharedPreferences
+import android.content.pm.PackageManager
 import android.media.AudioDeviceInfo
 import android.media.AudioManager
 import android.os.Build
@@ -303,11 +305,18 @@ class RadioService : MediaLibraryService() {
         }
     }
 
-    private fun sessionActivityIntent(): Intent =
-        Intent().setClassName(this,
-            if (net.mspanc.twinsenradio.BuildConfig.IS_AUTOMOTIVE)
-                "net.mspanc.twinsenradio.automotive.AutomotiveSettingsActivity"
-            else "net.mspanc.twinsenradio.phone.PhoneLibraryActivity")
+    private fun sessionActivityIntent(): Intent? {
+        if (!net.mspanc.twinsenradio.BuildConfig.IS_AUTOMOTIVE) {
+            return Intent().setClassName(this, "net.mspanc.twinsenradio.phone.PhoneLibraryActivity")
+        }
+        val intent = Intent("android.car.intent.action.MEDIA_TEMPLATE")
+            .putExtra("android.car.intent.extra.MEDIA_COMPONENT",
+                ComponentName(this, RadioService::class.java).flattenToString())
+        val host = packageManager.queryIntentActivities(
+            intent, PackageManager.MATCH_SYSTEM_ONLY or PackageManager.MATCH_DEFAULT_ONLY
+        ).firstOrNull { it.activityInfo.exported }?.activityInfo ?: return null
+        return intent.setClassName(host.packageName, host.name)
+    }
 
     override fun onCreate() {
         super.onCreate()
@@ -327,16 +336,16 @@ class RadioService : MediaLibraryService() {
             }
         )
 
-        val sessionActivity = PendingIntent.getActivity(
-            this,
-            0,
-            sessionActivityIntent(),
-            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
-        )
-
         val sessionPlayer = KeepCurrentStreamPlayer(player).apply { stationNavigation = ::navigateStationOrder }
         session = MediaLibrarySession.Builder(this, sessionPlayer, LibraryCallback())
-            .setSessionActivity(sessionActivity)
+            .apply {
+                sessionActivityIntent()?.let { intent ->
+                    setSessionActivity(PendingIntent.getActivity(
+                        this@RadioService, 0, intent,
+                        PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
+                    ))
+                }
+            }
             .setCustomLayout(customLayout())
             .build()
 

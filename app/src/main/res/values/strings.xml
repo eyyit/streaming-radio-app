@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Modified for Streaming Radio by Impostor Labs. -->
 <resources>
-    <string name="app_name">Twinsen Radio</string>
+    <string name="app_name">Streaming Radio</string>
     <string name="settings_title">Opcje</string>
 
     <!-- Krotkie, bo Android Auto renderuje je jako zakladki i dluzsze przycina -->

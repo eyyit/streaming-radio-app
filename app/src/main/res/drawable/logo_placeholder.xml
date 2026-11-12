@@ -10,5 +10,5 @@
         android:gravity="center"
         android:width="96dp"
         android:height="96dp"
-        android:drawable="@drawable/ic_radio" />
+            android:drawable="@drawable/ic_launcher_foreground" />
 </layer-list>

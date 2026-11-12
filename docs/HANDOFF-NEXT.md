@@ -1,3 +1,11 @@
+# Native AAOS version 14 recovery
+
+The Volvo showed the phone activity. Phone and native AAOS releases share
+the package ID. Native v14 outranks phone v13 and is intended for the
+automotive internal track as an in-place update. Verify the installed
+artifact and native browse and playback while the host is in driving mode.
+The media session opens the system media host. Playlist editing is parked.
+
 # Phone version 13 corrections - private candidate
 
 Phone version 13 / 0.3.0-rc11 targets the existing Streaming Radio package;

@@ -41,7 +41,7 @@ See [gallery provenance](docs/SCREENSHOTS.md).
 
 New to M3U files? See the [playlist guide](docs/PLAYLIST-GUIDE.md) and its downloadable template.
 
-1. Install version 11 (0.3.0-rc9) from the available Android Automotive OS internal testing track. There is no public production release.
+1. Install Streaming Radio from the Android Automotive OS internal testing track on the car. Use the existing installation's **Update** option to retain saved playlists and favorites.
 2. While parked, open **Settings → Manage playlists → Add playlist** and enter a direct HTTPS URL to an M3U file. It should return playlist text, not a web page requiring sign-in.
 3. Select a station, add favorites, and customize the theme if desired.
 
@@ -82,9 +82,9 @@ Evidence is saved at `app/build/reports/verification/verification.json`, includi
 
 ## Testing and release status
 
-Published AAOS release: **0.3.0-rc9**, version code **11**, package com.impostorlabs.streamingradio. It adds the exact HTTPS www.lesinrocks.com artwork host to the existing restricted source-artwork policy. It does not claim to fix the system-wide audio distortion reported during real-car testing; that remains under investigation. Volvo controls its native playback layout. Internal testing is not vehicle certification or public Play approval.
+This source contains the AAOS **v14** recovery candidate for package `com.impostorlabs.streamingradio`. Check the version offered by the car's Play Store before testing. The driving media host controls native browsing and playback.
 
-**Work in progress, not included in v11:** phone/tablet and playlist-transfer changes remain local in the shared working tree. No phone release or Firebase-backed transfer service is available; Firebase feature configuration remains disabled.
+Phone and AAOS builds use dedicated internal testing tracks. Firebase playlist transfer remains disabled.
 
 GitHub Actions builds unsigned candidates, runs unit tests and lint, and checks the resolved dependency inventory against OSV. Dependabot proposes dependency updates; updates and releases still need review. No automatic Play deployment or automatic merging is configured.
 
