@@ -91,6 +91,13 @@ class PhoneStationAdapterUpdateTest {
             assertEquals("Finishing Nova artwork should update only its row", listOf(1), changes.map { it.position })
             assertTrue(changes.single().payload != null)
             assertPayloadReusesHolder(context, changes.single().payload)
+            changes.clear()
+
+            PlaybackStatusBus.setStation("charlie")
+            adapter.update(rows)
+
+            assertFalse("Station changes must keep the existing list", invalidatedAll)
+            assertEquals("Refresh both the former and current station", listOf(1, 2), changes.map { it.position })
         } finally {
             artworkLoading.value = previousArtworkLoading
             PlaybackStatusBus.setStation(null)

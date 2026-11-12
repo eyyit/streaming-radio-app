@@ -1,7 +1,7 @@
 {
   "formatVersion": 1,
   "project": "Twinsen Radio independent source candidate",
-  "gitHead": "7298f14641ffe6779a944f01f7b34186c97c8964",
+  "gitHead": "907006077f857314d8afc568310b8ce02a5b3393",
   "workingTree": "dirty",
   "hashAlgorithm": "SHA-256",
   "selfHashExcluded": true,
@@ -1487,8 +1487,8 @@
     },
     {
       "path": "app/src/testPhone/java/net/mspanc/twinsenradio/phone/PhoneStationAdapterUpdateTest.kt",
-      "size": 5592,
-      "sha256": "c89cf19d4632d34564437f72098fba8c0fcff6d197a8ac830e2d79aa4f3aa2e4"
+      "size": 5909,
+      "sha256": "43fd16891c287e64c3cc2f62c49e7de60792f1626bff5b2f8f1c2ec8abca4c8b"
     },
     {
       "path": "app/src/testPhone/resources/phone_shuffle_A_reference.png",
