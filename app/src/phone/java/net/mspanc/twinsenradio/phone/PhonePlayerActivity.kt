@@ -29,6 +29,14 @@ class PhonePlayerActivity : PhonePlaybackActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        if (PhoneLibraryActivity.usesLandscapeSplit(resources.configuration)) {
+            startActivity(Intent(this, PhoneLibraryActivity::class.java).apply {
+                addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
+                putExtra(CENTER_ACTIVE_STATION, true)
+            })
+            finish()
+            return
+        }
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() { revealStationList() }
         })
@@ -125,7 +133,7 @@ class PhonePlayerActivity : PhonePlaybackActivity() {
         } else text.title.ifBlank { shown?.name ?: cast?.title ?: "Add a playlist to start" }
         val stationText = (shown?.name ?: cast?.title)?.let { "Station: $it" }.orEmpty()
         val collectionText = listOf(output, quality).filterNotNull().filter { it.isNotBlank() }.joinToString(" · ")
-        art.displayDetails(listOf(titleText, artistText, stationText, collectionText)) {
+        art.displayDetails {
             title.text = titleText
             artist.text = artistText
             artist.visibility = if (artistText.isBlank()) View.GONE else View.VISIBLE

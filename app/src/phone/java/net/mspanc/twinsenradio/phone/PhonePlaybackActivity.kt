@@ -63,6 +63,7 @@ abstract class PhonePlaybackActivity : AppCompatActivity() {
     protected var controller: MediaController? = null
         private set
     protected open val showMiniPlayer = true
+    protected var splitTransportHost: LinearLayout? = null
     protected abstract fun buildBody(): View
     protected open fun renderContent() {}
     private var connection: ListenableFuture<MediaController>? = null
@@ -128,7 +129,7 @@ abstract class PhonePlaybackActivity : AppCompatActivity() {
         if (showMiniPlayer) root.addView(buildMiniPlayer())
         if (this !is PhonePlayerActivity) root.addView(PhoneCastUi.dockRow(this))
         val dock = buildDock()
-        root.addView(dock)
+        (splitTransportHost ?: root).addView(dock)
         status = PhoneUi.text(this, size = 14f, muted = true).apply {
             tag = "phone_playback_status"
             maxLines = 1
@@ -141,8 +142,15 @@ abstract class PhonePlaybackActivity : AppCompatActivity() {
         val screen = object : FrameLayout(this) {
             override fun onLayout(changed: Boolean, left: Int, top: Int, right: Int, bottom: Int) {
                 super.onLayout(changed, left, top, right, bottom)
-                val statusBottom = root.top + dock.top - dp(4)
+                val bounds = android.graphics.Rect()
+                dock.getDrawingRect(bounds)
+                offsetDescendantRectToMyCoords(dock, bounds)
+                val statusBottom = bounds.top - dp(4)
                 status.offsetTopAndBottom(statusBottom - status.bottom)
+                if (splitTransportHost != null) {
+                    val center = bounds.centerX()
+                    status.offsetLeftAndRight(center - (status.left + status.width / 2))
+                }
             }
         }
         screen.addView(root, FrameLayout.LayoutParams(-1, -1))
@@ -301,6 +309,9 @@ abstract class PhonePlaybackActivity : AppCompatActivity() {
         val carousel = (view as? PhoneCarouselArtwork)?.also(artworkCarousels::add)
         val touchSlop = ViewConfiguration.get(this).scaledTouchSlop
         val swipeDistance = maxOf(dp(40), touchSlop * 2)
+        val windowLocation = IntArray(2)
+        var downFromLeft = 0f
+        var downFromRight = 0f
         var downX = 0f
         var downY = 0f
         var horizontal = false
@@ -313,6 +324,10 @@ abstract class PhonePlaybackActivity : AppCompatActivity() {
             when (event.actionMasked) {
                 MotionEvent.ACTION_DOWN -> {
                     downX = event.x; downY = event.y
+                    val decor = window.decorView
+                    decor.getLocationOnScreen(windowLocation)
+                    downFromLeft = event.rawX - windowLocation[0]
+                    downFromRight = decor.width - downFromLeft
                     horizontal = false; vertical = false; cancelled = false
                     finishArtworkPreview()
                     if (onVerticalSwipe != null) target.parent.requestDisallowInterceptTouchEvent(true)
@@ -340,7 +355,10 @@ abstract class PhonePlaybackActivity : AppCompatActivity() {
                             previewGestureDirection = step
                             if (prefs.artworkTransitionsEnabled) updateCarouselPreview(step)
                         }
-                        carousel?.drag(dx, prefs.artworkTransitionsEnabled)
+                        val room = if (dx < 0) downFromLeft else downFromRight
+                        val turnDistance = minOf(target.width.toFloat(), room - touchSlop)
+                            .coerceAtLeast(swipeDistance.toFloat())
+                        carousel?.drag(dx, prefs.artworkTransitionsEnabled, turnDistance)
                     } else carousel?.settle()
                 }
                 MotionEvent.ACTION_UP -> {
@@ -384,10 +402,10 @@ abstract class PhonePlaybackActivity : AppCompatActivity() {
         return if (currentIndex >= 0 && targetIndex >= 0 && targetIndex < currentIndex) 1 else -1
     }
 
-    private fun stationPreviewDrawable(station: Station): Drawable? {
+    private fun stationPreviewDrawable(station: Station): Drawable {
         val fallback = metadata.logoResId(station)
         if (fallback != R.drawable.logo_placeholder) {
-            return ContextCompat.getDrawable(this, fallback)?.mutate()
+            ContextCompat.getDrawable(this, fallback)?.mutate()?.let { return it }
         }
         return PhoneStationArtwork(station.name)
     }
@@ -421,7 +439,7 @@ abstract class PhonePlaybackActivity : AppCompatActivity() {
 
     private fun showAdjacentCover(step: Int, station: Station?, image: Drawable?) {
         artworkCarousels.forEach { carousel ->
-            carousel.setAdjacentPreview(step, station?.id, image, station?.name)
+            carousel.setAdjacentPreview(step, station?.id, image)
         }
     }
 
@@ -433,7 +451,7 @@ abstract class PhonePlaybackActivity : AppCompatActivity() {
         previewLoad = null
     }
 
-    protected fun buildPlayerHeader(restoreLibrary: (() -> Unit)? = null): View {
+    protected fun buildPlayerHeader(split: Boolean = false, restoreLibrary: (() -> Unit)? = null): View {
         val expanded = restoreLibrary != null
         val row = PhoneUi.row(this)
         val restore = PhoneUi.row(this).apply {
@@ -451,14 +469,28 @@ abstract class PhonePlaybackActivity : AppCompatActivity() {
             })
             addView(PhoneUi.text(this@PhonePlaybackActivity, if (expanded) "Library" else "Player"))
         }
-        row.addView(restore, LinearLayout.LayoutParams(0, dp(48), 1f))
+        val artworkActions = if (split) {
+            row.addView(PhoneUi.text(this, "Streaming Radio", 20f).apply {
+                setTypeface(typeface, android.graphics.Typeface.BOLD)
+                maxLines = 1
+                ellipsize = android.text.TextUtils.TruncateAt.END
+            }, LinearLayout.LayoutParams(0, -2, 1f))
+            row.addView(buildSecondaryActions(compact = true))
+            PhoneUi.row(this).apply {
+                gravity = Gravity.END or Gravity.CENTER_VERTICAL
+                row.addView(this, LinearLayout.LayoutParams(0, dp(48), 1f))
+            }
+        } else {
+            row.addView(restore, LinearLayout.LayoutParams(0, dp(48), 1f))
+            row
+        }
         artVisibility = PhoneUi.icon(this, R.drawable.phone_ic_track_art_hide, "Hide artwork").apply {
             setPadding(dp(8), dp(8), dp(8), dp(8))
             setOnClickListener {
                 displayPreferences.edit().putBoolean("hide_art", !artworkHidden).apply(); refreshPlaybackUi()
             }
         }
-        row.addView(artVisibility)
+        artworkActions.addView(artVisibility)
         val refreshBox = FrameLayout(this)
         artRefresh = PhoneUi.icon(this, R.drawable.phone_ic_artwork_refresh, "Refresh track artwork").apply {
             setPadding(dp(8), dp(8), dp(8), dp(8))
@@ -471,8 +503,8 @@ abstract class PhonePlaybackActivity : AppCompatActivity() {
             setLoading(false)
         }
         refreshBox.addView(artLoading, FrameLayout.LayoutParams(dp(32), dp(32), Gravity.CENTER))
-        row.addView(refreshBox, LinearLayout.LayoutParams(dp(48), dp(48)))
-        PhoneCastUi.introduce(this, castController.createButton(row))
+        artworkActions.addView(refreshBox, LinearLayout.LayoutParams(dp(48), dp(48)))
+        PhoneCastUi.introduce(this, castController.createButton(artworkActions))
         return row
     }
 
@@ -546,51 +578,67 @@ abstract class PhonePlaybackActivity : AppCompatActivity() {
         return row
     }
 
-    private fun buildDock(): View {
-        val controls = PhoneUi.column(this)
-        controls.addView(PhoneUi.divider(this))
+    private fun buildSecondaryActions(compact: Boolean): View {
         val secondary = PhoneUi.row(this).apply { tag = "phone_secondary_actions" }
         fun action(drawable: Int, caption: String, click: () -> Unit): LinearLayout = PhoneUi.column(this).apply {
-            gravity = Gravity.CENTER; minimumHeight = dp(64)
+            gravity = Gravity.CENTER; minimumHeight = dp(if (compact) 48 else 64)
             addView(PhoneUi.icon(this@PhonePlaybackActivity, drawable, caption).apply {
                 setPadding(dp(8), dp(8), dp(8), dp(8)); setOnClickListener { click() }
             })
-            addView(PhoneUi.text(this@PhonePlaybackActivity, caption, 12f).apply {
+            if (!compact) addView(PhoneUi.text(this@PhonePlaybackActivity, caption, 12f).apply {
                 gravity = Gravity.CENTER; maxLines = 2; importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
             })
         }
+        fun actionParams() = if (compact) LinearLayout.LayoutParams(dp(48), dp(48))
+            else LinearLayout.LayoutParams(0, -2, 1f)
         secondary.addView(action(R.drawable.phone_ic_settings_gear, "Settings") {
             startActivity(Intent(this, PhoneSettingsActivity::class.java))
-        }, LinearLayout.LayoutParams(0, -2, 1f))
+        }, actionParams())
         val shuffleAction = action(R.drawable.phone_shuffle_off, "Shuffle stations") { toggleShuffle() }
         shuffle = shuffleAction.getChildAt(0) as ImageButton
         shuffle.apply {
             tag = "phone_locked_a_shuffle"; imageTintList = null
             scaleType = ImageView.ScaleType.FIT_CENTER
-            setPadding(dp(12), dp(8), dp(12), dp(8))
+            setPadding(dp(if (compact) 9 else 12), dp(8), dp(if (compact) 9 else 12), dp(8))
         }
-        secondary.addView(shuffleAction, LinearLayout.LayoutParams(0, -2, 1f))
+        secondary.addView(shuffleAction, actionParams())
         val favoriteAction = action(R.drawable.ic_star_outline, "Favorite station") {
             shownStation()?.let { prefs.toggleFavourite(it.id); refreshPlaybackUi() }
         }
         favorite = favoriteAction.getChildAt(0) as ImageButton
-        secondary.addView(favoriteAction, LinearLayout.LayoutParams(0, -2, 1f)); controls.addView(secondary)
-        val transport = PhoneUi.row(this).apply {
-            tag = "phone_primary_transport"; setPadding(0, dp(12), 0, 0)
+        secondary.addView(favoriteAction, actionParams())
+        return secondary
+    }
+
+    private fun buildDock(): View {
+        val split = splitTransportHost != null
+        val controls = PhoneUi.column(this)
+        if (!split) {
+            controls.addView(PhoneUi.divider(this))
+            controls.addView(buildSecondaryActions(compact = false))
         }
-        previous = PhoneUi.icon(this, R.drawable.ic_transport_previous, "Previous station", 64).apply {
-            setPadding(dp(16), dp(16), dp(16), dp(16))
+        val transport = PhoneUi.row(this).apply {
+            tag = "phone_primary_transport"
+            if (split) gravity = Gravity.CENTER
+            else setPadding(0, dp(12), 0, 0)
+        }
+        previous = PhoneUi.icon(this, R.drawable.ic_transport_previous, "Previous station", if (split) 52 else 64).apply {
+            val padding = dp(if (split) 11 else 16)
+            setPadding(padding, padding, padding, padding)
             setOnClickListener {
                 artworkCarousels.forEach { it.expectStation(1, prefs.artworkTransitionsEnabled) }
                 castController.onExplicitQueueNavigation()
                 controller?.seekToPreviousMediaItem()
             }
         }
-        play = PhoneUi.icon(this, R.drawable.ic_transport_play, "Play", 88).apply {
-            setPadding(dp(26), dp(26), dp(26), dp(26)); setOnClickListener { togglePlayback() }
+        play = PhoneUi.icon(this, R.drawable.ic_transport_play, "Play", if (split) 56 else 88).apply {
+            val padding = dp(if (split) 15 else 26)
+            setPadding(padding, padding, padding, padding)
+            setOnClickListener { togglePlayback() }
         }
-        next = PhoneUi.icon(this, R.drawable.ic_transport_next, "Next station", 64).apply {
-            setPadding(dp(16), dp(16), dp(16), dp(16))
+        next = PhoneUi.icon(this, R.drawable.ic_transport_next, "Next station", if (split) 52 else 64).apply {
+            val padding = dp(if (split) 11 else 16)
+            setPadding(padding, padding, padding, padding)
             setOnClickListener {
                 artworkCarousels.forEach { it.expectStation(nextArtworkStep(), prefs.artworkTransitionsEnabled) }
                 castController.onExplicitQueueNavigation()
@@ -599,7 +647,8 @@ abstract class PhonePlaybackActivity : AppCompatActivity() {
         }
         listOf(previous, play, next).forEach { button -> transport.addView(FrameLayout(this).apply {
             addView(button, FrameLayout.LayoutParams(button.layoutParams.width, button.layoutParams.height, Gravity.CENTER))
-        }, LinearLayout.LayoutParams(0, dp(88), 1f)) }
+        }, if (split) LinearLayout.LayoutParams(dp(82), dp(56))
+            else LinearLayout.LayoutParams(0, dp(88), 1f)) }
         controls.addView(transport); return controls
     }
 
@@ -674,7 +723,7 @@ abstract class PhonePlaybackActivity : AppCompatActivity() {
             loadArt(cover)
             val title = text.title.ifBlank { shown?.name.orEmpty() }
             val station = shown?.name.orEmpty()
-            cover.displayDetails(listOf(title, text.artist, station)) {
+            cover.displayDetails {
                 miniTitle?.text = title
                 miniArtist?.text = text.artist
                 miniArtist?.visibility = if (text.artist.isBlank()) View.GONE else View.VISIBLE

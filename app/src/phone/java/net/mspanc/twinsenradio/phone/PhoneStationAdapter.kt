@@ -34,6 +34,7 @@ internal class PhoneStationAdapter(
     private val owner: LifecycleOwner,
     private val prefs: Prefs,
     private val repo: StationRepository,
+    private val compact: Boolean = false,
     private val play: (Station) -> Unit
 ) : RecyclerView.Adapter<PhoneStationAdapter.Holder>() {
     private var stations = emptyList<Station>()
@@ -98,8 +99,10 @@ internal class PhoneStationAdapter(
     fun positionOf(id: String) = stations.indexOfFirst { it.id == id }
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): Holder {
         val c = parent.context
-        val wrapper = PhoneUi.column(c)
-        val row = PhoneUi.row(c).apply { minimumHeight = PhoneUi.dp(c, 56) }
+        val wrapper = PhoneUi.column(c).apply {
+            if (compact) layoutParams = RecyclerView.LayoutParams(-1, -2)
+        }
+        val row = PhoneUi.row(c).apply { minimumHeight = PhoneUi.dp(c, if (compact) 48 else 56) }
         val selected = View(c)
         row.addView(selected, LinearLayout.LayoutParams(PhoneUi.dp(c, 3), PhoneUi.dp(c, 48)))
         val art = FrameLayout(c).apply { background = PhoneUi.shape(c, PhoneUi.SURFACE, 8); clipToOutline = true }
@@ -113,7 +116,7 @@ internal class PhoneStationAdapter(
         val title = PhoneUi.text(c, size = 18f).apply {
             maxLines = 1; ellipsize = TextUtils.TruncateAt.END; setTypeface(typeface, Typeface.BOLD)
         }
-        val subtitle = PhoneUi.text(c, size = 14f, muted = true).apply { maxLines = 2; ellipsize = TextUtils.TruncateAt.END }
+        val subtitle = PhoneUi.text(c, size = 14f, muted = true).apply { maxLines = if (compact) 1 else 2; ellipsize = TextUtils.TruncateAt.END }
         text.addView(title); text.addView(subtitle)
         row.addView(text, LinearLayout.LayoutParams(0, -2, 1f))
         val heart = PhoneUi.icon(c, R.drawable.ic_star_outline, "Favorite station").apply {

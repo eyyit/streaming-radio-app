@@ -16,9 +16,6 @@ import android.view.View
 import android.view.ViewGroup
 import android.view.animation.AccelerateDecelerateInterpolator
 import android.view.animation.PathInterpolator
-import android.text.StaticLayout
-import android.text.TextPaint
-import android.text.TextUtils
 import android.widget.TextView
 import androidx.appcompat.widget.AppCompatImageView
 import androidx.core.animation.doOnEnd
@@ -49,7 +46,6 @@ internal class PhoneCarouselArtwork @JvmOverloads constructor(
     private var incomingFallback: Drawable? = null
     private var keepPreviewForTurn = false
     private var adjacentCover: Drawable? = null
-    private var adjacentName: String? = null
     private var previewDirection = 0
     private var previewStationId: String? = null
     private var motion: ValueAnimator? = null
@@ -59,14 +55,9 @@ internal class PhoneCarouselArtwork @JvmOverloads constructor(
     private var details: List<TextView> = emptyList()
     private var hiddenDetails: List<Pair<View, Int>>? = null
     private var pendingDetails: (() -> Unit)? = null
-    private data class Caption(val bitmap: Bitmap, val bounds: RectF)
-    private var outgoingCaptions: List<Caption> = emptyList()
-    private var incomingCaptions: List<Caption> = emptyList()
-    private var incomingLabels: List<CharSequence>? = null
-    private var previewCaptions: List<Caption> = emptyList()
-    private var captionOverlay: View? = null
-    private var captionRoot: ViewGroup? = null
-    private val captionLocation = IntArray(2)
+    private var artworkOverlay: View? = null
+    private var overlayRoot: ViewGroup? = null
+    private val artworkLocation = IntArray(2)
     private val rootLocation = IntArray(2)
     private var expandedViewport: View? = null
     private val viewportLocation = IntArray(2)
@@ -91,16 +82,11 @@ internal class PhoneCarouselArtwork @JvmOverloads constructor(
         step: Int,
         adjacentStationId: String?,
         image: Drawable?,
-        name: String? = null,
     ) {
         previewDirection = step
         previewStationId = adjacentStationId
         adjacentCover = image
-        if (adjacentName != name) {
-            adjacentName = name
-            previewCaptions = if (coverMoving && name != null) captureCaptions(listOf(name)) else emptyList()
-            captionOverlay?.invalidate()
-        }
+        artworkOverlay?.invalidate()
         invalidate()
     }
 
@@ -112,15 +98,8 @@ internal class PhoneCarouselArtwork @JvmOverloads constructor(
         expandedViewport = viewport
     }
 
-    fun displayDetails(labels: List<CharSequence> = emptyList(), update: () -> Unit) {
-        if (hiddenDetails == null) update() else {
-            pendingDetails = update
-            if (oldCover != null && incomingLabels != labels) {
-                incomingLabels = labels
-                incomingCaptions = captureCaptions(labels)
-                captionOverlay?.invalidate()
-            }
-        }
+    fun displayDetails(update: () -> Unit) {
+        if (isMoving) pendingDetails = update else update()
     }
 
     fun setPanelMoving(moving: Boolean) {
@@ -131,49 +110,48 @@ internal class PhoneCarouselArtwork @JvmOverloads constructor(
     private fun syncDetailsVisibility() {
         updateCoverSurface()
         if (coverMoving && !panelMoving) {
-            if (captionOverlay == null) startCaptionOverlay()
-            if (previewCaptions.isEmpty()) adjacentName?.let { previewCaptions = captureCaptions(listOf(it)) }
-            captionOverlay?.invalidate()
+            if (artworkOverlay == null) startArtworkOverlay()
+            artworkOverlay?.invalidate()
         } else {
-            removeCaptionOverlay()
+            removeArtworkOverlay()
         }
-        if (isMoving) {
+        // The panel transition draws its own text. A station turn keeps the
+        // actual labels still and applies new metadata after the cover settles.
+        if (panelMoving) {
             if (hiddenDetails != null) return
             hiddenDetails = details.map { it to it.visibility }
             details.filter { it.visibility == View.VISIBLE }.forEach { it.visibility = View.INVISIBLE }
         } else {
-            val previous = hiddenDetails ?: return
+            hiddenDetails?.forEach { (view, visibility) -> view.visibility = visibility }
             hiddenDetails = null
-            previous.forEach { (view, visibility) -> view.visibility = visibility }
-            val update = pendingDetails
-            pendingDetails = null
-            update?.invoke()
+            if (!coverMoving) {
+                val update = pendingDetails
+                pendingDetails = null
+                update?.invoke()
+            }
         }
     }
 
-    private fun startCaptionOverlay() {
+    private fun startArtworkOverlay() {
         val root = rootView as? ViewGroup ?: return
-        if (outgoingCaptions.isEmpty()) {
-            outgoingCaptions = captureCaptions(details.map { it.text })
-        }
         val overlay = object : View(context) {
             override fun onDraw(canvas: Canvas) {
                 getLocationOnScreen(rootLocation)
-                this@PhoneCarouselArtwork.getLocationOnScreen(captionLocation)
-                val x = (captionLocation[0] - rootLocation[0]).toFloat()
-                val y = (captionLocation[1] - rootLocation[1]).toFloat()
+                this@PhoneCarouselArtwork.getLocationOnScreen(artworkLocation)
+                val x = (artworkLocation[0] - rootLocation[0]).toFloat()
+                val y = (artworkLocation[1] - rootLocation[1]).toFloat()
                 val saved = canvas.save()
                 canvas.translate(x, y)
                 val viewport = expandedViewport
                 if (viewport != null) {
                     viewport.getLocationOnScreen(viewportLocation)
-                    // The viewport owns the face. The cover and captions are inset within it.
+                    // The viewport owns the face. The cover is inset within it.
                     faceBounds.set(-x, 0f, root.width - x,
                         maxOf(this@PhoneCarouselArtwork.height.toFloat(),
-                            (viewportLocation[1] + viewport.height - captionLocation[1]).toFloat()))
+                            (viewportLocation[1] + viewport.height - artworkLocation[1]).toFloat()))
                     canvas.clipRect(faceBounds.left,
-                        maxOf(0f, (viewportLocation[1] - captionLocation[1]).toFloat()),
-                        faceBounds.right, (viewportLocation[1] + viewport.height - captionLocation[1]).toFloat())
+                        maxOf(0f, (viewportLocation[1] - artworkLocation[1]).toFloat()),
+                        faceBounds.right, (viewportLocation[1] + viewport.height - artworkLocation[1]).toFloat())
                 } else {
                     faceBounds.set(0f, 0f, this@PhoneCarouselArtwork.width.toFloat(),
                         this@PhoneCarouselArtwork.height.toFloat())
@@ -185,37 +163,15 @@ internal class PhoneCarouselArtwork @JvmOverloads constructor(
             importantForAccessibility = IMPORTANT_FOR_ACCESSIBILITY_NO
             layout(0, 0, root.width, root.height)
         }
-        captionOverlay = overlay
-        captionRoot = root
+        artworkOverlay = overlay
+        overlayRoot = root
         root.overlay.add(overlay)
     }
 
-    private fun removeCaptionOverlay() {
-        captionOverlay?.let { captionRoot?.overlay?.remove(it) }
-        captionOverlay = null
-        captionRoot = null
-    }
-
-    private fun captureCaptions(labels: List<CharSequence>): List<Caption> {
-        val origin = IntArray(2)
-        val location = IntArray(2)
-        getLocationOnScreen(origin)
-        return details.zip(labels).mapNotNull { (view, label) ->
-            val available = view.width - view.compoundPaddingLeft - view.compoundPaddingRight
-            if (label.isBlank() || available <= 0) return@mapNotNull null
-            val paint = TextPaint(view.paint).apply { color = view.currentTextColor }
-            val layout = StaticLayout.Builder.obtain(label, 0, label.length, paint, available)
-                .setIncludePad(view.includeFontPadding)
-                .setMaxLines(view.maxLines)
-                .setEllipsize(TextUtils.TruncateAt.END)
-                .build()
-            view.getLocationOnScreen(location)
-            val left = (location[0] - origin[0] + view.compoundPaddingLeft).toFloat()
-            val top = (location[1] - origin[1] + view.compoundPaddingTop).toFloat()
-            val bitmap = createBitmap(available, layout.height.coerceAtLeast(1))
-            layout.draw(Canvas(bitmap))
-            Caption(bitmap, RectF(left, top, left + available, top + bitmap.height))
-        }
+    private fun removeArtworkOverlay() {
+        artworkOverlay?.let { overlayRoot?.overlay?.remove(it) }
+        artworkOverlay = null
+        overlayRoot = null
     }
 
     private fun updateCoverSurface() {
@@ -231,14 +187,15 @@ internal class PhoneCarouselArtwork @JvmOverloads constructor(
         }
     }
 
-    fun drag(distance: Float, enabled: Boolean) {
+    fun drag(distance: Float, enabled: Boolean, turnDistance: Float = width.toFloat()) {
         if (!canAnimate(enabled) || oldCover != null) return
         removeCallbacks(release)
         stopMotion()
         if (position == 0f && distance != 0f && dragCover == null && drawable != null) {
             dragCover = captureCover()
         }
-        position = (distance / width).coerceIn(-0.82f, 0.82f)
+        val limit = if (adjacentCover == null) 0.82f else 1f
+        position = (distance / turnDistance.coerceAtLeast(1f)).coerceIn(-limit, limit)
         coverMoving = position != 0f
         syncDetailsVisibility()
         postInvalidateOnAnimation()
@@ -273,7 +230,6 @@ internal class PhoneCarouselArtwork @JvmOverloads constructor(
         val start = position.takeIf { it * step > 0f } ?: 0f
         val outgoing = dragCover.takeIf { start != 0f }
         val preview = adjacentCover.takeIf { previewStationId == id && previewDirection == step }
-        val captions = outgoingCaptions
         reset(revealDetails = false)
         val current = drawable
         if (previous == null || id == null || !canAnimate(enabled) || current == null) {
@@ -283,7 +239,6 @@ internal class PhoneCarouselArtwork @JvmOverloads constructor(
         }
 
         oldCover = outgoing ?: captureCover()
-        outgoingCaptions = captions
         oldDrawable = current
         incomingFallback = preview ?: name?.let(::PhoneStationArtwork)
         keepPreviewForTurn = preview != null
@@ -291,7 +246,10 @@ internal class PhoneCarouselArtwork @JvmOverloads constructor(
         position = start
         coverMoving = true
         syncDetailsVisibility()
-        animatePosition(step.toFloat(), (420 - abs(start) * 150).toLong(), committed = true)
+        // A full drag already placed the incoming face flat. Give the new
+        // drawable one frame to bind before releasing the preview and labels.
+        val duration = if (abs(start) == 1f) 16L else (420 - abs(start) * 150).toLong()
+        animatePosition(step.toFloat(), duration, committed = true)
     }
 
     private fun captureCover(): Bitmap {
@@ -315,7 +273,7 @@ internal class PhoneCarouselArtwork @JvmOverloads constructor(
     }
 
     override fun onDraw(canvas: Canvas) {
-        if (captionOverlay == null) {
+        if (artworkOverlay == null) {
             faceBounds.set(0f, 0f, width.toFloat(), height.toFloat())
             drawCarousel(canvas)
         }
@@ -330,20 +288,20 @@ internal class PhoneCarouselArtwork @JvmOverloads constructor(
         bounds.set(0, 0, width, height)
         if (old == null) {
             val frozen = dragCover
-            drawFace(canvas, position, outgoingCaptions) {
+            drawFace(canvas, position) {
                 if (frozen == null) drawCurrentCover(canvas) else canvas.drawBitmap(frozen, null, bounds, paint)
             }
             val step = previewDirection.takeIf { it != 0 && position * it > 0f }
             val adjacent = adjacentCover
             if (step != null && adjacent != null) {
-                drawFace(canvas, position - step, previewCaptions) {
+                drawFace(canvas, position - step) {
                     drawPreview(canvas, adjacent)
                 }
             }
             return
         }
-        drawFace(canvas, position, outgoingCaptions) { canvas.drawBitmap(old, null, bounds, paint) }
-        drawFace(canvas, position - direction, incomingCaptions) {
+        drawFace(canvas, position) { canvas.drawBitmap(old, null, bounds, paint) }
+        drawFace(canvas, position - direction) {
             val fallback = incomingFallback
             if (fallback != null && (keepPreviewForTurn || drawable == null || drawable === oldDrawable)) {
                 drawPreview(canvas, fallback)
@@ -373,12 +331,12 @@ internal class PhoneCarouselArtwork @JvmOverloads constructor(
         canvas.restoreToCount(save)
     }
 
-    private inline fun drawFace(canvas: Canvas, offset: Float, captions: List<Caption>, draw: () -> Unit) {
+    private inline fun drawFace(canvas: Canvas, offset: Float, draw: () -> Unit) {
         if (abs(offset) >= 1f) return
         val face = canvas.save()
         if (offset != 0f) {
-            if (square && captionOverlay != null) {
-                // The projected hinge separates the caption and cover together.
+            if (square && artworkOverlay != null) {
+                // The projected hinge separates the two cover faces.
                 val progress = if (offset > 0f) offset else 1f + offset
                 val hinge = faceBounds.left + faceBounds.width() * progress
                 if (offset > 0f) canvas.clipRect(hinge, faceBounds.top, faceBounds.right, faceBounds.bottom)
@@ -392,9 +350,6 @@ internal class PhoneCarouselArtwork @JvmOverloads constructor(
         }
         draw()
         canvas.restoreToCount(artwork)
-        if (captionOverlay != null) {
-            captions.forEach { canvas.drawBitmap(it.bitmap, null, it.bounds, paint) }
-        }
         canvas.restoreToCount(face)
     }
 
@@ -440,7 +395,7 @@ internal class PhoneCarouselArtwork @JvmOverloads constructor(
             addUpdateListener {
                 position = it.animatedValue as Float
                 invalidate()
-                captionOverlay?.invalidate()
+                artworkOverlay?.invalidate()
             }
             doOnEnd { reset() }
         }
@@ -465,11 +420,6 @@ internal class PhoneCarouselArtwork @JvmOverloads constructor(
         incomingFallback = null
         keepPreviewForTurn = false
         adjacentCover = null
-        adjacentName = null
-        outgoingCaptions = emptyList()
-        incomingCaptions = emptyList()
-        incomingLabels = null
-        previewCaptions = emptyList()
         previewDirection = 0
         previewStationId = null
         if (revealDetails) {
