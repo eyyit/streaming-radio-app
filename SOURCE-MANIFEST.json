@@ -1,7 +1,7 @@
 {
   "formatVersion": 1,
   "project": "Twinsen Radio independent source candidate",
-  "gitHead": "86603e43c2e329726396da42853966314df2e20a",
+  "gitHead": "bd6bca0e0caf008ccdb8c69a0c344c053975284b",
   "workingTree": "dirty",
   "hashAlgorithm": "SHA-256",
   "selfHashExcluded": true,
@@ -42,8 +42,8 @@
     },
     {
       "path": "app/build.gradle.kts",
-      "size": 8296,
-      "sha256": "fa0a9ecb88b71b429479235a598454af8b035afa4504c3aeb0c4dd9b51dc4283"
+      "size": 8304,
+      "sha256": "83059c1e8edf8aa0392d633a320c4283d7451c1376ccbc4adad00f403b84a7cc"
     },
     {
       "path": "app/src/androidTest/java/net/mspanc/twinsenradio/automotive/PrototypeSmokeInstrumentation.kt",

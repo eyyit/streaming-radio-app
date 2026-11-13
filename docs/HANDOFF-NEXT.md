@@ -1,3 +1,9 @@
+# Phone version naming
+
+Use 0.<versionCode>.0 for the phone bundle version name and Play Console
+release name. Phone code 19 is 0.19.0 for internal and closed testing.
+Historical labels describe the bundles originally uploaded.
+
 # Phone player gesture guide
 
 The full-screen player shows the approved guide once a station is available.
