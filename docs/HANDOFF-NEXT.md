@@ -1,3 +1,9 @@
+# Phone player gesture guide
+
+The full-screen player shows the approved guide once a station is available.
+Got it persists dismissal locally. The cover arrows explain horizontal station
+swipes and vertical library swipes.
+
 # Phone version 17 candidate
 
 L3-C puts the station library on the left and the player on the right in

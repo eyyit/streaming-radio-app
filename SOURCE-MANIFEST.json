@@ -1,8 +1,8 @@
 {
   "formatVersion": 1,
   "project": "Twinsen Radio independent source candidate",
-  "gitHead": "5b467f590f7e1f56168241ea123c22520afd40f2",
-  "workingTree": "clean",
+  "gitHead": "86603e43c2e329726396da42853966314df2e20a",
+  "workingTree": "dirty",
   "hashAlgorithm": "SHA-256",
   "selfHashExcluded": true,
   "manifestFilesExcludedFromIncludedFiles": [
@@ -43,7 +43,7 @@
     {
       "path": "app/build.gradle.kts",
       "size": 8296,
-      "sha256": "2c7fded1edc33d696e3c9601e0522df5ac1451f2060bbf0dd08d969ca7ea182e"
+      "sha256": "fa0a9ecb88b71b429479235a598454af8b035afa4504c3aeb0c4dd9b51dc4283"
     },
     {
       "path": "app/src/androidTest/java/net/mspanc/twinsenradio/automotive/PrototypeSmokeInstrumentation.kt",
@@ -942,8 +942,13 @@
     },
     {
       "path": "app/src/phone/java/net/mspanc/twinsenradio/phone/PhonePlayerActivity.kt",
-      "size": 7743,
-      "sha256": "9546c602176e243b932a1528094fb66044389e9e8ac3cd0d297f4dd6f18b380b"
+      "size": 10318,
+      "sha256": "1c67cf8b6bf1c18aacc81edd7b5eb3c293000f60f56e2fb991c514473a5302ff"
+    },
+    {
+      "path": "app/src/phone/java/net/mspanc/twinsenradio/phone/PhonePlayerGestureGuide.kt",
+      "size": 6521,
+      "sha256": "859b0729e22047249c6dac6009f292a8eb152851b045d0d9bccfa0bd8f8b65c8"
     },
     {
       "path": "app/src/phone/java/net/mspanc/twinsenradio/phone/PhonePlaylistActivity.kt",
@@ -1467,8 +1472,8 @@
     },
     {
       "path": "app/src/testPhone/java/net/mspanc/twinsenradio/phone/PhoneFlowUiTest.kt",
-      "size": 30783,
-      "sha256": "2f51de98ef234dec95c3599db53911c43dc194a28d7736dee09306eeb9e70bed"
+      "size": 32447,
+      "sha256": "f0585d6fa81ac915bcdae5461d0ba300b5039d5d739b68429ebaf11d89750db2"
     },
     {
       "path": "app/src/testPhone/java/net/mspanc/twinsenradio/phone/PhoneImportFlowTest.kt",
@@ -1787,6 +1792,7 @@
     }
   ],
   "warnings": [
+    "Working tree is dirty; Git HEAD does not identify the exported file contents.",
     "Local or emulator endpoint appears in tools/aaos-fixture-server.cjs.",
     "Reviewed reserved-domain rejection fixture in app/src/test/java/net/mspanc/twinsenradio/data/PlaylistLibraryTest.kt:69",
     "Reviewed reserved-domain rejection fixture in app/src/test/java/net/mspanc/twinsenradio/data/PlaylistNamesTest.kt:62",

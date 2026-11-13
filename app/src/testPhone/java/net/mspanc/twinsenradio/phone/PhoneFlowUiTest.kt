@@ -314,6 +314,40 @@ class PhoneFlowUiTest {
         }
     }
 
+    @Test fun playerGuideWaitsForAStationAndStaysDismissedAcrossPlayerVisits() {
+        org.robolectric.Shadows.shadowOf(context).declareComponentUnbindable(
+            android.content.ComponentName(context, RadioService::class.java)
+        )
+        fun visit(check: (ViewGroup) -> Unit) {
+            val host = Robolectric.buildActivity(PhonePlayerActivity::class.java)
+            host.get().setTheme(R.style.Theme_StreamingRadioPhone)
+            try {
+                val activity = host.setup().get()
+                val root = activity.findViewById<ViewGroup>(android.R.id.content)
+                measureCompact(root)
+                org.robolectric.shadows.ShadowLooper.idleMainLooper(80, java.util.concurrent.TimeUnit.MILLISECONDS)
+                measureCompact(root)
+                check(root)
+            } finally {
+                host.pause().stop().destroy()
+            }
+        }
+
+        visit { root -> assertFalse(descendants(root).any { it is PhonePlayerGestureGuide }) }
+
+        runBlocking {
+            repo.saveLocalPlaylist("Test list", "#EXTM3U\n#EXTINF:-1,Night Signal\nhttps://radio.example/a\n")
+        }
+        PlaybackStatusBus.setStation(repo.all().single().id)
+        visit { root ->
+            val guide = descendants(root).filterIsInstance<PhonePlayerGestureGuide>().single()
+            val gotIt = descendants(guide).filterIsInstance<Button>().single { it.text == "Got it" }
+            assertTrue(gotIt.performClick())
+            assertFalse(descendants(root).any { it is PhonePlayerGestureGuide })
+        }
+        visit { root -> assertFalse(descendants(root).any { it is PhonePlayerGestureGuide }) }
+    }
+
     @Test fun playerMetadataHasBoundedLinesWithoutShrinkingText() {
         withActivity(PhonePlayerActivity::class.java) { _, root ->
             val texts = descendants(root).filterIsInstance<TextView>()

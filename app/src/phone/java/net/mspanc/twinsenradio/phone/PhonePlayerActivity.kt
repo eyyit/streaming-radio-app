@@ -1,9 +1,11 @@
 package net.mspanc.twinsenradio.phone
 
+import android.content.Context
 import android.content.Intent
 import android.graphics.Typeface
 import android.os.Bundle
 import android.view.View
+import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.ScrollView
@@ -27,6 +29,16 @@ class PhonePlayerActivity : PhonePlaybackActivity() {
     private lateinit var collection: TextView
     private lateinit var wheelPanel: ScrollView
 
+    private val gestureGuidePreferences by lazy {
+        getSharedPreferences("phone_player_gesture_guide", Context.MODE_PRIVATE)
+    }
+    private var gestureGuide: PhonePlayerGestureGuide? = null
+    private var guideBack: OnBackPressedCallback? = null
+    private var guideBackground: View? = null
+    private var hasGuideStation = false
+    private var stationAreaMoving = false
+    private val showGuide = Runnable { showGestureGuide() }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         if (PhoneLibraryActivity.usesLandscapeSplit(resources.configuration)) {
@@ -43,7 +55,9 @@ class PhonePlayerActivity : PhonePlaybackActivity() {
     }
 
     override fun onStationAreaMotion(moving: Boolean) {
+        stationAreaMoving = moving
         if (::art.isInitialized) art.setPanelMoving(moving)
+        if (!moving) scheduleGestureGuide()
     }
 
     private fun revealStationList(enteringFromTop: Boolean = false, centerActive: Boolean = false) {
@@ -133,6 +147,8 @@ class PhonePlayerActivity : PhonePlaybackActivity() {
         } else text.title.ifBlank { shown?.name ?: cast?.title ?: "Add a playlist to start" }
         val stationText = (shown?.name ?: cast?.title)?.let { "Station: $it" }.orEmpty()
         val collectionText = listOf(output, quality).filterNotNull().filter { it.isNotBlank() }.joinToString(" · ")
+        hasGuideStation = shown != null || !cast?.title.isNullOrBlank()
+        scheduleGestureGuide()
         art.displayDetails {
             title.text = titleText
             artist.text = artistText
@@ -147,4 +163,51 @@ class PhonePlayerActivity : PhonePlaybackActivity() {
         }
     }
 
+    override fun onPause() {
+        art.removeCallbacks(showGuide)
+        dismissGestureGuide()
+        super.onPause()
+    }
+
+    private fun scheduleGestureGuide() {
+        if (hasGuideStation && gestureGuide == null &&
+            !gestureGuidePreferences.getBoolean("dismissed", false)
+        ) {
+            art.removeCallbacks(showGuide)
+            art.postOnAnimation(showGuide)
+        }
+    }
+
+    private fun showGestureGuide() {
+        if (!hasGuideStation || isFinishing || stationAreaMoving || gestureGuide != null ||
+            gestureGuidePreferences.getBoolean("dismissed", false) ||
+            !lifecycle.currentState.isAtLeast(androidx.lifecycle.Lifecycle.State.RESUMED)
+        ) return
+        if (!art.isLaidOut || art.width == 0) {
+            scheduleGestureGuide()
+            return
+        }
+        val content = findViewById<FrameLayout>(android.R.id.content)
+        val background = content.getChildAt(0)
+        val guide = PhonePlayerGestureGuide(this, art) {
+            gestureGuidePreferences.edit().putBoolean("dismissed", true).apply()
+            dismissGestureGuide()
+        }
+        guideBackground = background
+        background.importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS
+        gestureGuide = guide
+        content.addView(guide, FrameLayout.LayoutParams(-1, -1))
+        guideBack = object : OnBackPressedCallback(true) {
+            override fun handleOnBackPressed() { dismissGestureGuide() }
+        }.also { onBackPressedDispatcher.addCallback(this, it) }
+    }
+
+    private fun dismissGestureGuide() {
+        guideBack?.remove()
+        guideBack = null
+        gestureGuide?.let { (it.parent as? FrameLayout)?.removeView(it) }
+        gestureGuide = null
+        guideBackground?.importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_AUTO
+        guideBackground = null
+    }
 }
