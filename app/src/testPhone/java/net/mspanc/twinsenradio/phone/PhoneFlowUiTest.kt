@@ -411,6 +411,46 @@ class PhoneFlowUiTest {
     }
 
     @Test
+    @org.robolectric.annotation.GraphicsMode(org.robolectric.annotation.GraphicsMode.Mode.NATIVE)
+    fun fullCoverDragShowsAdjacentFaceBeforeStationCommit() {
+        val host = Robolectric.buildActivity(android.app.Activity::class.java).setup()
+        try {
+            val root = android.widget.FrameLayout(host.get())
+            val cover = PhoneCarouselArtwork(host.get())
+            host.get().setContentView(root)
+            root.addView(cover, 160, 160)
+            measureCompact(root)
+            val red = android.graphics.Color.RED
+            val blue = android.graphics.Color.BLUE
+            cover.setImageDrawable(android.graphics.drawable.ColorDrawable(red))
+            cover.stationChanged("current", "Current", enabled = true)
+            cover.setAdjacentPreview(1, "adjacent", android.graphics.drawable.ColorDrawable(blue))
+
+            val frame = android.graphics.Bitmap.createBitmap(
+                root.width, root.height, android.graphics.Bitmap.Config.ARGB_8888
+            )
+            val canvas = android.graphics.Canvas(frame)
+            host.get().window.decorView.draw(canvas)
+            assertEquals(red, frame.getPixel(80, 80))
+            cover.drag(160f, enabled = true)
+            assertTrue(cover.isMoving)
+            host.get().window.decorView.draw(canvas)
+            assertEquals(blue, frame.getPixel(8, 80))
+            assertEquals(blue, frame.getPixel(152, 80))
+
+            cover.stationChanged("adjacent", "Adjacent", enabled = true)
+            cover.setImageDrawable(android.graphics.drawable.ColorDrawable(blue))
+            org.robolectric.shadows.ShadowLooper.idleMainLooper(1, java.util.concurrent.TimeUnit.SECONDS)
+            assertFalse(cover.isMoving)
+            host.get().window.decorView.draw(canvas)
+            assertEquals(blue, frame.getPixel(80, 80))
+        } finally {
+            host.pause().stop().destroy()
+        }
+    }
+
+
+    @Test
     @Config(qualifiers = "w800dp-h360dp-land")
     fun landscapeLibraryKeepsStationsLeftOfArtworkAndTransport() {
         withActivity(PhoneLibraryActivity::class.java) { _, root ->
