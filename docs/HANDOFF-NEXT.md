@@ -1,3 +1,11 @@
+# Phone version 17 candidate
+
+L3-C puts the station library on the left and the player on the right in
+landscape. Full artwork drags finish visually before release. The phone uses
+the waveform app icon, with matching Play listing artwork. Keep the exact A
+shuffle asset and use the phone internal track for this candidate.
+
+
 # Native AAOS version 14 recovery
 
 The Volvo showed the phone activity. Phone and native AAOS releases share

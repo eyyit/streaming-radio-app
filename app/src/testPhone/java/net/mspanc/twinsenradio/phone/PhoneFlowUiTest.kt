@@ -51,6 +51,22 @@ class PhoneFlowUiTest {
         PlaybackStatusBus.setTrackArtworkLoading(false); PlaybackStatusBus.setCoverArt(null)
     }
 
+    @Test fun phoneLauncherForegroundUsesWaveform() {
+        val parser = context.resources.getXml(R.drawable.ic_launcher_foreground)
+        val android = "http://schemas.android.com/apk/res/android"
+        try {
+            val paths = mutableListOf<String>()
+            while (parser.next() != org.xmlpull.v1.XmlPullParser.END_DOCUMENT) {
+                if (parser.eventType == org.xmlpull.v1.XmlPullParser.START_TAG && parser.name == "path") {
+                    parser.getAttributeValue(android, "pathData")?.let(paths::add)
+                }
+            }
+            assertEquals(listOf("M28,54h9l7,-13 10,27 10,-27 7,13h9"), paths)
+        } finally {
+            parser.close()
+        }
+    }
+
     @Test fun phonePlaybackStatusUsesCurrentStreamEvidence() {
         val startupBuffer = phonePlaybackStatusLabel(
             PlaybackStatusBus.Status.BUFFERING, hasCurrentStreamFormat = false
@@ -366,6 +382,58 @@ class PhoneFlowUiTest {
         assertEquals(View.VISIBLE, title.visibility)
         assertEquals("Incoming station", title.text)
         assertEquals(View.GONE, artist.visibility)
+    }
+
+    @Test fun coverDragKeepsTheOriginalDetailsVisibleUntilItSettles() {
+        val host = Robolectric.buildActivity(android.app.Activity::class.java).setup()
+        try {
+            val root = android.widget.FrameLayout(host.get())
+            val cover = PhoneCarouselArtwork(host.get())
+            val title = TextView(host.get()).apply { text = "Previous station" }
+            host.get().setContentView(root)
+            root.addView(cover, 160, 160)
+            root.addView(title)
+            cover.attachDetails(title)
+            measureCompact(root)
+            cover.drag(80f, enabled = true)
+            assertTrue(cover.isMoving)
+            cover.displayDetails { title.text = "Latest metadata" }
+            assertEquals(View.VISIBLE, title.visibility)
+            assertEquals("Previous station", title.text)
+            assertEquals(0f, title.rotationY, 0f)
+            cover.settle()
+            org.robolectric.shadows.ShadowLooper.idleMainLooper(1, java.util.concurrent.TimeUnit.SECONDS)
+            assertFalse(cover.isMoving)
+            assertEquals("Latest metadata", title.text)
+        } finally {
+            host.pause().stop().destroy()
+        }
+    }
+
+    @Test
+    @Config(qualifiers = "w800dp-h360dp-land")
+    fun landscapeLibraryKeepsStationsLeftOfArtworkAndTransport() {
+        withActivity(PhoneLibraryActivity::class.java) { _, root ->
+            val density = context.resources.displayMetrics.density
+            val width = (800 * density).toInt()
+            val height = (360 * density).toInt()
+            root.measure(View.MeasureSpec.makeMeasureSpec(width, View.MeasureSpec.EXACTLY),
+                View.MeasureSpec.makeMeasureSpec(height, View.MeasureSpec.EXACTLY))
+            root.layout(0, 0, width, height)
+            val views = descendants(root)
+            val list = views.filterIsInstance<RecyclerView>().single()
+            val cover = views.filterIsInstance<PhoneCarouselArtwork>().single()
+            val transport = root.findViewWithTag<View>("phone_primary_transport")
+            val actions = root.findViewWithTag<View>("phone_secondary_actions")
+            fun bounds(view: View) = Rect().also {
+                view.getDrawingRect(it)
+                (root as ViewGroup).offsetDescendantRectToMyCoords(view, it)
+            }
+            assertTrue(bounds(list).right < bounds(cover).left)
+            assertTrue(kotlin.math.abs(bounds(cover).centerX() - bounds(transport).centerX()) <= 1)
+            assertTrue(bounds(actions).bottom < bounds(cover).top)
+            assertTrue(bounds(transport).top >= bounds(cover).bottom)
+        }
     }
 
     @Test fun tappingPlayerTitleCentersTheLibraryWithAPlaylistPlaying() {

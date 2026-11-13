@@ -83,8 +83,8 @@ android {
         create("phone") {
             dimension = "platform"
             applicationId = providers.gradleProperty("publicApplicationId").orElse("com.impostorlabs.streamingradio").get()
-            versionCode = 16
-            versionName = "0.3.0-rc14"
+            versionCode = 17
+            versionName = "0.3.0-rc15"
         }
         create("automotive") {
             dimension = "platform"
