@@ -37,6 +37,34 @@ class PhoneCastPolicyTest {
     }
 
     @Test
+    fun recognizesNativeFlacWithoutOverridingHlsOrOgg() {
+        assertEquals("audio/flac", PhoneCastPolicy.contentType("https://radio.test/live.FLAC?key=1"))
+        assertEquals("audio/flac", PhoneCastPolicy.contentType("https://radio.test/live", "FLAC lossless"))
+        assertEquals("audio/flac", PhoneCastPolicy.contentType("https://radio.test/live", sampleMimeType = "audio/flac"))
+        assertEquals(null, PhoneCastPolicy.contentType(
+            "https://radio.test/live.ogg", sampleMimeType = "audio/flac", containerMimeType = "audio/ogg"
+        ))
+        assertEquals("application/vnd.apple.mpegurl", PhoneCastPolicy.contentType(
+            "https://radio.test/live.m3u8", sampleMimeType = "audio/flac"
+        ))
+    }
+
+    @Test
+    fun packagedAudioUsesItsContainerAndRejectsMismatchedCodecs() {
+        val url = "https://radio.test/live"
+        assertEquals("audio/mp4", PhoneCastPolicy.contentType("$url.m4a", sampleMimeType = "audio/mp4a-latm"))
+        assertEquals("audio/mp4", PhoneCastPolicy.contentType(url,
+            sampleMimeType = "audio/mp4a-latm", containerMimeType = "video/mp4"))
+        assertEquals("audio/ogg", PhoneCastPolicy.contentType("$url.opus", sampleMimeType = "audio/opus"))
+        assertEquals("audio/ogg; codecs=vorbis", PhoneCastPolicy.contentType(url,
+            sampleMimeType = "audio/vorbis", containerMimeType = "audio/ogg"))
+        assertEquals("audio/webm", PhoneCastPolicy.contentType("$url.webm", sampleMimeType = "audio/opus"))
+        assertEquals("audio/wav", PhoneCastPolicy.contentType("$url.wav", sampleMimeType = "audio/raw"))
+        assertEquals(null, PhoneCastPolicy.contentType("$url.wav", sampleMimeType = "audio/aac"))
+        assertEquals(null, PhoneCastPolicy.contentType("$url?format=opus"))
+    }
+
+    @Test
     fun phonePausesOnlyAfterSuccessfulLoadOfSameCurrentUri() {
         assertTrue(PhoneCastPolicy.shouldPauseLocalAfterLoad(true, "https://radio.test/a.mp3", "https://radio.test/a.mp3"))
         assertFalse(PhoneCastPolicy.shouldPauseLocalAfterLoad(false, "https://radio.test/a.mp3", "https://radio.test/a.mp3"))

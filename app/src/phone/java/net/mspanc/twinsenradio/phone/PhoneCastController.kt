@@ -56,7 +56,6 @@ class PhoneCastController(
     private var unavailable = false
     private var mayLoadForSession = false
     private var castButton: WeakReference<MediaRouteButton>? = null
-    private var unsupportedUri: String? = null
     private var failedUri: String? = null
 
     private data class PlaybackTarget(val mediaId: String?, val uri: String?)
@@ -446,23 +445,22 @@ class PhoneCastController(
         if (!shouldLoad || (uri == pendingUri && station.id == pendingStationId)) return
         val selectedAudio = local.currentTracks?.groups.orEmpty().firstNotNullOfOrNull { group ->
             (0 until group.length).firstNotNullOfOrNull { index ->
-                group.getTrackFormat(index).sampleMimeType
-                    ?.takeIf { group.isTrackSelected(index) && it.startsWith("audio/") }
+                group.getTrackFormat(index)
+                    .takeIf { group.isTrackSelected(index) && it.sampleMimeType?.startsWith("audio/") == true }
             }
         }
-        val contentType = PhoneCastPolicy.contentType(uri, variantLabel, sampleMimeType = selectedAudio)
+        val contentType = PhoneCastPolicy.contentType(
+            uri, variantLabel, sampleMimeType = selectedAudio?.sampleMimeType,
+            containerMimeType = selectedAudio?.containerMimeType
+        )
         if (contentType == null && selectedAudio == null && local.playerError == null &&
-            (local.playbackState == Player.STATE_IDLE || local.playbackState == Player.STATE_BUFFERING)
+            local.playbackState != Player.STATE_ENDED
         ) {
             awaitingFormat = PlaybackTarget(localItem.mediaId, uri)
             return
         }
         awaitingFormat = null
         if (contentType == null) {
-            if (unsupportedUri != uri) {
-                onMessage("This stream format isn't identified for Cast.")
-                unsupportedUri = uri
-            }
             if (loadedUri != null) {
                 pendingLease?.close()
                 val lease = handoffLease()
@@ -536,7 +534,6 @@ class PhoneCastController(
                 lease?.close()
                 loadedUri = uri
                 loadedStationId = station.id
-                unsupportedUri = null
                 failedUri = null
                 val current = localController()
                 val currentUri = current?.currentMediaItem?.localConfiguration?.uri?.toString()

@@ -75,6 +75,7 @@ import java.util.IdentityHashMap
 
         init {
             `when`(castContext.sessionManager).thenReturn(manager)
+            `when`(player.playbackState).thenReturn(androidx.media3.common.Player.STATE_ENDED)
             `when`(player.currentMediaItem).thenReturn(mediaItem(station))
             `when`(durablePlayer.currentMediaItem).thenReturn(mediaItem(station))
             doAnswer { phonePlaying = false; null }.`when`(durablePlayer).pause()

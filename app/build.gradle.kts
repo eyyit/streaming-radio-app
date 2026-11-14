@@ -91,7 +91,7 @@ android {
             dimension = "platform"
             applicationId = providers.gradleProperty("publicApplicationId").orElse("com.impostorlabs.streamingradio").get()
             // Keep AAOS above the paired phone code so the car can replace a phone build.
-            versionCode = 22
+            versionCode = 24
             minSdk = 28
             buildConfigField("boolean", "IS_AUTOMOTIVE", "true")
         }

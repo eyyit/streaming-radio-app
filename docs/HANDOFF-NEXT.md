@@ -1,20 +1,17 @@
-# Phone 0.23.0 reliability update
+# Phone FLAC Cast
 
-Phone internal build 23 includes Cast format detection, load and stop recovery,
-and regression coverage for playlist edits and canceled swipes. The playlist
-repository fix and tests are shared. This release targets phone internal only.
-AAOS build 22 and the phone closed test stay on their current artifacts.
+The phone Cast sender recognizes native FLAC, AAC in MP4, Opus/Vorbis in
+Ogg or WebM, and PCM WAV using container evidence. HLS stays identified as HLS.
+A requested handoff waits for late track data even after the player reports Ready.
+Format inference does not trigger a user-facing warning. Receiver rejection still
+reports a load failure. These sender changes need real receiver playback checks.
 
-# Shared updates and coordinated releases
+# Paired 0.23.0 reliability update
 
-Follow the [shared-update and release contract](WORKSTREAMS.md#shared-update-and-release-contract).
-For a paired release, use one source revision and the same user-visible
-version name on both bundles, with distinct Play version codes. Phone code
-19 used 0.19.0 for internal and closed testing. Existing staged and published
-version labels remain historical. The local paired candidate is 0.21.0 for
-both builds, provisionally phone code 21 and AAOS code 22. Check both codes
-against the full Play inventory before a later submission. The staged
-AAOS v20 and released phone v19 artifacts retain their embedded names.
+Mobile internal uses build 23 and Android Automotive internal uses build 24.
+Both bundles use the 0.23.0 name and the same source revision. The phone Cast
+changes preserve the approved UI. The playlist save fix is shared and tested in
+both flavors. The closed-test release is outside this paired submission.
 
 # Phone player gesture guide
 

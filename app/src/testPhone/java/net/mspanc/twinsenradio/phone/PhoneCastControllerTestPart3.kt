@@ -188,6 +188,44 @@ class PhoneCastControllerTestPart3 {
     }
 
     @Test
+    fun firstCastWaitsForAacAndSucceedsWithoutWarning() = firstCastWaitsForFormat("audio/mp4a-latm", "audio/aac")
+
+    @Test
+    fun firstCastWaitsForFlacAndSucceedsWithoutWarning() = firstCastWaitsForFormat("audio/flac", "audio/flac")
+
+    private fun firstCastWaitsForFormat(sampleMimeType: String, expected: String) {
+        val rig = Rig(station = station("unknown", "https://radio.test/live"), localPlaying = true)
+        val client = rig.remoteClient()
+        val pending = rig.loadResult(client)
+        `when`(rig.player.playbackState).thenReturn(androidx.media3.common.Player.STATE_BUFFERING)
+        rig.start()
+        rig.listener().onSessionStarted(rig.session(client), "session")
+        rig.confirmEmptyReceiver(client)
+
+        assertTrue(rig.phonePlaying)
+        assertTrue(rig.messages.isEmpty())
+        verify(client, never()).load(Mockito.any(MediaLoadRequestData::class.java))
+        `when`(rig.player.playbackState).thenReturn(androidx.media3.common.Player.STATE_READY)
+        rig.controller.onLocalPlaybackChanged()
+        assertTrue(rig.messages.isEmpty())
+        verify(client, never()).load(Mockito.any(MediaLoadRequestData::class.java))
+
+        val format = androidx.media3.common.Format.Builder().setSampleMimeType(sampleMimeType).build()
+        val group = androidx.media3.common.Tracks.Group(
+            androidx.media3.common.TrackGroup(format), false,
+            intArrayOf(androidx.media3.common.C.FORMAT_HANDLED), booleanArrayOf(true)
+        )
+        `when`(rig.player.currentTracks).thenReturn(androidx.media3.common.Tracks(listOf(group)))
+        rig.controller.onLocalPlaybackChanged()
+        assertEquals(expected, rig.loadRequest(client).mediaInfo!!.contentType)
+        rig.completeLoad(pending, success = true)
+
+        assertTrue(rig.controller.isCasting())
+        assertFalse(rig.phonePlaying)
+        assertTrue(rig.messages.isEmpty())
+    }
+
+    @Test
     fun failedStopClearsCastOnlyWhenReceiverReportsIdle() {
         val rig = Rig(station = station("unknown", "https://radio.test/live"))
         val client = rig.remoteClient(initiallyPlaying = true)

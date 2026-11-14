@@ -9,7 +9,8 @@ internal object PhoneCastPolicy {
         uri: String,
         variantLabel: String = "",
         measuredCodec: String? = null,
-        sampleMimeType: String? = null
+        sampleMimeType: String? = null,
+        containerMimeType: String? = null
     ): String? {
         val path = runCatching { URI(uri).path.orEmpty() }.getOrDefault("")
             .lowercase(Locale.ROOT)
@@ -18,8 +19,24 @@ internal object PhoneCastPolicy {
         return when {
             path.endsWith(".m3u8") || Regex("\\bhls\\b").containsMatchIn(label) ->
                 "application/vnd.apple.mpegurl"
+            containerMimeType == "audio/mp4" || containerMimeType == "video/mp4" ||
+                path.endsWith(".m4a") || path.endsWith(".mp4") ->
+                if (sampleMimeType == null || sampleMimeType == "audio/mp4a-latm") "audio/mp4" else null
+            containerMimeType in setOf("audio/ogg", "application/ogg") ||
+                path.endsWith(".ogg") || path.endsWith(".oga") || path.endsWith(".opus") ->
+                if (sampleMimeType == null || sampleMimeType == "audio/opus") "audio/ogg"
+                else if (sampleMimeType == "audio/vorbis") "audio/ogg; codecs=vorbis" else null
+            containerMimeType in setOf("audio/webm", "video/webm") || path.endsWith(".webm") ->
+                if (sampleMimeType == null || sampleMimeType in setOf("audio/opus", "audio/vorbis")) "audio/webm"
+                else null
+            containerMimeType == "audio/wav" || path.endsWith(".wav") ->
+                if (sampleMimeType == null || sampleMimeType == "audio/raw") "audio/wav" else null
             sampleMimeType in setOf("audio/mp4a-latm", "audio/aac", "audio/aacp") -> "audio/aac"
             sampleMimeType == "audio/mpeg" -> "audio/mpeg"
+            sampleMimeType == "audio/flac" && containerMimeType != null &&
+                containerMimeType != "audio/flac" -> null
+            sampleMimeType == "audio/flac" || hasTerminalPathToken(path, "flac") ||
+                Regex("\\bflac\\b").containsMatchIn(label) || codec == "FLAC" -> "audio/flac"
             hasTerminalPathToken(path, "aacp") || "aacp" in label || codec.startsWith("AAC+") ->
                 "audio/aac"
             hasTerminalPathToken(path, "aac") || Regex("\\baac\\b").containsMatchIn(label) ||
