@@ -1,3 +1,10 @@
+# Phone 0.23.0 reliability update
+
+Phone internal build 23 includes Cast format detection, load and stop recovery,
+and regression coverage for playlist edits and canceled swipes. The playlist
+repository fix and tests are shared. This release targets phone internal only.
+AAOS build 22 and the phone closed test stay on their current artifacts.
+
 # Shared updates and coordinated releases
 
 Follow the [shared-update and release contract](WORKSTREAMS.md#shared-update-and-release-contract).

@@ -1,7 +1,7 @@
 {
   "formatVersion": 1,
   "project": "Twinsen Radio independent source candidate",
-  "gitHead": "bd6bca0e0caf008ccdb8c69a0c344c053975284b",
+  "gitHead": "bcee2a5ca2d5bedb9dbd022ef33c7d60334de6f0",
   "workingTree": "dirty",
   "hashAlgorithm": "SHA-256",
   "selfHashExcluded": true,
@@ -14,6 +14,11 @@
       "path": ".cursor/rules/streaming-radio-design.mdc",
       "size": 2004,
       "sha256": "762b41a83b8c6e562dd1d3ad752d0aa8b26abf72fbecd677e248ca3e83902f9d"
+    },
+    {
+      "path": ".cursor/rules/streaming-radio-parity.mdc",
+      "size": 495,
+      "sha256": "5a13ff968692e4fd2a1b9e326972490c32839a9a19c1939d540a1a50a4588745"
     },
     {
       "path": ".cursor/rules/twinsen-attribution.mdc",
@@ -37,13 +42,13 @@
     },
     {
       "path": "AGENTS.md",
-      "size": 6106,
-      "sha256": "4c5b4cff5aa0969f05d8ade8506d326566bdfdf9f723b6436c57edc8be18568d"
+      "size": 6471,
+      "sha256": "8c0e636af4f43cb08b6d8e3695e162c6cd0c50bd2d0034ac03bc4c278173daf1"
     },
     {
       "path": "app/build.gradle.kts",
-      "size": 8304,
-      "sha256": "83059c1e8edf8aa0392d633a320c4283d7451c1376ccbc4adad00f403b84a7cc"
+      "size": 9009,
+      "sha256": "fcf6f5b5cfcf494244cc89fedbb38fba238f29daa1c8a11b90ee868bcfa30292"
     },
     {
       "path": "app/src/androidTest/java/net/mspanc/twinsenradio/automotive/PrototypeSmokeInstrumentation.kt",
@@ -102,8 +107,8 @@
     },
     {
       "path": "app/src/automotive/java/net/mspanc/twinsenradio/automotive/ImpostorPlayerActivity.kt",
-      "size": 28490,
-      "sha256": "ff0b6afc906c558218edf92b403f18bb6d48eb9040ba14100db81e261f2cb3c4"
+      "size": 28715,
+      "sha256": "7b2b19d94781232bdb1b92658c533b35d25f001c609faddf1ab5000d6f81da3a"
     },
     {
       "path": "app/src/automotive/java/net/mspanc/twinsenradio/automotive/RadioManagement.kt",
@@ -312,8 +317,8 @@
     },
     {
       "path": "app/src/main/java/net/mspanc/twinsenradio/data/StationRepository.kt",
-      "size": 32292,
-      "sha256": "ca805b77aaa375aa65e8df71b7cabab5bad5d7af9fb3c5722b7db977bca7df3e"
+      "size": 32886,
+      "sha256": "05e2c82b306ad9da35cc497fb38a677678bc02e12ab6e1c0aa68cd70b22a230e"
     },
     {
       "path": "app/src/main/java/net/mspanc/twinsenradio/data/StationText.kt",
@@ -363,7 +368,7 @@
     {
       "path": "app/src/main/java/net/mspanc/twinsenradio/playback/AutomotiveText.kt",
       "size": 955,
-      "sha256": "2799305dbe1cf9824ce401f241590c8c4d51d4e7f31505c45a7805f3a101f099"
+      "sha256": "3eeafac1630fa863e4c8f3d43741540b59ff753a86d217fc7e5bf4c670dccf79"
     },
     {
       "path": "app/src/main/java/net/mspanc/twinsenradio/playback/BrowsePage.kt",
@@ -537,8 +542,8 @@
     },
     {
       "path": "app/src/main/java/net/mspanc/twinsenradio/playback/StreamQuality.kt",
-      "size": 7041,
-      "sha256": "22d376b2280582550f9a8fb1a9c589159298b74fccab5ecb025409b2c34cb79a"
+      "size": 7033,
+      "sha256": "f5cfa28e194ec547d1e8f7af98fce43ae6c4075481620eb5c8170e7c079507e6"
     },
     {
       "path": "app/src/main/java/net/mspanc/twinsenradio/playback/StreamWitness.kt",
@@ -872,8 +877,8 @@
     },
     {
       "path": "app/src/phone/java/net/mspanc/twinsenradio/phone/PhoneCastController.kt",
-      "size": 26777,
-      "sha256": "1bfa29c6366460dc5338ffe15ff630930111a02e1dec9d4f03f449a4cd345016"
+      "size": 29309,
+      "sha256": "53cad8d800f14983624abd180a979c7e5a4a2d34e4279942a8e502db96c1dbe2"
     },
     {
       "path": "app/src/phone/java/net/mspanc/twinsenradio/phone/PhoneCastHandoffLease.kt",
@@ -897,8 +902,8 @@
     },
     {
       "path": "app/src/phone/java/net/mspanc/twinsenradio/phone/PhoneCastPolicy.kt",
-      "size": 2066,
-      "sha256": "9980d89acf6440931ef84386941f8793171bbb4fa68986cf261366b38a34e570"
+      "size": 2262,
+      "sha256": "0145608517e66473c6b40ecc380f812f41a02b69e888e19c60a151807e51bbbc"
     },
     {
       "path": "app/src/phone/java/net/mspanc/twinsenradio/phone/PhoneCastReceiverDialog.kt",
@@ -1062,8 +1067,8 @@
     },
     {
       "path": "app/src/test/java/net/mspanc/twinsenradio/data/ImportedPlaylistTest.kt",
-      "size": 3926,
-      "sha256": "fcc26b64a16db8d61d9735f3ce7898515eb266fcb9db62d76ce537b48cc65dca"
+      "size": 5718,
+      "sha256": "3ecd7c66b00e2b8eb661773f17af8eb9b95e75f29c7e45a337b7388820584acf"
     },
     {
       "path": "app/src/test/java/net/mspanc/twinsenradio/data/LineContentTest.kt",
@@ -1157,8 +1162,8 @@
     },
     {
       "path": "app/src/test/java/net/mspanc/twinsenradio/playback/AutomotiveTextTest.kt",
-      "size": 2319,
-      "sha256": "f3c59cea96ed6ba076ec15991370045a9cb3e4011f32b0a094232a3e80cfd0f4"
+      "size": 2823,
+      "sha256": "944cc58f85c52cf346def978ccd85a7977acbf8a7d163b802bd730ca57cba6fd"
     },
     {
       "path": "app/src/test/java/net/mspanc/twinsenradio/playback/BrowsePageTest.kt",
@@ -1412,8 +1417,8 @@
     },
     {
       "path": "app/src/testPhone/java/net/mspanc/twinsenradio/phone/PhoneCastControllerTestPart1.kt",
-      "size": 7579,
-      "sha256": "65396ffb3904fb431ae1332fb8c89fe73b9d6862397093f69fbac54b06913d95"
+      "size": 8695,
+      "sha256": "842829c155beceae2d712f189609dbf8b074cd8bfe2121f14f901c3492452c4b"
     },
     {
       "path": "app/src/testPhone/java/net/mspanc/twinsenradio/phone/PhoneCastControllerTestPart2.kt",
@@ -1422,8 +1427,8 @@
     },
     {
       "path": "app/src/testPhone/java/net/mspanc/twinsenradio/phone/PhoneCastControllerTestPart3.kt",
-      "size": 26907,
-      "sha256": "61cd0151411db0e581e81f82979ba0d555687488372beaf1f613676dc7c3c7b2"
+      "size": 29249,
+      "sha256": "7e32a6ecc8925e6387c6fdfb75cc05092e95a745a4035182e2afa3206cc84e82"
     },
     {
       "path": "app/src/testPhone/java/net/mspanc/twinsenradio/phone/PhoneCastControllerTestShared.kt",
@@ -1472,8 +1477,8 @@
     },
     {
       "path": "app/src/testPhone/java/net/mspanc/twinsenradio/phone/PhoneFlowUiTest.kt",
-      "size": 32447,
-      "sha256": "f0585d6fa81ac915bcdae5461d0ba300b5039d5d739b68429ebaf11d89750db2"
+      "size": 33778,
+      "sha256": "8e3f429e74a307ede2c88d96fef2ea9c0dffd82964672f92504df02e9308b42b"
     },
     {
       "path": "app/src/testPhone/java/net/mspanc/twinsenradio/phone/PhoneImportFlowTest.kt",
@@ -1567,13 +1572,13 @@
     },
     {
       "path": "docs/WORKSTREAMS.md",
-      "size": 3772,
-      "sha256": "da812c5e6ca49c75cd17d86dd6d984306bd8352e30488865c85ccef51a462144"
+      "size": 5973,
+      "sha256": "25ccf84c9fc9e18dd66757c9f4b444313304375723b29556a8d9e4d6c63e2f51"
     },
     {
       "path": "gradle.properties",
-      "size": 182,
-      "sha256": "569d1fcab2fd35b08e46391d0098c1ecaa87d0b84da68893f072011dc3c1eab6"
+      "size": 297,
+      "sha256": "02b6942b6d84d5cc06e57464ba0c56d75982bc7200f592d2bb5e59c73b5e9c5a"
     },
     {
       "path": "gradle/wrapper/gradle-wrapper.jar",
@@ -1737,8 +1742,8 @@
     },
     {
       "path": "tools/docker-build.sh",
-      "size": 7872,
-      "sha256": "f2460d31f57b3b5e2c756c6795ed23d72ddfff25770fed4c3efcf824712ee539"
+      "size": 8028,
+      "sha256": "260f84434e62a6539fd749c2410d620b0c26f23f19522bc6031bee067164cc1e"
     },
     {
       "path": "tools/docker-build.test.cjs",
@@ -1757,8 +1762,8 @@
     },
     {
       "path": "tools/export-public-source.cjs",
-      "size": 9194,
-      "sha256": "760e908faa79f8269d66ebd0ce362ad8cc501096fd93cd9bd1acaa83f250398c"
+      "size": 9247,
+      "sha256": "8b1349bf77dd425f57741978b7055c9130d92f44ffef19c53de4175468eda06a"
     },
     {
       "path": "tools/export-public-source.test.cjs",
@@ -1777,8 +1782,8 @@
     },
     {
       "path": "tools/verify-automotive.cjs",
-      "size": 9201,
-      "sha256": "9a4b86540d146fa2e40dd9113ca2779637916af73ce3c659b8f3564a989074bc"
+      "size": 9228,
+      "sha256": "bd06895789f5e5d0d5e7e11450a0f50a861a163ce246805dbdeb64b5bd512b15"
     },
     {
       "path": "tools/verify-automotive.test.cjs",
