@@ -8,7 +8,8 @@ internal object PhoneCastPolicy {
     fun contentType(
         uri: String,
         variantLabel: String = "",
-        measuredCodec: String? = null
+        measuredCodec: String? = null,
+        sampleMimeType: String? = null
     ): String? {
         val path = runCatching { URI(uri).path.orEmpty() }.getOrDefault("")
             .lowercase(Locale.ROOT)
@@ -17,6 +18,8 @@ internal object PhoneCastPolicy {
         return when {
             path.endsWith(".m3u8") || Regex("\\bhls\\b").containsMatchIn(label) ->
                 "application/vnd.apple.mpegurl"
+            sampleMimeType in setOf("audio/mp4a-latm", "audio/aac", "audio/aacp") -> "audio/aac"
+            sampleMimeType == "audio/mpeg" -> "audio/mpeg"
             hasTerminalPathToken(path, "aacp") || "aacp" in label || codec.startsWith("AAC+") ->
                 "audio/aac"
             hasTerminalPathToken(path, "aac") || Regex("\\baac\\b").containsMatchIn(label) ||

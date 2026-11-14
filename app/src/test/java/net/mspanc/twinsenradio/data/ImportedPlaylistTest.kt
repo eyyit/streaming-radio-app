@@ -1,6 +1,8 @@
 package net.mspanc.twinsenradio.data
 
 import android.content.Context
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.async
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.*
 import org.junit.Test
@@ -72,5 +74,43 @@ class ImportedPlaylistTest {
             "local:imported:12345678-1234-1234-1234-123456789abg")) {
             assertFalse(PlaylistLibrary.isLocalSnapshot(url))
         }
+    }
+
+    @Test fun validatedEditPreservesLatestSourceOrder() = runBlocking {
+        val validationStarted = CompletableDeferred<Unit>()
+        val finishValidation = CompletableDeferred<Unit>()
+        val repo = StationRepository(context) {
+            validationStarted.complete(Unit)
+            finishValidation.await()
+            body
+        }
+        val urls = listOf("https://radio.example/a", "https://radio.example/b", "https://radio.example/c")
+        repo.replaceRemotePlaylists(urls)
+        val target = repo.playlists()[1]
+        val edit = async { repo.savePlaylist("Edited", target.url, target.id) }
+        validationStarted.await()
+        val reordered = listOf(urls[2], urls[0], urls[1])
+        repo.replaceRemotePlaylists(reordered)
+        finishValidation.complete(Unit)
+        assertEquals(target.id, edit.await().id)
+        assertEquals(reordered, repo.playlists().map { it.url })
+    }
+
+    @Test fun validatedEditDoesNotRecreateRemovedSource() = runBlocking {
+        val validationStarted = CompletableDeferred<Unit>()
+        val finishValidation = CompletableDeferred<Unit>()
+        val repo = StationRepository(context) {
+            validationStarted.complete(Unit)
+            finishValidation.await()
+            body
+        }
+        repo.replaceRemotePlaylists(listOf("https://radio.example/playlist"))
+        val target = repo.playlists().single()
+        val edit = async { runCatching { repo.savePlaylist("Edited", target.url, target.id) } }
+        validationStarted.await()
+        assertTrue(repo.removePlaylist(target.id))
+        finishValidation.complete(Unit)
+        assertTrue(edit.await().isFailure)
+        assertTrue(fresh().playlists().isEmpty())
     }
 }

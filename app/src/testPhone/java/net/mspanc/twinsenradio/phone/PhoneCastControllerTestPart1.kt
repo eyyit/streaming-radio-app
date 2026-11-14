@@ -90,6 +90,28 @@ class PhoneCastControllerTestPart1 {
     }
 
     @Test
+    fun synchronousLoadFailureKeepsPhonePlayingAndAllowsNextStation() {
+        val rig = Rig(station = station("one", STREAM), localPlaying = true)
+        val client = rig.remoteClient()
+        `when`(client.load(Mockito.any(MediaLoadRequestData::class.java)))
+            .thenThrow(IllegalStateException("receiver disconnected during load"))
+        rig.start()
+        rig.listener().onSessionStarted(rig.session(client), "session")
+        rig.confirmEmptyReceiver(client)
+
+        assertFalse(rig.controller.isCasting())
+        assertTrue(rig.phonePlaying)
+        assertEquals(listOf("Could not start this station on the Cast device."), rig.messages)
+
+        Mockito.doAnswer { mock<PendingResult<RemoteMediaClient.MediaChannelResult>>() }
+            .`when`(client).load(Mockito.any(MediaLoadRequestData::class.java))
+        rig.select(station("two", "https://radio.test/two.mp3"))
+        rig.controller.onExplicitStationSelection("two")
+        rig.controller.onLocalPlaybackChanged()
+        assertEquals("https://radio.test/two.mp3", rig.loadRequest(client).mediaInfo!!.contentId)
+    }
+
+    @Test
     fun passiveResumePreservesOwnedMediaAndExplicitStationChangeLoads() {
         val rig = Rig(station = station("new-station", STREAM))
         val client = rig.remoteClient(initiallyPlaying = true)

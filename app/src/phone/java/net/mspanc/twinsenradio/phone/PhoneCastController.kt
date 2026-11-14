@@ -5,9 +5,11 @@ import java.lang.ref.WeakReference
 import android.view.ViewGroup
 import androidx.appcompat.view.ContextThemeWrapper
 import androidx.mediarouter.app.MediaRouteButton
+import androidx.media3.common.Player
 import androidx.media3.session.MediaController
 import com.google.android.gms.cast.MediaInfo
 import com.google.android.gms.cast.MediaMetadata
+import com.google.android.gms.cast.MediaStatus
 import org.json.JSONObject
 import com.google.android.gms.cast.framework.CastButtonFactory
 import com.google.android.gms.cast.framework.CastContext
@@ -18,7 +20,6 @@ import com.google.android.gms.cast.framework.media.RemoteMediaClient.Callback
 import com.google.android.gms.cast.MediaLoadRequestData
 import net.mspanc.twinsenradio.R
 import net.mspanc.twinsenradio.data.Station
-import net.mspanc.twinsenradio.playback.PlaybackStatusBus
 
 /** Phone-flavor Cast routing. Local playback remains the fallback until remote load succeeds. */
 class PhoneCastController(
@@ -40,6 +41,8 @@ class PhoneCastController(
     private var loadedStationId: String? = null
     private var remoteShouldPlay = true
     private var pendingStop = false
+    private var awaitingFormat: PlaybackTarget? = null
+    private var unconfirmedStop = false
     private var requestGeneration = 0
     private var attachmentGeneration = 0
     private var initialStatusRequestGeneration: Int? = null
@@ -135,11 +138,21 @@ class PhoneCastController(
             return
         }
 
+        val waiting = awaitingFormat
+        if (waiting != null) {
+            if (waiting == playbackTarget()) {
+                loadCurrentStation()
+                return
+            }
+            awaitingFormat = null
+        }
+
         if (initialLoadAllowedGeneration == attachmentGeneration) loadCurrentStation()
     }
 
     fun onExplicitStationSelection(stationId: String) {
         mayLoadForSession = true
+        awaitingFormat = null
         explicitStationSelection = stationId
         explicitQueueTarget = null
         explicitQueueNavigationPending = false
@@ -147,6 +160,7 @@ class PhoneCastController(
 
     fun onExplicitQueueNavigation() {
         mayLoadForSession = true
+        awaitingFormat = null
         explicitStationSelection = null
         explicitQueueNavigationPending = true
         explicitQueueTarget = playbackTarget()
@@ -218,6 +232,8 @@ class PhoneCastController(
     private fun attach(session: CastSession, userSelectedReceiver: Boolean = false) {
         if (!active) return
         pendingStop = false
+        awaitingFormat = null
+        unconfirmedStop = false
         pendingLease?.close()
         pendingLease = null
         remoteClient?.let { client -> remoteCallback?.let(client::unregisterCallback) }
@@ -257,8 +273,18 @@ class PhoneCastController(
                     }
                 }
                 if (statusResolvedGeneration == statusGeneration) {
-                    adoptOwnedRemoteMedia(client, requestGeneration)
-                    relinquishForeignRemoteMedia(client)
+                    val status = client.mediaStatus
+                    val receiverIdle = status?.playerState == MediaStatus.PLAYER_STATE_IDLE ||
+                        (status == null && client.mediaInfo == null &&
+                            runCatching { !client.hasMediaSession() }.getOrDefault(false))
+                    if (unconfirmedStop && pendingUri == null && !pendingStop && receiverIdle) {
+                        loadedUri = null
+                        loadedStationId = null
+                        remoteShouldPlay = false
+                    } else {
+                        adoptOwnedRemoteMedia(client, requestGeneration)
+                        if (relinquishForeignRemoteMedia(client)) unconfirmedStop = false
+                    }
                     if (pendingUri == null && !pendingStop && loadedUri != null && client.mediaStatus != null) {
                         remoteShouldPlay = remoteInPlayMode()
                     }
@@ -400,25 +426,38 @@ class PhoneCastController(
             return
         }
         val station = currentStation() ?: return
-        val localItem = localController()?.currentMediaItem ?: return
+        val local = localController() ?: return
+        val localItem = local.currentMediaItem ?: return
         val itemStation = localItem.mediaId.let(Station::idFromMediaId)
         if (itemStation != station.id) return
         val uri = localItem.localConfiguration?.uri?.toString() ?: station.stream
         if (failedUri == uri && !forceReload) return
         if (failedUri != null && failedUri != uri) failedUri = null
         val variantLabel = station.variants().firstOrNull { it.url == uri }?.label.orEmpty()
-        val shouldLoad = forceReload || PhoneCastPolicy.shouldLoadCurrentStream(
+        val requestedChange = PhoneCastPolicy.shouldLoadCurrentStream(
             userSelectedReceiver = false,
             ownsRemoteMedia = loadedUri != null,
             remoteUri = loadedUri,
             requestedUri = uri,
             remoteStationId = loadedStationId,
             requestedStationId = station.id
-        ) || (mayLoadForSession && loadedUri == null)
+        )
+        val shouldLoad = forceReload || requestedChange || (mayLoadForSession && loadedUri == null)
         if (!shouldLoad || (uri == pendingUri && station.id == pendingStationId)) return
-        val measuredCodec = PlaybackStatusBus.quality.value?.codec
-            ?.takeIf { PlaybackStatusBus.stationId.value == station.id && !PlaybackStatusBus.joining() }
-        val contentType = PhoneCastPolicy.contentType(uri, variantLabel, measuredCodec)
+        val selectedAudio = local.currentTracks?.groups.orEmpty().firstNotNullOfOrNull { group ->
+            (0 until group.length).firstNotNullOfOrNull { index ->
+                group.getTrackFormat(index).sampleMimeType
+                    ?.takeIf { group.isTrackSelected(index) && it.startsWith("audio/") }
+            }
+        }
+        val contentType = PhoneCastPolicy.contentType(uri, variantLabel, sampleMimeType = selectedAudio)
+        if (contentType == null && selectedAudio == null && local.playerError == null &&
+            (local.playbackState == Player.STATE_IDLE || local.playbackState == Player.STATE_BUFFERING)
+        ) {
+            awaitingFormat = PlaybackTarget(localItem.mediaId, uri)
+            return
+        }
+        awaitingFormat = null
         if (contentType == null) {
             if (unsupportedUri != uri) {
                 onMessage("This stream format isn't identified for Cast.")
@@ -445,6 +484,7 @@ class PhoneCastController(
         remoteShouldPlay = autoplay
         val token = ++requestGeneration
         pendingStop = false
+        unconfirmedStop = false
         pendingUri = uri
         pendingStationId = station.id
         val metadata = MediaMetadata(MediaMetadata.MEDIA_TYPE_MUSIC_TRACK).apply {
@@ -462,58 +502,77 @@ class PhoneCastController(
         pendingLease?.close()
         val lease = handoffLease()
         pendingLease = lease
-        client.load(MediaLoadRequestData.Builder().setMediaInfo(mediaInfo).setAutoplay(false).build())
-            .setResultCallback { result ->
-                if (token != requestGeneration || pendingUri != uri || pendingStationId != station.id) {
-                    lease?.close()
-                    return@setResultCallback
-                }
-                if (!active) {
-                    pendingUri = null
-                    pendingStationId = null
-                    if (result.status.isSuccess) {
-                        if (lease != null) lease.confirm(uri, station.id) { phoneWantsPlay ->
-                            val shouldPlay = shouldPlayAfterLoad(phoneWantsPlay)
-                            if (shouldPlay) client.play()
-                        }
-                        else if (autoplay) client.pause()
-                    } else if (loadedUri != null) {
-                        stopOldRemoteThenResumeLocal(client, uri, station.id, lease)
-                    } else lease?.close()
-                    return@setResultCallback
-                }
+        val request = MediaLoadRequestData.Builder().setMediaInfo(mediaInfo).setAutoplay(false).build()
+        val pending = try {
+            client.load(request)
+        } catch (error: RuntimeException) {
+            android.util.Log.w("PhoneCastController", "Cast load request failed", error)
+            handleLoadFailure(client, uri, station.id, lease)
+            onPlaybackChanged()
+            return
+        }
+        pending.setResultCallback { result ->
+            if (token != requestGeneration || pendingUri != uri || pendingStationId != station.id) {
+                lease?.close()
+                return@setResultCallback
+            }
+            if (!active) {
                 pendingUri = null
                 pendingStationId = null
                 if (result.status.isSuccess) {
-                    lease?.close()
-                    loadedUri = uri
-                    loadedStationId = station.id
-                    unsupportedUri = null
-                    failedUri = null
-                    val current = localController()
-                    val currentUri = current?.currentMediaItem?.localConfiguration?.uri?.toString()
-                    val currentStationId = current?.currentMediaItem?.mediaId?.let(Station::idFromMediaId)
-                    if (current != null && currentStationId == station.id && currentStation()?.id == station.id &&
-                        PhoneCastPolicy.shouldPauseLocalAfterLoad(true, currentUri, uri)) {
-                        val shouldPlay = shouldPlayAfterLoad(current.playWhenReady)
-                        remoteShouldPlay = shouldPlay
-                        current.pause()
-                        if (current.playWhenReady) {
-                            loadedUri = null
-                            loadedStationId = null
-                            failedUri = uri
-                            remoteShouldPlay = false
-                        } else if (shouldPlay) client.play()
+                    if (lease != null) lease.confirm(uri, station.id) { phoneWantsPlay ->
+                        val shouldPlay = shouldPlayAfterLoad(phoneWantsPlay)
+                        if (shouldPlay) client.play()
                     }
-                } else {
-                    failedUri = uri
-                    onMessage("Could not start this station on the Cast device.")
-                    if (loadedUri != null) {
-                        stopOldRemoteThenResumeLocal(client, uri, station.id, lease)
-                    } else lease?.close()
-                }
-                onPlaybackChanged()
+                    else if (autoplay) client.pause()
+                } else if (loadedUri != null) {
+                    stopOldRemoteThenResumeLocal(client, uri, station.id, lease)
+                } else lease?.close()
+                return@setResultCallback
             }
+            pendingUri = null
+            pendingStationId = null
+            if (result.status.isSuccess) {
+                lease?.close()
+                loadedUri = uri
+                loadedStationId = station.id
+                unsupportedUri = null
+                failedUri = null
+                val current = localController()
+                val currentUri = current?.currentMediaItem?.localConfiguration?.uri?.toString()
+                val currentStationId = current?.currentMediaItem?.mediaId?.let(Station::idFromMediaId)
+                if (current != null && currentStationId == station.id && currentStation()?.id == station.id &&
+                    PhoneCastPolicy.shouldPauseLocalAfterLoad(true, currentUri, uri)) {
+                    val shouldPlay = shouldPlayAfterLoad(current.playWhenReady)
+                    remoteShouldPlay = shouldPlay
+                    current.pause()
+                    if (current.playWhenReady) {
+                        loadedUri = null
+                        loadedStationId = null
+                        failedUri = uri
+                        remoteShouldPlay = false
+                    } else if (shouldPlay) client.play()
+                }
+            } else {
+                handleLoadFailure(client, uri, station.id, lease)
+            }
+            onPlaybackChanged()
+        }
+    }
+
+    private fun handleLoadFailure(
+        client: RemoteMediaClient,
+        uri: String,
+        stationId: String,
+        lease: PhoneCastHandoffLease?
+    ) {
+        pendingUri = null
+        pendingStationId = null
+        failedUri = uri
+        onMessage("Could not start this station on the Cast device.")
+        if (loadedUri != null) {
+            stopOldRemoteThenResumeLocal(client, uri, stationId, lease)
+        } else lease?.close()
     }
 
     private fun stopOldRemoteThenResumeLocal(
@@ -538,6 +597,7 @@ class PhoneCastController(
                     loadedUri = null
                     loadedStationId = null
                     remoteShouldPlay = false
+
                     if (!active) {
                         if (resumePhone) lease?.resume(requestedUri, stationId) else lease?.close()
                         return@setResultCallback
@@ -554,22 +614,34 @@ class PhoneCastController(
                     }
                 } else {
                     lease?.close()
-                    if (active) onMessage("Could not confirm Cast stopped. Phone playback wasn't resumed.")
+                    reconcileFailedStop(client)
                 }
                 if (active) onPlaybackChanged()
             }
         }.onFailure {
+            pendingUri = null
+            pendingStationId = null
             pendingStop = false
+
             lease?.close()
-            if (active) {
-                onMessage("Could not confirm Cast stopped. Phone playback wasn't resumed.")
-                onPlaybackChanged()
-            }
+            reconcileFailedStop(client)
+            if (active) onPlaybackChanged()
+        }
+    }
+
+    private fun reconcileFailedStop(client: RemoteMediaClient) {
+        if (!active || remoteClient !== client) return
+        unconfirmedStop = true
+        onMessage("Could not confirm Cast stopped. Phone playback wasn't resumed.")
+        runCatching { client.requestStatus() }.onFailure { error ->
+            android.util.Log.w("PhoneCastController", "Could not refresh receiver status after failed stop", error)
         }
     }
 
     private fun clearRemote() {
         pendingStop = false
+        awaitingFormat = null
+        unconfirmedStop = false
         pendingLease?.close()
         pendingLease = null
         remoteClient?.let { client -> remoteCallback?.let(client::unregisterCallback) }

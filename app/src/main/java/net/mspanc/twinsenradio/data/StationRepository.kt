@@ -23,7 +23,11 @@ import java.text.Normalizer
  * lists provided by the user in Options. Keeps the result in memory, because
  * Android Auto can query the browsing tree frequently.
  */
-class StationRepository private constructor(private val appContext: Context) {
+class StationRepository internal constructor(
+    private val appContext: Context,
+    private val fetchPlaylist: suspend (String) -> String
+) {
+    private constructor(appContext: Context) : this(appContext, ::fetchText)
 
     private val prefs = Prefs(appContext)
     private val playlistPrefs = appContext.getSharedPreferences("playlist_library", Context.MODE_PRIVATE)
@@ -134,7 +138,7 @@ class StationRepository private constructor(private val appContext: Context) {
         val normalized = url.trim()
         CatalogLimits.field(normalized, CatalogLimits.MAX_URL, "Playlist URL")
         PlaylistLibrary.requireRemoteUrl(normalized)
-        val body = fetchText(normalized)
+        val body = fetchPlaylist(normalized)
         require(!body.contains("#EXT-X-", ignoreCase = true)) { "Expected a station catalog, received HLS" }
         val stations = M3uParser.parse(body, normalized)
         require(stations.isNotEmpty()) { "No playable station entries" }
@@ -153,34 +157,44 @@ class StationRepository private constructor(private val appContext: Context) {
         CatalogLimits.sources(playlists().filterNot { it.id == id || it.url == normalized } + proposal)
         val validated = fetchValidatedPlaylist(normalized)
         val validation = validated.second
-        val currentSources = playlists()
-        val existingIndex = id?.let { key -> currentSources.indexOfFirst { it.id == key } } ?: -1
-        val existing = currentSources.getOrNull(existingIndex)
-        val source = PlaylistSource(existing?.id ?: "pl_${java.util.UUID.randomUUID()}",
-            normalized, name.trim().ifBlank { PlaylistNames.fromUrl(normalized, "Playlist 1") },
-            validation.size)
-        refreshLock.withLock { withContext(Dispatchers.IO) {
-        val file = playlistFile(normalized)
-        synchronized(sourceLock) {
-            val previous = playlists()
-            val sources = previous.filterNot { it.id == source.id || it.url == source.url }.toMutableList()
-            val insertAt = existingIndex.takeIf { it >= 0 }?.coerceAtMost(sources.size) ?: sources.size
-            sources.add(insertAt, source)
-            CatalogLimits.sources(sources)
-            val candidate = sources.associate { it.url to
-                (if (it.url == normalized) validation else activeCatalogs[it.url].orEmpty()) }
-            CatalogLimits.catalog(candidate.values)
-            snapshotFavorites(allIncludingHidden())
-            val output = file.startWrite()
-            try { output.write(validated.first.toByteArray(Charsets.UTF_8)); file.finishWrite(output) }
-            catch (e: Exception) { file.failWrite(output); throw e }
-            parsedCatalogs[normalized] = validation
-            writeSources(sources)
-            prefs.userM3uUrls = sources.map { it.url }
-            reloadPlaylistCache(sources)
+        return withContext(Dispatchers.IO) {
+            refreshLock.withLock {
+                val file = playlistFile(normalized)
+                synchronized(sourceLock) {
+                    val previous = playlists()
+                    val existingIndex = previous.indexOfFirst { it.id == id }
+                    val existing = previous.getOrNull(existingIndex)
+                    check(id == null || existing != null) { "The playlist was removed while saving" }
+                    val source = PlaylistSource(
+                        existing?.id ?: "pl_${java.util.UUID.randomUUID()}",
+                        normalized,
+                        name.trim().ifBlank { PlaylistNames.fromUrl(normalized, "Playlist 1") },
+                        validation.size
+                    )
+                    val sources = previous.filterNot { it.id == source.id || it.url == source.url }.toMutableList()
+                    val insertAt = existingIndex.takeIf { it >= 0 }?.coerceAtMost(sources.size) ?: sources.size
+                    sources.add(insertAt, source)
+                    CatalogLimits.sources(sources)
+                    val candidate = sources.associate { it.url to
+                        (if (it.url == normalized) validation else activeCatalogs[it.url].orEmpty()) }
+                    CatalogLimits.catalog(candidate.values)
+                    snapshotFavorites(allIncludingHidden())
+                    val output = file.startWrite()
+                    try {
+                        output.write(validated.first.toByteArray(Charsets.UTF_8))
+                        file.finishWrite(output)
+                    } catch (error: Exception) {
+                        file.failWrite(output)
+                        throw error
+                    }
+                    parsedCatalogs[normalized] = validation
+                    writeSources(sources)
+                    prefs.userM3uUrls = sources.map { it.url }
+                    reloadPlaylistCache(sources)
+                    source
+                }
+            }
         }
-        } }
-        return source
     }
 
     /** Import a bounded file as its own local source; never fetch its stream URLs. */
@@ -643,17 +657,16 @@ class StationRepository private constructor(private val appContext: Context) {
         return station.copy(stream = variant.url)
     }
 
-    private fun fetchText(url: String): String {
-        return net.mspanc.twinsenradio.net.SafeHttp.getText(url,CatalogLimits.MAX_BYTES,USER_AGENT,15_000,
-            allowHttp=net.mspanc.twinsenradio.BuildConfig.DEBUG)
-    }
-
     private fun fold(s: String): String =
         Normalizer.normalize(s.lowercase(), Normalizer.Form.NFD)
             .replace(Regex("\\p{Mn}+"), "")
             .replace("ł", "l")
 
     companion object {
+        private fun fetchText(url: String): String =
+            net.mspanc.twinsenradio.net.SafeHttp.getText(url, CatalogLimits.MAX_BYTES, USER_AGENT, 15_000,
+                allowHttp = net.mspanc.twinsenradio.BuildConfig.DEBUG)
+
         private const val TAG = "StationRepository"
         private const val REFRESH_MS = 15 * 60 * 1_000L
         const val USER_AGENT = "StreamingRadio/0.3 (Android; Impostor Labs)"

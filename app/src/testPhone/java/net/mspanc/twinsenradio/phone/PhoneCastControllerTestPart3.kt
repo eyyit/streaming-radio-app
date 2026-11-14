@@ -162,6 +162,54 @@ class PhoneCastControllerTestPart3 {
     }
 
     @Test
+    fun opaqueReplacementWaitsForSelectedAacTrackBeforeChangingReceiver() {
+        val rig = Rig(station = station("unknown", "https://radio.test/live"))
+        val client = rig.remoteClient(initiallyPlaying = true)
+        rig.loadResult(client)
+        `when`(client.mediaInfo).thenReturn(remoteInfo(STREAM, PhoneCastPolicy.OWNER_MARKER, "old"))
+        `when`(rig.player.playbackState).thenReturn(androidx.media3.common.Player.STATE_BUFFERING)
+        rig.start(currentSession = rig.session(client))
+        rig.selectStationOnCast(client, "unknown")
+        verify(client, never()).stop()
+        verify(client, never()).load(Mockito.any(MediaLoadRequestData::class.java))
+        assertTrue(rig.messages.isEmpty())
+
+        val format = androidx.media3.common.Format.Builder().setSampleMimeType("audio/mp4a-latm").build()
+        val group = androidx.media3.common.Tracks.Group(
+            androidx.media3.common.TrackGroup(format), false,
+            intArrayOf(androidx.media3.common.C.FORMAT_HANDLED), booleanArrayOf(true)
+        )
+        `when`(rig.player.currentTracks).thenReturn(androidx.media3.common.Tracks(listOf(group)))
+        rig.controller.onLocalPlaybackChanged()
+
+        assertEquals("audio/aac", rig.loadRequest(client).mediaInfo!!.contentType)
+        verify(client, never()).stop()
+        assertFalse(rig.phonePlaying)
+    }
+
+    @Test
+    fun failedStopClearsCastOnlyWhenReceiverReportsIdle() {
+        val rig = Rig(station = station("unknown", "https://radio.test/live"))
+        val client = rig.remoteClient(initiallyPlaying = true)
+        val stop = rig.stopResult(client)
+        `when`(client.mediaInfo).thenReturn(remoteInfo(STREAM, PhoneCastPolicy.OWNER_MARKER, "old"))
+        rig.start(currentSession = rig.session(client))
+        rig.selectStationOnCast(client, "unknown")
+        rig.completeStop(stop, success = false)
+        assertTrue(rig.controller.isCasting())
+        rig.statusRequest(client, index = 1)
+        rig.remoteStatusUpdated(client)
+        assertTrue(rig.controller.isCasting())
+        rig.remoteState(client, MediaStatus.PLAYER_STATE_IDLE)
+        rig.remoteStatusUpdated(client)
+
+        assertFalse(rig.controller.isCasting())
+        rig.remoteStatusUpdated(client)
+        assertFalse(rig.controller.isCasting())
+        assertFalse(rig.phonePlaying)
+    }
+
+    @Test
     fun unidentifiedReplacementStopsOwnedRemoteBeforePhoneResume() {
         val rig = Rig(station = station("unknown", "https://radio.test/live"), durable = true)
         val client = rig.remoteClient(initiallyPlaying = true)

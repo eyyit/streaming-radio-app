@@ -418,6 +418,29 @@ class PhoneFlowUiTest {
         assertEquals(View.GONE, artist.visibility)
     }
 
+    @Test fun cancelledVerticalArtworkSwipeKeepsFullScreenPlayerOpen() {
+        withActivity(PhonePlayerActivity::class.java) { activity, root ->
+            measureCompact(root)
+            val art = descendants(root).filterIsInstance<PhoneCarouselArtwork>().single()
+            val middle = art.width / 2f
+            fun touch(action: Int, offset: Float) {
+                val event = android.view.MotionEvent.obtain(0, 0, action, middle, middle + offset, 0)
+                try { assertTrue(art.dispatchTouchEvent(event)) } finally { event.recycle() }
+            }
+
+            touch(android.view.MotionEvent.ACTION_DOWN, 0f)
+            touch(android.view.MotionEvent.ACTION_MOVE, PhoneUi.dp(activity, 60).toFloat())
+            touch(android.view.MotionEvent.ACTION_CANCEL, PhoneUi.dp(activity, 60).toFloat())
+            assertNull(org.robolectric.Shadows.shadowOf(activity).nextStartedActivity)
+
+            touch(android.view.MotionEvent.ACTION_DOWN, 0f)
+            touch(android.view.MotionEvent.ACTION_MOVE, PhoneUi.dp(activity, 60).toFloat())
+            touch(android.view.MotionEvent.ACTION_UP, PhoneUi.dp(activity, 60).toFloat())
+            assertEquals(PhoneLibraryActivity::class.java.name,
+                org.robolectric.Shadows.shadowOf(activity).nextStartedActivity.component?.className)
+        }
+    }
+
     @Test fun coverDragKeepsTheOriginalDetailsVisibleUntilItSettles() {
         val host = Robolectric.buildActivity(android.app.Activity::class.java).setup()
         try {
