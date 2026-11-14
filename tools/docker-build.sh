@@ -159,6 +159,9 @@ docker_args=(
     --mount "type=bind,src=$pending,dst=/out"
     --mount "type=volume,src=$cache_volume,dst=/gradle-cache"
     --env "MODE=$mode"
+    --env ORG_GRADLE_PROJECT_phoneTransferApiKey
+    --env ORG_GRADLE_PROJECT_phoneTransferDatabaseUrl
+    --env ORG_GRADLE_PROJECT_phoneTransferHostingUrl
 )
 
 if [ "$mode" = signed-bundle ]; then

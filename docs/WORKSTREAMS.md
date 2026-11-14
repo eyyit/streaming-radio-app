@@ -39,6 +39,40 @@ phoneImplementation Cast dependency only if its licensing/privacy issues are
 resolved. Preserve PHONE_TRANSFER_* defaults, ZXing, AAOS resumption/import fixes
 and all saved data. Do not assume sharing code proves either form factor works.
 
+## Shared-update and release contract
+
+- At intake, identify how the change affects phone/tablet and AAOS. Playback,
+  codec and stream metadata, station ordering, playlist parsing, favorites,
+  and artwork lookup are shared by default. A platform-only change records
+  the reason in its handoff.
+- Put shared behavior in `app/src/main` and reusable tests in `app/src/test`.
+  Trace both platform entry points. Where each platform presents the same
+  data differently, wire the change into both supported surfaces in the same
+  batch. AAC profile labels, for example, belong in both the phone readout
+  and the AAOS metadata description. Preserve Volvo's host-owned driving UI,
+  parked restrictions, phone Cast, and platform-specific navigation.
+- Run the existing `tools/verify-automotive.cjs` matrix for changes that
+  affect both flavors. It covers phone and automotive Debug/Release unit
+  tests and release lint. Add a targeted contract test when the existing
+  suite misses a specific regression. Record the source revision and evidence
+  for both platforms. If one runtime surface still needs a device check,
+  record that gap in the handoff before closing the work.
+- Shared feature releases use one source revision and the same user-visible
+  `versionName` and Play release label. Set `streamingRadioVersionName` in
+  `gradle.properties` once for the pair. The Gradle check rejects flavor
+  overrides and duplicate codes. The existing verifier builds both release
+  bundles as well as running the two-flavor checks. Build two signed AABs for
+  publication. Assign each a
+  distinct, unused `versionCode` for the shared package
+  `com.impostorlabs.streamingradio` and verify form-factor targeting before
+  submitting to Mobile and dedicated Android Automotive OS tracks. Record
+  both codes and both track statuses in the release handoff.
+- When both submissions are authorized and ready, coordinate them as one
+  release. Play's API can stage both track updates in one edit. App review,
+  eligibility and rollout can affect when each build reaches users. A
+  platform-only hotfix can ship separately. Shared source or matched release
+  labels never authorize a publication or track change.
+
 ## Evidence and publication
 
 Use immutable build exports with recorded source hashes. Reuse existing test

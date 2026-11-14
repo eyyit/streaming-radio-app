@@ -29,6 +29,7 @@ addFile('docs/DESIGN-SYSTEM.md');
 addFile('docs/privacy.html');
 for(const f of ['docker/Dockerfile','docker/entrypoint.sh','docker/.dockerignore','tools/docker-build.sh','docs/DOCKER-BUILD.md','tools/export-public-source.test.cjs','tools/docker-build.test.cjs'])addFile(f);
 addFile('.cursor/rules/streaming-radio-design.mdc');
+addFile('.cursor/rules/streaming-radio-parity.mdc');
 addFile('NOTICE');
 addFile('LICENSE-APACHE');
 addFile('LICENSING.md');

@@ -1,8 +1,13 @@
-# Phone version naming
+# Shared updates and coordinated releases
 
-Use 0.<versionCode>.0 for the phone bundle version name and Play Console
-release name. Phone code 19 is 0.19.0 for internal and closed testing.
-Historical labels describe the bundles originally uploaded.
+Follow the [shared-update and release contract](WORKSTREAMS.md#shared-update-and-release-contract).
+For a paired release, use one source revision and the same user-visible
+version name on both bundles, with distinct Play version codes. Phone code
+19 used 0.19.0 for internal and closed testing. Existing staged and published
+version labels remain historical. The local paired candidate is 0.21.0 for
+both builds, provisionally phone code 21 and AAOS code 22. Check both codes
+against the full Play inventory before a later submission. The staged
+AAOS v20 and released phone v19 artifacts retain their embedded names.
 
 # Phone player gesture guide
 

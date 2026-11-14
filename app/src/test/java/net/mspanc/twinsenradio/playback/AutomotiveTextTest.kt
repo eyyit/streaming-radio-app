@@ -15,7 +15,16 @@ class AutomotiveTextTest {
     @Test fun completedArtworkRestoresCollectionAndQualityOnce() {
         val lines = AutomotiveText.playback("Station", "Song", "Artist", null,
             StreamQuality("AAC", 128, 44100, 2), "Favorites", false)
-        assertEquals("Favorites · AAC · 128 kbps", lines.description)
+        assertEquals("AAC · 128 kbps · Favorites", lines.description)
+    }
+
+    @Test fun nativeDescriptionLeadsWithTheDetectedAacProfile() {
+        for (profile in listOf("AAC-LC", "HE-AAC", "HE-AAC v2", "AAC-LC (HE-AAC inferred)")) {
+            val quality = StreamQuality("AAC", 48, 44100, 2, technicalCodec = profile)
+            val lines = AutomotiveText.playback("Station", "Song", "Artist", null, quality, "Long playlist")
+            assertEquals("Song", lines.title)
+            assertEquals("$profile · 48 kbps · Long playlist", lines.description)
+        }
     }
 
     @Test fun collectionStillAppearsBeforeQualityIsKnown() {

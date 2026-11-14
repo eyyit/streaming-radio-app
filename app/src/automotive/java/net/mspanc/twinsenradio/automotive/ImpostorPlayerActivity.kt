@@ -126,6 +126,8 @@ class ImpostorPlayerActivity : AppCompatActivity() {
   lifecycleScope.launch { StationArtworkStore.loading.collect { adapter.notifyDataSetChanged(); renderPlayer() } }
   lifecycleScope.launch { PlaybackStatusBus.trackArtworkLoading.collect { renderArtworkLoading(); renderMetadataFooter() } }
   lifecycleScope.launch { PlaybackStatusBus.status.collect { renderPlayer() } }
+  lifecycleScope.launch { PlaybackStatusBus.quality.collect { renderStationDetails() } }
+
  }
  private fun buildTransport(root:LinearLayout) {
   val dock=LinearLayout(this).apply {
@@ -268,6 +270,12 @@ class ImpostorPlayerActivity : AppCompatActivity() {
   controller?.let { c -> c.setMediaItem(MediaItem.Builder().setMediaId(Station.contextualMediaId(station.mediaId,parent)).build()); c.prepare(); c.play() }
  }
  private fun currentStation():Station? = controller?.currentMediaItem?.mediaId?.let(Station::idFromMediaId)?.let(repo::byId) ?: repo.resumeCandidate()
+ private fun renderStationDetails() {
+  val stationName = currentStation()?.name
+  val quality = PlaybackStatusBus.quality.value?.compactLabel()?.takeIf { it.isNotBlank() }
+  stationView.text = listOfNotNull(stationName, quality).joinToString("  ·  ")
+ }
+
  private fun renderPlayer() {
   if(!::cover.isInitialized) return
   val c=controller; val station=currentStation(); val metadata=c?.mediaMetadata
@@ -282,7 +290,7 @@ class ImpostorPlayerActivity : AppCompatActivity() {
   val artist=if(track.isNotBlank())metadata?.artist?.toString().orEmpty() else ""
   artistView.text=artist
   renderMetadataFooter()
-  stationView.text=listOfNotNull(station?.name,PlaybackStatusBus.quality.value?.compactLabel()?.takeIf { it.isNotBlank() }).joinToString("  ·  ")
+  renderStationDetails()
   val playing=c?.playWhenReady==true
   playPause.setImageResource(if(playing)R.drawable.ic_transport_pause else R.drawable.ic_transport_play); playPause.contentDescription=if(playing)"Pause" else "Play"
   shuffle.setColorFilter(if(prefs.randomStationOrder)coral else Color.WHITE)

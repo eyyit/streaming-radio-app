@@ -13,7 +13,7 @@ object AutomotiveText {
             subtitle = listOf(performer, track)
                 .filter { it.isNotBlank() }.distinct().joinToString(" · "),
             description = if (artworkLoading) "Loading artwork…"
-                else listOf(collection, quality?.compactLabel().orEmpty())
+                else listOf(quality?.compactLabel().orEmpty(), collection)
                     .filter { it.isNotBlank() }.joinToString(" · ")
         )
     }

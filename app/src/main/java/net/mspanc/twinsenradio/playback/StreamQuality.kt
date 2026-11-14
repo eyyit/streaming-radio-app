@@ -14,19 +14,18 @@ import androidx.media3.common.util.UnstableApi
  * from the header is used purely as a fallback, when the decoder doesn't
  * report one (typical for AAC in an ADTS container).
  *
- * We only show this on the phone - in Android Auto we have no field of our
- * own to write it into, and appending it to the title would corrupt the
- * metadata.
+ * The phone shows the full technical label, while AAOS uses a shorter label
+ * in the playback description to leave the title available for track metadata.
  */
 data class StreamQuality(
     val codec: String,
     val bitrateKbps: Int,
     val sampleRateHz: Int,
     val channels: Int,
-    /** More precise AAC profile detail for the phone's technical readout. */
+    /** More precise AAC profile detail for playback readouts. */
     val technicalCodec: String = codec
 ) {
-    fun compactLabel(): String = codecAndBitrateLabel(codec)
+    fun compactLabel(): String = codecAndBitrateLabel(technicalCodec)
 
     fun technicalLabel(): String = listOf(
         codecAndBitrateLabel(technicalCodec),

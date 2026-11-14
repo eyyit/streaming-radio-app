@@ -6,6 +6,8 @@ plugins {
     id("org.jetbrains.kotlin.android")
 }
 
+val sharedVersionName = providers.gradleProperty("streamingRadioVersionName").get()
+
 android {
     useLibrary("android.car", false)
     namespace = "net.mspanc.twinsenradio"
@@ -16,7 +18,7 @@ android {
         minSdk = 26
         targetSdk = 36
         versionCode = 11
-        versionName = "0.3.0-rc9"
+        versionName = sharedVersionName
         for ((field, property) in mapOf(
             "PHONE_TRANSFER_API_KEY" to "phoneTransferApiKey",
             "PHONE_TRANSFER_DATABASE_URL" to "phoneTransferDatabaseUrl",
@@ -83,15 +85,13 @@ android {
         create("phone") {
             dimension = "platform"
             applicationId = providers.gradleProperty("publicApplicationId").orElse("com.impostorlabs.streamingradio").get()
-            versionCode = 19
-            versionName = "0.${versionCode}.0"
+            versionCode = 21
         }
         create("automotive") {
             dimension = "platform"
             applicationId = providers.gradleProperty("publicApplicationId").orElse("com.impostorlabs.streamingradio").get()
-            // The car must be able to update in place from the phone's higher shared-package build.
-            versionCode = 14
-            versionName = "0.3.0-rc12"
+            // Keep AAOS above the paired phone code so the car can replace a phone build.
+            versionCode = 22
             minSdk = 28
             buildConfigField("boolean", "IS_AUTOMOTIVE", "true")
         }
@@ -140,6 +140,20 @@ androidComponents {
 kotlin {
     compilerOptions {
         jvmTarget.set(JvmTarget.JVM_17)
+    }
+}
+
+androidComponents.finalizeDsl { dsl ->
+    val platforms = listOf("phone", "automotive").map(dsl.productFlavors::getByName)
+    require(platforms.all { it.versionName == null && it.versionNameSuffix.isNullOrEmpty() }) {
+        "Phone and automotive must inherit the same release version name."
+    }
+    require(dsl.buildTypes.getByName("release").versionNameSuffix.isNullOrEmpty()) {
+        "Release bundles must use the shared version name without a suffix."
+    }
+    val codes = platforms.map { requireNotNull(it.versionCode) }
+    require(codes.all { it in 1..2_100_000_000 } && codes.distinct().size == codes.size) {
+        "Assign distinct valid Play version codes to phone and automotive."
     }
 }
 

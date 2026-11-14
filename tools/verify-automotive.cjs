@@ -5,7 +5,7 @@ const { spawnSync } = require('node:child_process');
 const ROOT = path.resolve(__dirname, '..');
 const TASKS = [':app:assembleAutomotiveDebugAndroidTest', ':app:testAutomotiveDebugUnitTest', ':app:testAutomotiveReleaseUnitTest',
   ':app:testPhoneDebugUnitTest', ':app:testPhoneReleaseUnitTest', ':app:lintPhoneRelease',
-  ':app:lintAutomotiveRelease', ':app:bundleAutomotiveRelease',
+  ':app:lintAutomotiveRelease', ':app:bundleAutomotiveRelease', ':app:bundlePhoneRelease',
   ':app:writeAutomotiveReleaseInventory'];
 const SIGNING = ['STREAMING_RADIO_KEYSTORE', 'STREAMING_RADIO_STORE_FILE', 'STREAMING_RADIO_STORE_PASSWORD',
   'STREAMING_RADIO_KEY_ALIAS', 'STREAMING_RADIO_KEY_PASSWORD',

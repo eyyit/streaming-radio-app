@@ -1,0 +1,10 @@
+---
+description: Apply the shared Streaming Radio phone and AAOS update contract
+alwaysApply: true
+---
+
+Follow [the shared-update and release contract](../../docs/WORKSTREAMS.md#shared-update-and-release-contract).
+For a change that benefits both variants, use shared code where practical,
+verify both entry points and record any device checks still pending.
+For a coordinated release, use a shared version name and distinct Play
+version codes. Honor each platform's UI and release constraints.
