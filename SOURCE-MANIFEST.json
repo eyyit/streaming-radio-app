@@ -1,8 +1,8 @@
 {
   "formatVersion": 1,
   "project": "Twinsen Radio independent source candidate",
-  "gitHead": "bcee2a5ca2d5bedb9dbd022ef33c7d60334de6f0",
-  "workingTree": "dirty",
+  "gitHead": "30e30fc4b67b95543acf309571896cd51a59431b",
+  "workingTree": "clean",
   "hashAlgorithm": "SHA-256",
   "selfHashExcluded": true,
   "manifestFilesExcludedFromIncludedFiles": [
@@ -48,7 +48,7 @@
     {
       "path": "app/build.gradle.kts",
       "size": 9009,
-      "sha256": "fcf6f5b5cfcf494244cc89fedbb38fba238f29daa1c8a11b90ee868bcfa30292"
+      "sha256": "f24c12ac25c1c6a5bcc375be38c0b319cd12dcf1bbb7658bee7f1dce0609a6ff"
     },
     {
       "path": "app/src/androidTest/java/net/mspanc/twinsenradio/automotive/PrototypeSmokeInstrumentation.kt",
@@ -877,8 +877,8 @@
     },
     {
       "path": "app/src/phone/java/net/mspanc/twinsenradio/phone/PhoneCastController.kt",
-      "size": 29309,
-      "sha256": "53cad8d800f14983624abd180a979c7e5a4a2d34e4279942a8e502db96c1dbe2"
+      "size": 29119,
+      "sha256": "64ec693519dabd33caab1bcdd1c9ece0372e85325e8e5ec55c4726d0c7275e93"
     },
     {
       "path": "app/src/phone/java/net/mspanc/twinsenradio/phone/PhoneCastHandoffLease.kt",
@@ -902,8 +902,8 @@
     },
     {
       "path": "app/src/phone/java/net/mspanc/twinsenradio/phone/PhoneCastPolicy.kt",
-      "size": 2262,
-      "sha256": "0145608517e66473c6b40ecc380f812f41a02b69e888e19c60a151807e51bbbc"
+      "size": 3631,
+      "sha256": "c21f1295f40c8fd97e9be852ad45e5cac6aba649d8524f0ce6cf42a784f61e13"
     },
     {
       "path": "app/src/phone/java/net/mspanc/twinsenradio/phone/PhoneCastReceiverDialog.kt",
@@ -1427,13 +1427,13 @@
     },
     {
       "path": "app/src/testPhone/java/net/mspanc/twinsenradio/phone/PhoneCastControllerTestPart3.kt",
-      "size": 29249,
-      "sha256": "7e32a6ecc8925e6387c6fdfb75cc05092e95a745a4035182e2afa3206cc84e82"
+      "size": 31163,
+      "sha256": "20094ab5ad7015a157e2823afc17cd220b3f9b1d6da58ec1de634f4b379e4ec6"
     },
     {
       "path": "app/src/testPhone/java/net/mspanc/twinsenradio/phone/PhoneCastControllerTestShared.kt",
-      "size": 12856,
-      "sha256": "ea094a92ca39f523cdfb25701e13938fa982bc828db912eef292e7a3bdc578c4"
+      "size": 12951,
+      "sha256": "dcfe47ef589831a4496cacf4dc45f707773e208e38c794965f386a62b4bd77b4"
     },
     {
       "path": "app/src/testPhone/java/net/mspanc/twinsenradio/phone/PhoneCastHandoffLeaseTest.kt",
@@ -1467,8 +1467,8 @@
     },
     {
       "path": "app/src/testPhone/java/net/mspanc/twinsenradio/phone/PhoneCastPolicyTest.kt",
-      "size": 3343,
-      "sha256": "a5e41f25e51401234186a0081f58f0c34043c5ec1b8a03959e36a94dee9b7662"
+      "size": 5135,
+      "sha256": "e140e40cb4a4278a98b378298ac647f80d817596f33aaf4d0970f5202538ed1a"
     },
     {
       "path": "app/src/testPhone/java/net/mspanc/twinsenradio/phone/PhoneExpandedPlayerTest.kt",
@@ -1797,7 +1797,6 @@
     }
   ],
   "warnings": [
-    "Working tree is dirty; Git HEAD does not identify the exported file contents.",
     "Local or emulator endpoint appears in tools/aaos-fixture-server.cjs.",
     "Reviewed reserved-domain rejection fixture in app/src/test/java/net/mspanc/twinsenradio/data/PlaylistLibraryTest.kt:69",
     "Reviewed reserved-domain rejection fixture in app/src/test/java/net/mspanc/twinsenradio/data/PlaylistNamesTest.kt:62",
