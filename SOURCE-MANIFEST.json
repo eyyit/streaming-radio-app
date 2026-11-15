@@ -1,7 +1,7 @@
 {
   "formatVersion": 1,
   "project": "Twinsen Radio independent source candidate",
-  "gitHead": "2b7332a665448a2e9771268cb2f469423e99f045",
+  "gitHead": "38beb444930dfa17b97b54fe082a01172d21c0a9",
   "workingTree": "clean",
   "hashAlgorithm": "SHA-256",
   "selfHashExcluded": true,
@@ -937,8 +937,8 @@
     },
     {
       "path": "app/src/phone/java/net/mspanc/twinsenradio/phone/PhoneLibraryActivity.kt",
-      "size": 18682,
-      "sha256": "6d152bf22375bd0ac89e40dc2fab21f644720bb0d77ba98825a6493426174623"
+      "size": 21632,
+      "sha256": "d366aef22d91ee3f9418a632d064f31a17ce18e62367c78066112c7b9e4cfd90"
     },
     {
       "path": "app/src/phone/java/net/mspanc/twinsenradio/phone/PhoneM3uFile.kt",
@@ -977,13 +977,18 @@
     },
     {
       "path": "app/src/phone/java/net/mspanc/twinsenradio/phone/PhoneStationAdapter.kt",
-      "size": 17402,
-      "sha256": "4731fa664d1859945be44537e0be96cf2a48fb5742ec51bd5a1b883f8bc5c7e1"
+      "size": 20547,
+      "sha256": "0c832ae15376bcb813cf4548b37338f9e23c6989d76a3428b319adf10c19ad08"
     },
     {
       "path": "app/src/phone/java/net/mspanc/twinsenradio/phone/PhoneStationArtwork.kt",
       "size": 1522,
       "sha256": "3611e2d112861fd474d5194da57f8bb42a77d5e4e658585b9ee0a597e00d6682"
+    },
+    {
+      "path": "app/src/phone/java/net/mspanc/twinsenradio/phone/PhoneStationArtworkCache.kt",
+      "size": 7104,
+      "sha256": "7ab19b9e747c965207d074cdb659771f5af97fb909d20974395b720ca5edb94a"
     },
     {
       "path": "app/src/phone/java/net/mspanc/twinsenradio/phone/PhoneUi.kt",
@@ -1502,8 +1507,8 @@
     },
     {
       "path": "app/src/testPhone/java/net/mspanc/twinsenradio/phone/PhoneStationAdapterUpdateTest.kt",
-      "size": 5909,
-      "sha256": "43fd16891c287e64c3cc2f62c49e7de60792f1626bff5b2f8f1c2ec8abca4c8b"
+      "size": 9702,
+      "sha256": "58fc3155a6c750716562d11f93338656608c91ac419d5ce9ccac68df2c99d724"
     },
     {
       "path": "app/src/testPhone/resources/phone_shuffle_A_reference.png",
