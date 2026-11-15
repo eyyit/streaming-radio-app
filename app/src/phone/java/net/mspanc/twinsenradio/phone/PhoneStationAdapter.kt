@@ -18,16 +18,20 @@ import androidx.media3.common.util.UnstableApi
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import net.mspanc.twinsenradio.R
+import net.mspanc.twinsenradio.playback.ArtworkWorkScheduler
 import net.mspanc.twinsenradio.data.Prefs
 import net.mspanc.twinsenradio.data.Station
 import net.mspanc.twinsenradio.data.StationRepository
 import net.mspanc.twinsenradio.data.AppearanceTheme
 import net.mspanc.twinsenradio.playback.MetadataFactory
 import net.mspanc.twinsenradio.playback.PlaybackStatusBus
-import net.mspanc.twinsenradio.ui.ArtworkLoader
 
 private object StationStatePayload
+private object StationArtworkPayload
 
 @UnstableApi
 internal class PhoneStationAdapter(
@@ -35,9 +39,16 @@ internal class PhoneStationAdapter(
     private val prefs: Prefs,
     private val repo: StationRepository,
     private val compact: Boolean = false,
+    private val artworkCache: PhoneStationArtworkCache = PhoneStationArtworkCache(
+        owner as android.content.Context,
+        owner.lifecycleScope
+    ),
     private val play: (Station) -> Unit
 ) : RecyclerView.Adapter<PhoneStationAdapter.Holder>() {
     private var stations = emptyList<Station>()
+    private var artworkWindow = emptyList<Station>()
+    private var artworkResolution: Job? = null
+    private val metadata = MetadataFactory(owner as android.content.Context, prefs)
     private var lastFavourites = prefs.favourites
     private var lastStationId = PlaybackStatusBus.stationId.value
     private var lastNowPlaying = PlaybackStatusBus.nowPlaying.value
@@ -67,6 +78,7 @@ internal class PhoneStationAdapter(
         }
 
         val changedIds = mutableSetOf<String>()
+        val artworkChangedIds = mutableSetOf<String>()
         changedIds += lastFavourites - favourites
         changedIds += favourites - lastFavourites
         if (lastStationId != stationId || lastNowPlaying != nowPlaying) {
@@ -77,15 +89,24 @@ internal class PhoneStationAdapter(
         changedIds += artworkLoading - lastArtworkLoading
         if (lastOnlineArtworkEnabled != onlineArtworkEnabled) {
             changedIds += values.map { it.id }
+            artworkChangedIds += values.map { it.id }
         }
         if (lastRepositoryRevision != repo.revisions.value) {
-            changedIds += values.asSequence().map { it.id }
+            val favoriteIds = values.asSequence().map { it.id }
                 .filter { it in favourites }.toList()
+            changedIds += favoriteIds
+            artworkChangedIds += favoriteIds
         }
         val accent = AppearanceTheme.current(owner as android.content.Context).accent
         if (lastAccent != accent) stationId?.let(changedIds::add)
-        changedIds.map(::positionOf).filter { it >= 0 }
-            .forEach { notifyItemChanged(it, StationStatePayload) }
+        if (oldStations != values || lastArtworkLoading != artworkLoading ||
+            lastOnlineArtworkEnabled != onlineArtworkEnabled || lastRepositoryRevision != repo.revisions.value
+        ) artworkWindow = emptyList()
+        changedIds.forEach { id ->
+            val position = positionOf(id)
+            if (position >= 0) notifyItemChanged(position,
+                if (id in artworkChangedIds) StationArtworkPayload else StationStatePayload)
+        }
 
         lastFavourites = favourites
         lastStationId = stationId
@@ -97,6 +118,36 @@ internal class PhoneStationAdapter(
     }
     override fun getItemCount() = stations.size
     fun positionOf(id: String) = stations.indexOfFirst { it.id == id }
+    fun prefetchAhead(first: Int, last: Int, backwards: Boolean = false) {
+        if (stations.isEmpty()) return
+        val start = first.coerceAtLeast(0).coerceAtMost(stations.lastIndex)
+        val end = last.coerceAtLeast(start).coerceAtMost(minOf(stations.lastIndex, start + PREFETCH_ROWS - 1))
+        val positions = if (backwards) end downTo start else start..end
+        val window = positions.map(stations::get)
+        if (artworkWindow == window) return
+        artworkWindow = window
+        artworkResolution?.cancel()
+        artworkResolution = owner.lifecycleScope.launch {
+            val uris = withContext(ArtworkWorkScheduler.dispatcher) { window.mapNotNull(metadata::logoDisplayUri) }
+            artworkCache.prefetch(uris)
+        }
+    }
+    suspend fun prepareInitialArtwork(first: Int, last: Int, center: Int) {
+        if (stations.isEmpty()) return
+        val start = first.coerceAtLeast(0).coerceAtMost(stations.lastIndex)
+        val end = last.coerceAtLeast(start).coerceAtMost(stations.lastIndex)
+        val positions = (start..end).sortedBy { kotlin.math.abs(it - center) }
+        val window = positions.map(stations::get)
+        val uris = withContext(ArtworkWorkScheduler.dispatcher) { window.mapNotNull(metadata::logoDisplayUri) }
+        uris.forEach { artworkCache.restore(it) }
+        artworkCache.waitForInitialRemoteArt(uris)
+    }
+    fun refreshRange(first: Int, last: Int) {
+        if (stations.isEmpty()) return
+        val start = first.coerceAtLeast(0).coerceAtMost(stations.lastIndex)
+        val end = last.coerceAtLeast(start).coerceAtMost(stations.lastIndex)
+        notifyItemRangeChanged(start, end - start + 1, StationArtworkPayload)
+    }
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): Holder {
         val c = parent.context
         val wrapper = PhoneUi.column(c).apply {
@@ -128,10 +179,15 @@ internal class PhoneStationAdapter(
         return Holder(wrapper, row, selected, title, subtitle, initials, logo, heart)
     }
     override fun onBindViewHolder(holder: Holder, position: Int) {
+        bind(holder, position, refreshArtwork = false)
+    }
+    override fun onBindViewHolder(holder: Holder, position: Int, payloads: MutableList<Any>) {
+        bind(holder, position, refreshArtwork = StationArtworkPayload in payloads)
+    }
+    private fun bind(holder: Holder, position: Int, refreshArtwork: Boolean) {
         val station = stations[position]; val playing = station.id == PlaybackStatusBus.stationId.value
         holder.row.tag = "phone_station_${station.id}"
         holder.title.text = station.name
-        holder.initials.text = station.name.split(' ').filter { it.isNotBlank() }.take(2).joinToString("") { it.take(1) }
         val now = PlaybackStatusBus.nowPlaying.value
         holder.subtitle.text = when {
             repo.isDetachedFavorite(station.id) -> "Not in current playlists"
@@ -145,32 +201,45 @@ internal class PhoneStationAdapter(
         holder.heart.contentDescription = if (favorite) "Remove ${station.name} from Favorites" else "Add ${station.name} to Favorites"
         holder.heart.setOnClickListener { prefs.toggleFavourite(station.id) }
         holder.row.setOnClickListener { play(station) }
-        val factory = MetadataFactory(holder.row.context, prefs)
-        val uri = factory.logoDisplayUri(station)
-        val fallback = factory.logoResId(station)
-        val showInitials = uri == null && fallback == R.drawable.logo_placeholder
-        holder.initials.visibility = if (showInitials) View.VISIBLE else View.GONE
-        holder.logo.visibility = if (uri != null || !showInitials) View.VISIBLE else View.GONE
-        if (uri != null) ArtworkLoader.into(
-            owner.lifecycleScope, null, uri,
-            fallback,
-            holder.logo,
-            fallbackDrawable = if (fallback == R.drawable.logo_placeholder) PhoneStationArtwork(station.name) else null,
-            showFallbackWhileLoading = true
-        ) else {
-            ArtworkLoader.into(owner.lifecycleScope, null, null, android.R.color.transparent, holder.logo)
-            if (!showInitials) holder.logo.setImageResource(fallback)
+        val uri = metadata.logoDisplayUri(station)
+        val fallback = metadata.logoResId(station)
+        val artworkKey = "${uri?.toString() ?: "resource"}:$fallback:${station.name}"
+        if (refreshArtwork || holder.artworkStationId != station.id ||
+            holder.artworkKey != artworkKey
+        ) {
+            holder.artworkStationId = station.id
+            holder.artworkKey = artworkKey
+            holder.initials.visibility = View.GONE
+            holder.logo.visibility = View.VISIBLE
+            if (uri == null && fallback != R.drawable.logo_placeholder) {
+                holder.logo.setImageResource(fallback)
+            } else {
+                holder.logo.setImageDrawable(artworkCache.drawable(uri, station.name))
+            }
+        }
+    }
+
+    override fun onViewAttachedToWindow(holder: Holder) {
+        val position = holder.bindingAdapterPosition
+        if (position in stations.indices && holder.logo.drawable is PhoneStationArtwork) {
+            bind(holder, position, refreshArtwork = true)
         }
     }
 
     override fun onViewRecycled(holder: Holder) {
-        // Invalidate any in-flight load before this ImageView is reused.
-        ArtworkLoader.into(owner.lifecycleScope, null, null, android.R.color.transparent, holder.logo)
         holder.initials.visibility = View.GONE
+        holder.logo.setImageDrawable(null)
+        holder.artworkStationId = null
+        holder.artworkKey = null
         super.onViewRecycled(holder)
     }
     class Holder(root: View, val row: View, val selected: View, val title: TextView, val subtitle: TextView,
-        val initials: TextView, val logo: ImageView, val heart: ImageButton) : RecyclerView.ViewHolder(root)
+        val initials: TextView, val logo: ImageView, val heart: ImageButton) : RecyclerView.ViewHolder(root) {
+        var artworkStationId: String? = null
+        var artworkKey: String? = null
+    }
+
+    private companion object { const val PREFETCH_ROWS = 32 }
 }
 
 /** Reveal a station once per selection, without snapping back on metadata or artwork updates. */

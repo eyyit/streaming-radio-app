@@ -14,9 +14,11 @@ import android.view.ViewGroup
 import android.widget.*
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.lifecycle.lifecycleScope
 import androidx.media3.common.util.UnstableApi
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import kotlinx.coroutines.launch
 import net.mspanc.twinsenradio.R
 import net.mspanc.twinsenradio.data.AppearanceTheme
 import net.mspanc.twinsenradio.playback.RadioService
@@ -50,6 +52,8 @@ class PhoneLibraryActivity : PhonePlaybackActivity() {
     private lateinit var stations: PhoneStationAdapter
     private val stationFollow = PhoneStationFollow()
     private var chooserSignature = ""
+    private var initialArtworkReady = false
+    private var preparingInitialArtwork = false
     private val positions = mutableMapOf<String, Parcelable?>()
     private val notifications = registerForActivityResult(ActivityResultContracts.RequestPermission()) { }
     private val closeChooser = object : OnBackPressedCallback(false) {
@@ -70,7 +74,7 @@ class PhoneLibraryActivity : PhonePlaybackActivity() {
         super.onStop()
     }
 
-    override fun stationAreaReady() = !stationFollow.isCentering
+    override fun stationAreaReady() = initialArtworkReady && !stationFollow.isCentering
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
@@ -139,10 +143,23 @@ class PhoneLibraryActivity : PhonePlaybackActivity() {
         main = PhoneUi.column(this@PhoneLibraryActivity)
         empty = PhoneUi.text(this@PhoneLibraryActivity, size = 16f, muted = true)
         main.addView(empty)
-        list = RecyclerView(this@PhoneLibraryActivity).apply { layoutManager = LinearLayoutManager(context) }
+        list = RecyclerView(this@PhoneLibraryActivity).apply {
+            layoutManager = LinearLayoutManager(context)
+            visibility = View.INVISIBLE
+        }
         stations = PhoneStationAdapter(this@PhoneLibraryActivity, prefs, repo, compact = split) { selected ->
             playStation(selected, if (browse == "favorites") RadioService.NODE_FAVOURITES else RadioService.NODE_ALL)
         }
+        list.addOnScrollListener(object : RecyclerView.OnScrollListener() {
+            override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
+                if (dy == 0 || recyclerView.adapter !== stations) return
+                val layout = recyclerView.layoutManager as? LinearLayoutManager ?: return
+                val first = layout.findFirstVisibleItemPosition()
+                val last = layout.findLastVisibleItemPosition()
+                if (dy > 0) stations.prefetchAhead(last + 1, last + 32)
+                else stations.prefetchAhead(first - 32, first - 1, backwards = true)
+            }
+        })
         main.addView(list, LinearLayout.LayoutParams(-1, 0, 1f))
         if (!split) animateStationArea(main, browseControls)
         addView(main, LinearLayout.LayoutParams(-1, 0, 1f))
@@ -286,15 +303,24 @@ class PhoneLibraryActivity : PhonePlaybackActivity() {
         if (list.adapter !== stations) list.adapter = stations
         val values = if (browse == "favorites") repo.favourites() else repo.all()
         stations.update(values)
+        val layout = list.layoutManager as? LinearLayoutManager
+        val firstVisible = layout?.findFirstVisibleItemPosition() ?: RecyclerView.NO_POSITION
         restoredListState?.let { state ->
             list.layoutManager?.onRestoreInstanceState(state)
             restoredListState = null
         }
         if (!picking) {
-            if (centerActive) {
-                intent.removeExtra(PhonePlayerActivity.CENTER_ACTIVE_STATION)
-                stationFollow.centerBeforeDraw(list, stations, browse, activeStation)
-            } else stationFollow.reveal(list, stations, browse, activeStation)
+            if (!initialArtworkReady) {
+                prepareInitialStationArt(centerActive, activeStation)
+            } else {
+                if (firstVisible == RecyclerView.NO_POSITION) {
+                    stations.prefetchAhead(0, 31)
+                } else {
+                    stations.prefetchAhead(firstVisible,
+                        (layout?.findLastVisibleItemPosition() ?: firstVisible) + 31)
+                }
+                followActiveStation(centerActive, activeStation)
+            }
         }
         val isEmpty = values.isEmpty()
         empty.visibility = if (isEmpty) View.VISIBLE else View.GONE
@@ -304,6 +330,38 @@ class PhoneLibraryActivity : PhonePlaybackActivity() {
         }
         val key = "${prefs.favourites}${prefs.activeBrowseParent}${repo.revisions.value}"
         if (key != chooserSignature) { chooserSignature = key; rebuildChooser() }
+    }
+
+    /** Restore persisted thumbnails before any station row draws its first frame. */
+    private fun prepareInitialStationArt(centerActive: Boolean, stationId: String?) {
+        if (preparingInitialArtwork) return
+        preparingInitialArtwork = true
+        list.post {
+            val layout = list.layoutManager as? LinearLayoutManager
+            val first = layout?.findFirstVisibleItemPosition()
+                ?.takeIf { it >= 0 } ?: 0
+            val target = if (centerActive) stationId?.let(stations::positionOf) ?: -1 else -1
+            val start = (if (target >= 0) target - 32 else first).coerceAtLeast(0)
+            val end = if (target >= 0) target + 32 else start + 31
+            lifecycleScope.launch {
+                stations.prepareInitialArtwork(start, end, if (target >= 0) target else first)
+                if (isFinishing || isDestroyed) return@launch
+                stations.refreshRange(start, end)
+                val prefetchStart = if (target >= 0) (target - 16).coerceAtLeast(0) else start
+                stations.prefetchAhead(prefetchStart, prefetchStart + 31)
+                initialArtworkReady = true
+                preparingInitialArtwork = false
+                list.visibility = View.VISIBLE
+                followActiveStation(centerActive, stationId)
+            }
+        }
+    }
+
+    private fun followActiveStation(centerActive: Boolean, stationId: String?) {
+        if (centerActive) {
+            intent.removeExtra(PhonePlayerActivity.CENTER_ACTIVE_STATION)
+            stationFollow.centerBeforeDraw(list, stations, browse, stationId)
+        } else stationFollow.reveal(list, stations, browse, stationId)
     }
 
     private fun rebuildChooser() {
