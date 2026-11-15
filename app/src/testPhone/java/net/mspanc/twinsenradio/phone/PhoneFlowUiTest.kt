@@ -418,6 +418,78 @@ class PhoneFlowUiTest {
         assertEquals(View.GONE, artist.visibility)
     }
 
+    @Test
+    @org.robolectric.annotation.GraphicsMode(org.robolectric.annotation.GraphicsMode.Mode.NATIVE)
+    fun aNewDragTakesOverWhileThePreviousStationTurnIsSettling() {
+        val host = Robolectric.buildActivity(android.app.Activity::class.java).setup()
+        try {
+            val root = android.widget.FrameLayout(host.get())
+            val cover = PhoneCarouselArtwork(host.get())
+            host.get().setContentView(root)
+            root.addView(cover, 160, 160)
+            measureCompact(root)
+            val red = android.graphics.Color.RED
+            val green = android.graphics.Color.GREEN
+            val blue = android.graphics.Color.BLUE
+            fun fill(color: Int) = android.graphics.drawable.ColorDrawable(color)
+            cover.setImageDrawable(fill(red))
+            cover.stationChanged("first", "First", enabled = true)
+            cover.stationChanged("second", "Second", enabled = true)
+            cover.setImageDrawable(fill(green))
+            assertTrue(cover.isMoving)
+
+            cover.setAdjacentPreview(1, "third", fill(blue))
+            cover.drag(160f, enabled = true)
+            val frame = android.graphics.Bitmap.createBitmap(
+                root.width, root.height, android.graphics.Bitmap.Config.ARGB_8888
+            )
+            host.get().window.decorView.draw(android.graphics.Canvas(frame))
+            assertEquals("The new incoming face follows the finger immediately", blue, frame.getPixel(80, 80))
+        } finally {
+            host.pause().stop().destroy()
+        }
+    }
+
+    @Test fun artworkSwipeSelectsTheNeighborWhileAColdResumeIsPaused() {
+        runBlocking {
+            repo.saveLocalPlaylist("Test list",
+                "#EXTM3U\n#EXTINF:-1,Alpha\nhttps://radio.example/a\n#EXTINF:-1,Beta\nhttps://radio.example/b\n")
+        }
+        val (alpha, beta) = repo.all()
+        prefs.recent = listOf(alpha.id)
+        prefs.artworkTransitionsEnabled = false
+        val controller = org.mockito.Mockito.mock(androidx.media3.session.MediaController::class.java)
+        org.mockito.Mockito.`when`(controller.isCommandAvailable(androidx.media3.common.Player.COMMAND_SET_MEDIA_ITEM))
+            .thenReturn(true)
+        org.mockito.Mockito.`when`(controller.isCommandAvailable(androidx.media3.common.Player.COMMAND_PREPARE))
+            .thenReturn(true)
+        val previousNeighbor = PlaybackStatusBus.phoneStationNeighbor
+        PlaybackStatusBus.phoneStationNeighbor = { if (it == 1) beta.id else null }
+        try {
+            withActivity(PhoneLibraryActivity::class.java) { activity, root ->
+                PhonePlaybackActivity::class.java.getDeclaredField("controller")
+                    .apply { isAccessible = true }.set(activity, controller)
+                measureCompact(root)
+                val art = descendants(root).filterIsInstance<PhoneCarouselArtwork>().single()
+                fun touch(action: Int, offset: Float) {
+                    val event = android.view.MotionEvent.obtain(0, 0, action,
+                        art.width / 2f + offset, art.height / 2f, 0)
+                    try { assertTrue(art.dispatchTouchEvent(event)) } finally { event.recycle() }
+                }
+                touch(android.view.MotionEvent.ACTION_DOWN, 0f)
+                touch(android.view.MotionEvent.ACTION_MOVE, -80f)
+                touch(android.view.MotionEvent.ACTION_UP, -80f)
+                val selection = org.mockito.ArgumentCaptor.forClass(androidx.media3.common.MediaItem::class.java)
+                org.mockito.Mockito.verify(controller).setMediaItem(selection.capture())
+                assertEquals(beta.id, net.mspanc.twinsenradio.data.Station.idFromMediaId(selection.value.mediaId))
+                org.mockito.Mockito.verify(controller).prepare()
+                org.mockito.Mockito.verify(controller, org.mockito.Mockito.never()).play()
+            }
+        } finally {
+            PlaybackStatusBus.phoneStationNeighbor = previousNeighbor
+        }
+    }
+
     @Test fun cancelledVerticalArtworkSwipeKeepsFullScreenPlayerOpen() {
         withActivity(PhonePlayerActivity::class.java) { activity, root ->
             measureCompact(root)

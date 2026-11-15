@@ -10,6 +10,14 @@ Local prototype/release preparation and emulator testing only. No commits, pushe
 
 Apply the [shared-update and release contract](docs/WORKSTREAMS.md#shared-update-and-release-contract) to every change, even when it originates in one workstream. Changes that benefit both platforms must work in both builds and be verified in both before they are marked complete. Preserve platform-specific UI and release authorization.
 
+## Feature preservation before release
+
+Follow the [feature preservation gate](docs/WORKSTREAMS.md#feature-preservation-gate)
+for every Streaming Radio release, including internal testing and promotions.
+Missing or failing acceptance evidence blocks the affected release. Obtain
+explicit owner approval before changing or removing an accepted behavior.
+
+
 ## Official design contract
 
 Read docs/DESIGN-SYSTEM.md before UI/mock/resource work. It applies across the entire app-owned UI/UX and future mocks. Shared AutomotiveDesign tokens implement the approved neutral charcoal art direction. Preserve approved v11 picker geometry and existing dock; do not redesign adjacent options during a fix. New structural/flow changes require mocks and explicit approval. Full-screen Settings/management and the linked PL04/PL06 Hide/Remove flow are now approved for implementation (2 November 2026); PL06 has only the header Cancel. Targeted user-requested consistency/correctness fixes are authorized. The built-in AAOS driving media host is separate and must remain available.

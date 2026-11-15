@@ -25,11 +25,13 @@ for(const f of ['README.md','SETUP.md','package.json','firebase.json','database.
 addTree('phone-transfer/public');
 addTree('phone-transfer/tests');
 addFile('docs/WORKSTREAMS.md');
+addFile('docs/FEATURE-ACCEPTANCE.md');
 addFile('docs/DESIGN-SYSTEM.md');
 addFile('docs/privacy.html');
 for(const f of ['docker/Dockerfile','docker/entrypoint.sh','docker/.dockerignore','tools/docker-build.sh','docs/DOCKER-BUILD.md','tools/export-public-source.test.cjs','tools/docker-build.test.cjs'])addFile(f);
 addFile('.cursor/rules/streaming-radio-design.mdc');
 addFile('.cursor/rules/streaming-radio-parity.mdc');
+addFile('.cursor/rules/streaming-radio-feature-preservation.mdc');
 addFile('NOTICE');
 addFile('LICENSE-APACHE');
 addFile('LICENSING.md');

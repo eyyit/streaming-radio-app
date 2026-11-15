@@ -17,9 +17,9 @@ mock approval. Local mock files are recorded in the private workstream handoff.
 
 Phone imports use Android's file picker or a hosted URL. They do not require QR
 pairing, Firebase, or the AAOS parked settings UI. The phone media player is app
-owned, unlike Volvo's native driving player. Direct Cast is planned, not yet
-implemented; GPL/SDK licensing, receiver metadata support and required SDK
-telemetry need resolution before adding a Cast dependency.
+owned, unlike Volvo's native driving player. Phone Cast uses the Google Cast
+SDK. Preserve receiver playback, handoff, and volume behavior. Use the paired
+acceptance checks to record actual receiver results for each release.
 
 ## AAOS and shared integration workstream
 
@@ -34,10 +34,53 @@ scoped patch/request and an explicit file/batch handover before the other chat
 edits it. Phone-only classes must not leak into tests compiled for AAOS.
 
 Expected future shared batches: phone public/debug application IDs; phone test
-source sets and export coverage; narrow shared media/import contracts; and a
-phoneImplementation Cast dependency only if its licensing/privacy issues are
-resolved. Preserve PHONE_TRANSFER_* defaults, ZXing, AAOS resumption/import fixes
+source sets and export coverage, and narrow shared media/import contracts.
+Preserve PHONE_TRANSFER_* defaults, ZXing, AAOS resumption/import fixes
 and all saved data. Do not assume sharing code proves either form factor works.
+
+## Feature preservation gate
+
+This applies to every phone, tablet and AAOS Play release, including testing
+tracks, hotfixes and promotions. Use the latest owner-accepted behavior for
+each surface as its baseline. A newer tester build with a regression does not
+replace that baseline.
+
+1. Maintain the [cumulative feature inventory](FEATURE-ACCEPTANCE.md) with
+   each feature's platform,
+   accepted behavior, source of approval and repeatable acceptance check.
+   Reconcile it against accepted mocks and recordings, previous releases and
+   release notes. Add every newly accepted feature before the next release.
+   An incomplete inventory blocks release.
+2. Before upload, record a passing result and evidence for every applicable
+   check on the exact candidate. Tie the record to the source SHA, platform,
+   version code and signed bundle digest. Use automated tests for behaviors
+   they actually exercise and runtime evidence for gestures, rendering,
+   device integrations and other behaviors they cannot establish. Test
+   both variant entry points for shared features. An unchanged source file
+   or green build is insufficient evidence of runtime behavior.
+3. Report every failed or unverified check to Elliott and hold the affected
+   release. Changing or removing an accepted behavior requires his explicit
+   approval and an update to the baseline before upload. Attach the completed
+   inventory and relevant evidence to the release handoff. Recheck any changed
+   candidate. A promotion may reuse reproducible evidence for the same signed
+   artifact when the target configuration is covered.
+
+First entries for the inventory. These are outstanding checks, and this
+list is only the starting point for the full baseline.
+
+- **Phone cover carousel.** In the compact and full-screen player, record
+  both swipe directions on the same build. Hold halfway to show both faces
+  during the drag, then reach the far side to show the turn finishes before
+  release. Check rounded artwork, stable bounds, and station metadata that
+  settles with the incoming cover. Use the approved phone recording as
+  the comparison.
+- **Phone station-row artwork.** On a playlist with known station logos,
+  record fast scrolling and automatic scrolling to the playing station.
+  Each available logo must be in the row on its first visible frame,
+  including after a cold restart. A station without usable art has its
+  station-specific fallback from the first frame. Include a slow or offline
+  pass with cached logos to verify the render does not depend on a new fetch.
+
 
 ## Shared-update and release contract
 

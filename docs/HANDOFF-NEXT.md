@@ -1,3 +1,17 @@
+# Feature preservation before release
+
+The [feature preservation gate](WORKSTREAMS.md#feature-preservation-gate)
+and [acceptance inventory](FEATURE-ACCEPTANCE.md) apply to every Play track.
+
+The 0.25.0 candidate addresses two phone regressions. A new artwork drag
+takes over while the preceding turn settles. A restored station can be
+swiped to a neighbor before the first Play action, with playback staying
+paused. Mutable artwork state stays outside list-row binding, with bounded
+local thumbnail restore and viewport-prioritized preparation in both scroll
+directions. The exact approved shuffle A asset is retained. Runtime release
+acceptance and Play status are recorded against the candidate artifacts.
+
+
 # Phone FLAC Cast
 
 The phone Cast sender recognizes native FLAC, AAC in MP4, Opus/Vorbis in
@@ -18,6 +32,14 @@ both flavors. The closed-test release is outside this paired submission.
 The full-screen player shows the approved guide once a station is available.
 Got it persists dismissal locally. The cover arrows explain horizontal station
 swipes and vertical library swipes.
+
+Phone station rows now warm logo images for visible and upcoming rows during
+manual or automatic scrolling. A bounded phone-only cache restores remote row
+logos after process restart; until an image is usable, each row has a stable
+station-specific fallback. `PhoneStationAdapterUpdateTest` covers cached
+cold-bind and visible-fallback stability. This is source and unit-test evidence
+only; the approved first-frame row check still needs runtime evidence on the
+candidate.
 
 # Phone version 17 candidate
 

@@ -349,7 +349,7 @@ abstract class PhonePlaybackActivity : AppCompatActivity() {
                             target.parent.requestDisallowInterceptTouchEvent(true)
                         }
                     }
-                    if (horizontal && (if (dx < 0) next else previous).isEnabled) {
+                    if (horizontal && ((if (dx < 0) next else previous).isEnabled || canSelectArtworkStation())) {
                         val step = if (dx < 0) -1 else 1
                         if (previewGestureDirection != step) {
                             previewGestureDirection = step
@@ -358,17 +358,19 @@ abstract class PhonePlaybackActivity : AppCompatActivity() {
                         val room = if (dx < 0) downFromLeft else downFromRight
                         val turnDistance = minOf(target.width.toFloat(), room - touchSlop)
                             .coerceAtLeast(swipeDistance.toFloat())
-                        carousel?.drag(dx, prefs.artworkTransitionsEnabled, turnDistance)
+                        if (previewStationId != null) carousel?.drag(dx, prefs.artworkTransitionsEnabled, turnDistance)
+                        else carousel?.settle()
                     } else carousel?.settle()
                 }
                 MotionEvent.ACTION_UP -> {
                     val button = if (dx < 0) next else previous
                     if (!cancelled && horizontal && abs(dx) >= swipeDistance &&
-                        abs(dx) > abs(dy) && button.isEnabled) {
+                        abs(dx) > abs(dy) && (button.isEnabled || canSelectArtworkStation())) {
                         val step = if (dx < 0) -1 else 1
                         if (prefs.artworkTransitionsEnabled) updateCarouselPreview(step)
                         finishArtworkPreview()
-                        button.performClick()
+                        if (button.isEnabled) button.performClick()
+                        else if (!selectArtworkStation(step)) carousel?.settle()
                     } else if (!cancelled && vertical && abs(dy) >= swipeDistance &&
                         abs(dy) > abs(dx)
                     ) {
@@ -387,9 +389,28 @@ abstract class PhonePlaybackActivity : AppCompatActivity() {
         }
     }
 
+    private fun canSelectArtworkStation(): Boolean {
+        val c = controller ?: return false
+        return c.currentMediaItem == null && shownStation() != null &&
+            c.isCommandAvailable(Player.COMMAND_SET_MEDIA_ITEM) &&
+            c.isCommandAvailable(Player.COMMAND_PREPARE)
+    }
+
+    private fun selectArtworkStation(step: Int): Boolean {
+        val c = controller ?: return false
+        val station = adjacentStation(step) ?: return false
+        artworkCarousels.forEach { it.expectStation(step, prefs.artworkTransitionsEnabled) }
+        castController.onExplicitStationSelection(station.id)
+        val parent = prefs.activeBrowseParent.ifBlank { RadioService.NODE_ALL }
+        val mediaId = Station.contextualMediaId(station.mediaId, parent)
+        c.setMediaItem(MediaItem.Builder().setMediaId(mediaId).build())
+        c.prepare()
+        return true
+    }
+
     private fun adjacentStation(step: Int): Station? {
         val candidate = PlaybackStatusBus.phoneStationNeighbor?.invoke(-step) ?: return null
-        return repo.byId(candidate)?.takeUnless { it.id == PlaybackStatusBus.stationId.value }
+        return repo.byId(candidate)?.takeUnless { it.id == shownStation()?.id }
     }
 
     private fun nextArtworkStep(): Int {

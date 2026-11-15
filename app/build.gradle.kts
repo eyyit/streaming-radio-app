@@ -85,13 +85,13 @@ android {
         create("phone") {
             dimension = "platform"
             applicationId = providers.gradleProperty("publicApplicationId").orElse("com.impostorlabs.streamingradio").get()
-            versionCode = 23
+            versionCode = 25
         }
         create("automotive") {
             dimension = "platform"
             applicationId = providers.gradleProperty("publicApplicationId").orElse("com.impostorlabs.streamingradio").get()
             // Keep AAOS above the paired phone code so the car can replace a phone build.
-            versionCode = 24
+            versionCode = 26
             minSdk = 28
             buildConfigField("boolean", "IS_AUTOMOTIVE", "true")
         }

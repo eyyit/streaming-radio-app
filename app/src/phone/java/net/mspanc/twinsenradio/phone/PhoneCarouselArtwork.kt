@@ -188,7 +188,15 @@ internal class PhoneCarouselArtwork @JvmOverloads constructor(
     }
 
     fun drag(distance: Float, enabled: Boolean, turnDistance: Float = width.toFloat()) {
-        if (!canAnimate(enabled) || oldCover != null) return
+        if (!canAnimate(enabled)) return
+        // A fresh finger drag takes ownership from a committed turn that is still settling.
+        if (oldCover != null) {
+            val image = adjacentCover
+            val step = previewDirection
+            val neighbor = previewStationId
+            reset()
+            setAdjacentPreview(step, neighbor, image)
+        }
         removeCallbacks(release)
         stopMotion()
         if (position == 0f && distance != 0f && dragCover == null && drawable != null) {

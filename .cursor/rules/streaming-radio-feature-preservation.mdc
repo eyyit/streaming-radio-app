@@ -1,0 +1,9 @@
+---
+description: Require evidence of accepted Streaming Radio features before each release
+alwaysApply: true
+---
+
+Follow the [feature preservation gate](../../docs/WORKSTREAMS.md#feature-preservation-gate).
+Reconcile the cumulative feature inventory and verify it against the exact
+release candidate. A missing or failing check blocks the affected release.
+Get Elliott's explicit approval before changing or removing accepted behavior.

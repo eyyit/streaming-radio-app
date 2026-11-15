@@ -2901,7 +2901,8 @@ class RadioService : MediaLibraryService() {
     }
 
     private fun stationNavigationTarget(delta: Int, preview: Boolean): String? {
-        val current = Station.idFromMediaId(player.currentMediaItem?.mediaId.orEmpty())
+        val current = player.currentMediaItem?.mediaId?.let(Station::idFromMediaId)
+            ?: repo.resumeCandidate()?.id?.takeIf { preview && !net.mspanc.twinsenradio.BuildConfig.IS_AUTOMOTIVE }
         val allowed = childrenOf(prefs.activeBrowseParent).map { it.id }
         if (!prefs.randomStationOrder) {
             val index = allowed.indexOf(current)
