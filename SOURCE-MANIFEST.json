@@ -1,7 +1,7 @@
 {
   "formatVersion": 1,
   "project": "Twinsen Radio independent source candidate",
-  "gitHead": "30e30fc4b67b95543acf309571896cd51a59431b",
+  "gitHead": "2b7332a665448a2e9771268cb2f469423e99f045",
   "workingTree": "clean",
   "hashAlgorithm": "SHA-256",
   "selfHashExcluded": true,
@@ -14,6 +14,11 @@
       "path": ".cursor/rules/streaming-radio-design.mdc",
       "size": 2004,
       "sha256": "762b41a83b8c6e562dd1d3ad752d0aa8b26abf72fbecd677e248ca3e83902f9d"
+    },
+    {
+      "path": ".cursor/rules/streaming-radio-feature-preservation.mdc",
+      "size": 436,
+      "sha256": "da3037b59c74dd0777988032511053b9d8b68f808bfa99a179c55148170ece3f"
     },
     {
       "path": ".cursor/rules/streaming-radio-parity.mdc",
@@ -42,13 +47,13 @@
     },
     {
       "path": "AGENTS.md",
-      "size": 6471,
-      "sha256": "8c0e636af4f43cb08b6d8e3695e162c6cd0c50bd2d0034ac03bc4c278173daf1"
+      "size": 6826,
+      "sha256": "57a8465664f7560914eeb1d95c33e6fc37301f5834ef55b0b85fefd1af3c5d7e"
     },
     {
       "path": "app/build.gradle.kts",
       "size": 9009,
-      "sha256": "f24c12ac25c1c6a5bcc375be38c0b319cd12dcf1bbb7658bee7f1dce0609a6ff"
+      "sha256": "9b366e5ebb08ece4def5e63c423dcdc1c7391fcdd9758dee937281fe4236c093"
     },
     {
       "path": "app/src/androidTest/java/net/mspanc/twinsenradio/automotive/PrototypeSmokeInstrumentation.kt",
@@ -487,8 +492,8 @@
     },
     {
       "path": "app/src/main/java/net/mspanc/twinsenradio/playback/RadioService.kt",
-      "size": 150931,
-      "sha256": "b52bcc205c5101c694cde3b4783ef57e8fe681a4bbdaead55460335d9e658b52"
+      "size": 151043,
+      "sha256": "7d2fc994a196705b05de764e9b4985db5d496e9d816de0d8b57eedd0dddc14be"
     },
     {
       "path": "app/src/main/java/net/mspanc/twinsenradio/playback/ReconnectController.kt",
@@ -872,8 +877,8 @@
     },
     {
       "path": "app/src/phone/java/net/mspanc/twinsenradio/phone/PhoneCarouselArtwork.kt",
-      "size": 17064,
-      "sha256": "e0ddf79959fc16c9e0ac48db0905875fb4641218e6478d4eeec996defc320dbb"
+      "size": 17375,
+      "sha256": "6bdf8c957307e594369b38e794d4c0273f3130184ff0fdf05020b6591f25502f"
     },
     {
       "path": "app/src/phone/java/net/mspanc/twinsenradio/phone/PhoneCastController.kt",
@@ -942,8 +947,8 @@
     },
     {
       "path": "app/src/phone/java/net/mspanc/twinsenradio/phone/PhonePlaybackActivity.kt",
-      "size": 37957,
-      "sha256": "4085f425805f8fbacb7d2e780a78d78e3f3d23dd1fb690633ffb94c3dbcc82aa"
+      "size": 39072,
+      "sha256": "e057e204bc6687139fd4c8ff0d7d33cfa955afce6be38b2956cc918f556f5eac"
     },
     {
       "path": "app/src/phone/java/net/mspanc/twinsenradio/phone/PhonePlayerActivity.kt",
@@ -1477,8 +1482,8 @@
     },
     {
       "path": "app/src/testPhone/java/net/mspanc/twinsenradio/phone/PhoneFlowUiTest.kt",
-      "size": 33778,
-      "sha256": "8e3f429e74a307ede2c88d96fef2ea9c0dffd82964672f92504df02e9308b42b"
+      "size": 37762,
+      "sha256": "aa050d7707d121337a54f1157aa983dcc4286cdca00572b43b38d77182c4b853"
     },
     {
       "path": "app/src/testPhone/java/net/mspanc/twinsenradio/phone/PhoneImportFlowTest.kt",
@@ -1546,6 +1551,11 @@
       "sha256": "2a4f201ee2b10807966f6c626da7cc05d029b462a442ecfe1ed1f195227a637e"
     },
     {
+      "path": "docs/FEATURE-ACCEPTANCE.md",
+      "size": 5505,
+      "sha256": "6006a11189fa9c5edf8cd03e9e3a6ff19bd0034a5ee1c5463ce15810feec8aee"
+    },
+    {
       "path": "docs/privacy.html",
       "size": 4986,
       "sha256": "ae51106675c043b9e27611e476a2488c5eb1544cc81231a1be1bd5e3c59fd322"
@@ -1572,13 +1582,13 @@
     },
     {
       "path": "docs/WORKSTREAMS.md",
-      "size": 5973,
-      "sha256": "25ccf84c9fc9e18dd66757c9f4b444313304375723b29556a8d9e4d6c63e2f51"
+      "size": 8467,
+      "sha256": "e72a430e946249ffc716f650aed1e237fb100785667d27ee8ec73c0226ac63a0"
     },
     {
       "path": "gradle.properties",
       "size": 297,
-      "sha256": "02b6942b6d84d5cc06e57464ba0c56d75982bc7200f592d2bb5e59c73b5e9c5a"
+      "sha256": "a2db765e51c2932476ec63bbd62d783e20cb448ff1e75f218871f9e057e61b4f"
     },
     {
       "path": "gradle/wrapper/gradle-wrapper.jar",
@@ -1762,8 +1772,8 @@
     },
     {
       "path": "tools/export-public-source.cjs",
-      "size": 9247,
-      "sha256": "8b1349bf77dd425f57741978b7055c9130d92f44ffef19c53de4175468eda06a"
+      "size": 9353,
+      "sha256": "df720ba29044b1142011b01100735474037f2947b0506c159b6570e1bdbd3836"
     },
     {
       "path": "tools/export-public-source.test.cjs",
