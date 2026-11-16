@@ -695,7 +695,7 @@ class RadioService : MediaLibraryService() {
         override fun onPlayWhenReadyChanged(playWhenReady: Boolean, reason: Int) {
             if (!net.mspanc.twinsenradio.BuildConfig.IS_AUTOMOTIVE && !playWhenReady &&
                 reason == Player.PLAY_WHEN_READY_CHANGE_REASON_END_OF_MEDIA_ITEM) {
-                // A clean EOF keeps this station paused. Explicit Play uses the existing IDLE revival.
+                // Clear the exhausted source; ReconnectController rejoins this same station.
                 player.stop()
                 player.seekToDefaultPosition()
             }

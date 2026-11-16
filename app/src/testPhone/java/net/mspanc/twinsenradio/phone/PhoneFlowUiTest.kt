@@ -450,6 +450,75 @@ class PhoneFlowUiTest {
         }
     }
 
+    @Test
+    @org.robolectric.annotation.GraphicsMode(org.robolectric.annotation.GraphicsMode.Mode.NATIVE)
+    fun expandedArtworkFacesStayConnectedAcrossBothDragDirections() {
+        val host = Robolectric.buildActivity(android.app.Activity::class.java).setup()
+        try {
+            val root = android.widget.FrameLayout(host.get()).apply {
+                setBackgroundColor(android.graphics.Color.BLACK)
+            }
+            val cover = PhoneCarouselArtwork(host.get(), square = true).apply {
+                useExpandedViewport(root)
+                setImageDrawable(android.graphics.drawable.ColorDrawable(android.graphics.Color.RED))
+            }
+            host.get().setContentView(root)
+            root.addView(cover, android.widget.FrameLayout.LayoutParams(120, 120).apply {
+                leftMargin = 100
+                topMargin = 180
+            })
+            measureCompact(root)
+            cover.stationChanged("current", "Current", enabled = true)
+            val decor = host.get().window.decorView
+            val decorLocation = IntArray(2)
+            val rootLocation = IntArray(2)
+            val coverLocation = IntArray(2)
+            decor.getLocationOnScreen(decorLocation)
+            root.getLocationOnScreen(rootLocation)
+            cover.getLocationOnScreen(coverLocation)
+            val frame = android.graphics.Bitmap.createBitmap(
+                decor.width, decor.height, android.graphics.Bitmap.Config.ARGB_8888
+            )
+            val canvas = android.graphics.Canvas(frame)
+            val y = coverLocation[1] - decorLocation[1] + cover.height / 2
+            val red = android.graphics.Color.RED
+            val blue = android.graphics.Color.BLUE
+            for (direction in listOf(-1, 1)) {
+                for (progress in listOf(0.25f, 0.5f, 0.75f)) {
+                    cover.setAdjacentPreview(direction, "neighbor",
+                        android.graphics.drawable.ColorDrawable(blue))
+                    cover.drag(direction * cover.width * progress, enabled = true)
+                    decor.draw(canvas)
+                    val visibleColors = mutableSetOf<Int>()
+                    val rootLeft = rootLocation[0] - decorLocation[0]
+                    for (x in rootLeft until rootLeft + root.width) {
+                        val pixel = frame.getPixel(x, y)
+                        visibleColors += pixel
+                        assertTrue(
+                            "Open background strip at x=$x, direction=$direction, progress=$progress",
+                            pixel == red || pixel == blue
+                        )
+                    }
+                    assertEquals("Both current and actual neighbor must be visible",
+                        setOf(red, blue), visibleColors)
+                    val belowArtwork = coverLocation[1] - decorLocation[1] + cover.height + 12
+                    val outsidePixel = frame.getPixel(rootLeft + root.width / 2, belowArtwork)
+                    assertEquals(
+                        "Artwork must not stretch into controls, direction=$direction, progress=$progress",
+                        android.graphics.Color.BLACK,
+                        outsidePixel
+                    )
+                    cover.settle()
+                    org.robolectric.shadows.ShadowLooper.idleMainLooper(
+                        1, java.util.concurrent.TimeUnit.SECONDS
+                    )
+                }
+            }
+        } finally {
+            host.pause().stop().destroy()
+        }
+    }
+
     @Test fun artworkSwipeSelectsTheNeighborWhileAColdResumeIsPaused() {
         runBlocking {
             repo.saveLocalPlaylist("Test list",

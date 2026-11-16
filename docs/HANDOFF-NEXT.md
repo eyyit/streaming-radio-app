@@ -1,3 +1,16 @@
+# Acceptance audit, 16 November 2026 (local only)
+
+Audit base: `bc12ed13015dd5f6492d5798e254b2425767d495`.
+The isolated audit adds candidate evidence retention, a phone cube projection
+regression, and shared stream-end recovery. On 16 November 2026 UTC the owner
+approved automatic retry of the same station after unexpected phone stream
+end, superseding its previous pause-at-EOF behavior. Explicit pause remains
+authoritative. Source changes are not a
+release: use [FEATURE-ACCEPTANCE.md](FEATURE-ACCEPTANCE.md) per candidate and
+[the relay/device check](RELAY-DEVICE-CHECK.md). Missing runtime evidence blocks
+release. No push, release signing, Play action, or production relay change is
+authorized by this handoff. Preserve other workstreams' pending changes.
+
 # Feature preservation before release
 
 The [feature preservation gate](WORKSTREAMS.md#feature-preservation-gate)

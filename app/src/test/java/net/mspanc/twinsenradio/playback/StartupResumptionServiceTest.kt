@@ -401,10 +401,17 @@ class StartupResumptionServiceTest {
         }
     }
 
-    @Test fun finiteEofKeepsPhoneStationPausedAndExplicitPlayAndSkipsStillWork() {
+    @Test fun finiteEofRejoinsPhoneStationAndExplicitPlayAndSkipsStillWork() {
         prefs.activeBrowseParent = imported
         val stations = repo.all()
         withFiniteService { service, finite, wrapper, autoTransitions ->
+            var cleanEnds = 0
+            finite.addListener(object : androidx.media3.common.Player.Listener {
+                override fun onPlayWhenReadyChanged(ready: Boolean, reason: Int) {
+                    if (reason == androidx.media3.common.Player.PLAY_WHEN_READY_CHANGE_REASON_END_OF_MEDIA_ITEM)
+                        cleanEnds++
+                }
+            })
             finite.prepare()
             wrapper.play()
             if (net.mspanc.twinsenradio.BuildConfig.IS_AUTOMOTIVE) {
@@ -412,16 +419,15 @@ class StartupResumptionServiceTest {
                 assertTrue("AAOS retains its existing automatic station advancement",
                     autoTransitions.contains(stations.last().mediaId))
             } else {
-                pumpUntil { !finite.playWhenReady && finite.playbackState ==
-                    androidx.media3.common.Player.STATE_IDLE }
+                pumpUntil { cleanEnds > 0 && finite.playWhenReady }
+                assertTrue("The source must actually reach EOF", cleanEnds > 0)
                 assertEquals("EOF must not choose a neighboring phone station", emptyList<String>(),
                     autoTransitions)
                 assertEquals(stations.first().mediaId, finite.currentMediaItem!!.mediaId)
-                assertFalse(finite.playWhenReady)
-                assertEquals(androidx.media3.common.Player.STATE_IDLE, finite.playbackState)
+                assertTrue("Clean EOF must rejoin the same station automatically", finite.playWhenReady)
+                wrapper.pause()
+                assertFalse("An explicit pause remains authoritative", finite.playWhenReady)
                 wrapper.play()
-                assertEquals("Explicit Play must use existing reconnect to prepare a fresh source",
-                    androidx.media3.common.Player.STATE_BUFFERING, finite.playbackState)
                 assertEquals(stations.first().mediaId, finite.currentMediaItem!!.mediaId)
                 assertTrue(finite.playWhenReady)
                 wrapper.seekToNextMediaItem()

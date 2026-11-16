@@ -147,6 +147,13 @@ class ReconnectController(
     }
 
     override fun onPlayWhenReadyChanged(playWhenReady: Boolean, reason: Int) {
+        if (!net.mspanc.twinsenradio.BuildConfig.IS_AUTOMOTIVE && !playWhenReady &&
+            reason == Player.PLAY_WHEN_READY_CHANGE_REASON_END_OF_MEDIA_ITEM) {
+            // Media3's phone queue pauses at EOF to avoid jumping to another
+            // station. This automatic pause is not a request to stop listening.
+            retryNow("live stream ended", resumeEndedItem = true)
+            return
+        }
         if (!playWhenReady) {
             cancelPending()
             cancelStuckCheck()
@@ -171,6 +178,15 @@ class ReconnectController(
             // in circles - at that point we call it what it is and start
             // retrying ourselves.
             Player.STATE_BUFFERING -> scheduleStuckCheck()
+            Player.STATE_ENDED -> {
+                cancelStuckCheck()
+                // A live radio connection can close cleanly without a load error.
+                // Rejoin with backoff, but never override pause or Cast handoff.
+                if (!net.mspanc.twinsenradio.BuildConfig.IS_AUTOMOTIVE && player.playWhenReady) {
+                    status = currentStatus()
+                    scheduleRetry()
+                }
+            }
             else -> cancelStuckCheck()
         }
     }
@@ -187,9 +203,9 @@ class ReconnectController(
         Log.i(TAG, "Ponowie za ${delay}ms (proba $attempt)")
     }
 
-    private fun retryNow(reason: String) {
+    private fun retryNow(reason: String, resumeEndedItem: Boolean = false) {
         cancelPending()
-        if (!player.playWhenReady) return
+        if (!player.playWhenReady && !resumeEndedItem) return
         Log.i(TAG, "Wznawiam odtwarzanie ($reason)")
         status = currentStatus()
         runCatching {
