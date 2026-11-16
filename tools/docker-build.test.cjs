@@ -47,7 +47,17 @@ if (args[0] === 'run') {
     arg.includes(',dst=/out'));
   const destination = output && output.match(/src=(.*),dst=\/out/);
   if (destination) {
-    fs.writeFileSync(path.join(destination[1], 'artifact.aab'), 'fixture');
+    const out = destination[1];
+    fs.writeFileSync(path.join(out, 'artifact.aab'), 'fixture');
+    if (process.env.DOCKER_FAIL === '1' && args.includes('MODE=verify')) {
+      const reports = path.join(out, 'app/build/reports/verification');
+      const tests = path.join(out, 'app/build/test-results/unitTest');
+      fs.mkdirSync(reports, { recursive: true });
+      fs.mkdirSync(tests, { recursive: true });
+      fs.writeFileSync(path.join(out, 'SOURCE-MANIFEST.json'), 'manifest');
+      fs.writeFileSync(path.join(reports, 'verification.json'), 'failed receipt');
+      fs.writeFileSync(path.join(tests, 'results.xml'), '<testsuite/>');
+    }
   }
 }
 if (process.env.DOCKER_FAIL === '1') process.exit(37);
@@ -169,6 +179,45 @@ test('Docker failure propagates and removes pending output', { skip: linuxOnly }
   assert.deepEqual(fs.readdirSync(path.join(f.repo, 'dist', 'docker')), []);
 });
 
+
+test('failed verification retains partial evidence and its exit status',
+  { skip: linuxOnly },
+  (t) => {
+    const f = fixture(t);
+    const result = invoke(f, 'verify', { DOCKER_FAIL: '1' });
+    assert.equal(result.status, 37);
+    assert.ok(!result.stdout.includes('Build artifacts saved under'));
+    const output = path.join(f.repo, 'dist', 'docker');
+    const entries = fs.readdirSync(output);
+    assert.equal(
+      entries.length,
+      1,
+      'failed verification must keep its evidence directory',
+    );
+    assert.match(entries[0], /^failed-verify-/);
+    assert.match(result.stderr, /Verification failed; evidence retained under/);
+    const evidence = path.join(output, entries[0]);
+    assert.equal(
+      fs.readFileSync(path.join(evidence, 'SOURCE-MANIFEST.json'), 'utf8'),
+      'manifest',
+    );
+    assert.equal(
+      fs.readFileSync(
+        path.join(evidence, 'app/build/reports/verification/verification.json'),
+        'utf8',
+      ),
+      'failed receipt',
+    );
+    assert.equal(
+      fs.readFileSync(
+        path.join(evidence, 'app/build/test-results/unitTest/results.xml'),
+        'utf8',
+      ),
+      '<testsuite/>',
+    );
+  },
+);
+
 test('setup-signing preserves password spaces without echoing them',
   { skip: linuxOnly, timeout: 40000 }, (t) => {
     const f = fixture(t);
@@ -280,4 +329,247 @@ test('comma paths fail before Docker is invoked', { skip: linuxOnly }, (t) => {
   assert.notEqual(result.status, 0);
   assert.match(result.stderr, /cannot contain commas/i);
   assert.equal(fs.existsSync(licenseCase.ledger), false);
+});
+test(
+  'verify entrypoint exports phone bundle, test evidence, and source identity',
+  { skip: linuxOnly },
+  (t) => {
+    const f = fixture(t);
+    const source = path.join(f.root, 'source');
+    const output = path.join(f.root, 'out');
+    const work = path.join(f.root, 'work');
+    const bin = path.join(f.root, 'entrypoint bin');
+    fs.mkdirSync(source);
+    fs.mkdirSync(output);
+    fs.mkdirSync(bin);
+    fs.writeFileSync(
+      path.join(source, 'SOURCE-MANIFEST.json'),
+      '{"gitHead":null}\n',
+    );
+    fs.writeFileSync(
+      path.join(source, 'SOURCE-MANIFEST.sha256'),
+      'fixture  SOURCE-MANIFEST.json\n',
+    );
+    const node = path.join(bin, 'node');
+    fs.writeFileSync(node, `#!/bin/sh
+set -eu
+case "$1" in
+  *export-public-source.cjs)
+    mkdir -p "$3/app/src" "$3/tools"
+    cp "$STREAMING_RADIO_SOURCE_DIR"/SOURCE-MANIFEST* "$3/"
+    cat > "$3/gradlew" <<'GRADLE'
+#!/bin/sh
+set -eu
+case " $* " in
+  *" :app:assembleAutomotiveDebug "*) ;;
+  *) printf 'unexpected Gradle task: %s\n' "$*" >&2; exit 51 ;;
+esac
+mkdir -p app/build/outputs/apk/automotive/debug
+printf 'apk' > app/build/outputs/apk/automotive/debug/app-automotive-debug.apk
+GRADLE
+    chmod +x "$3/gradlew"
+    ;;
+  *verify-automotive.cjs)
+    mkdir -p app/build/test-results/unitTest
+    mkdir -p app/build/reports/lint app/build/reports/verification
+    printf '<testsuite/>' > app/build/test-results/unitTest/results.xml
+    if [ "$FAIL_VERIFY" = 1 ]; then
+      mkdir -p app/build/outputs/bundle/automotiveRelease
+      printf 'partial bundle' > app/build/outputs/bundle/automotiveRelease/app-automotive-release.aab
+      printf '{"status":"failed"}\n' > app/build/reports/verification/verification.json
+      exit 42
+    fi
+    mkdir -p app/build/outputs/bundle/automotiveRelease
+    mkdir -p app/build/outputs/bundle/phoneRelease
+    printf 'automotive' > app/build/outputs/bundle/automotiveRelease/app-automotive-release.aab
+    if [ "$OMIT_PHONE_BUNDLE" != 1 ]; then
+      printf 'phone' > app/build/outputs/bundle/phoneRelease/app-phone-release.aab
+    fi
+    printf 'lint' > app/build/reports/lint/lint.html
+    printf '{"status":"passed"}\n' > app/build/reports/verification/verification.json
+    ;;
+esac
+`);
+    fs.chmodSync(node, 0o700);
+    const runVerify = (omitPhoneBundle, failVerifier = false) => spawnSync(
+      'sh',
+      [path.join(f.repo, 'docker', 'entrypoint.sh')],
+      {
+        cwd: f.root,
+        encoding: 'utf8',
+        env: {
+          ...process.env,
+          PATH: `${bin}${path.delimiter}${process.env.PATH}`,
+          MODE: 'verify',
+          SOURCE_ROOT: source,
+          OUTPUT_ROOT: output,
+          WORK_ROOT: work,
+          HOME_TMP_DIR: path.join(f.root, 'home-tmp'),
+          GRADLE_CACHE_DIR: path.join(f.root, 'gradle-cache'),
+          STREAMING_RADIO_SOURCE_DIR: source,
+          ANDROID_USER_HOME: path.join(f.root, 'android-user'),
+          ANDROID_HOME: path.join(f.root, 'android-sdk'),
+          OMIT_PHONE_BUNDLE: omitPhoneBundle ? '1' : '0',
+          FAIL_VERIFY: failVerifier ? '1' : '0',
+        },
+      },
+    );
+    const result = runVerify(false);
+    assert.equal(result.status, 0, result.stderr);
+    const phoneBundle = path.join(output, 'Streaming-Radio-phone-unsigned.aab');
+    assert.ok(
+      fs.existsSync(phoneBundle),
+      'verify must export the phone release bundle',
+    );
+    assert.equal(fs.readFileSync(phoneBundle, 'utf8'), 'phone');
+    const sumsPath = path.join(output, 'SHA256SUMS');
+    const checksumLines = fs.readFileSync(sumsPath, 'utf8').trim().split('\n');
+    assert.equal(checksumLines.length, 3);
+    for (const line of checksumLines) {
+      const [expected, name] = line.split(/\s+/, 2);
+      const actual = crypto.createHash('sha256')
+        .update(fs.readFileSync(path.join(output, name))).digest('hex');
+      assert.equal(expected, actual, name);
+    }
+    assert.equal(
+      fs.readFileSync(path.join(output, 'SOURCE-MANIFEST.json'), 'utf8'),
+      '{"gitHead":null}\n',
+    );
+    assert.equal(
+      fs.readFileSync(path.join(output, 'SOURCE-MANIFEST.sha256'), 'utf8'),
+      'fixture  SOURCE-MANIFEST.json\n',
+    );
+    assert.equal(
+      fs.readFileSync(
+        path.join(output, 'app/build/test-results/unitTest/results.xml'),
+        'utf8',
+      ),
+      '<testsuite/>',
+    );
+    assert.equal(
+      fs.readFileSync(path.join(output, 'app/build/reports/lint/lint.html'), 'utf8'),
+      'lint',
+    );
+    assert.equal(
+      fs.readFileSync(
+        path.join(output, 'app/build/reports/verification/verification.json'),
+        'utf8',
+      ),
+      '{"status":"passed"}\n',
+    );
+    fs.rmSync(work, { recursive: true, force: true });
+    fs.rmSync(output, { recursive: true, force: true });
+    fs.mkdirSync(output);
+    const missingPhone = runVerify(true);
+    assert.notEqual(missingPhone.status, 0);
+    assert.match(
+      missingPhone.stderr,
+      /phone release bundle was not produced/,
+    );
+    fs.rmSync(work, { recursive: true, force: true });
+    fs.rmSync(output, { recursive: true, force: true });
+    fs.mkdirSync(output);
+    const failedVerifier = runVerify(false, true);
+    assert.equal(failedVerifier.status, 42, failedVerifier.stderr);
+    assert.ok(
+      fs.existsSync(path.join(output, 'SOURCE-MANIFEST.json')),
+      'failed verify must retain source identity',
+    );
+    assert.ok(
+      fs.existsSync(
+        path.join(output, 'app/build/reports/verification/verification.json'),
+      ),
+      'failed verify must retain its partial receipt',
+    );
+    assert.ok(
+      fs.existsSync(
+        path.join(output, 'app/build/test-results/unitTest/results.xml'),
+      ),
+      'failed verify must retain available test output',
+    );
+    assert.equal(
+      fs.readFileSync(path.join(output, 'SOURCE-MANIFEST.json'), 'utf8'),
+      '{"gitHead":null}\n',
+    );
+    assert.equal(
+      fs.readFileSync(path.join(output, 'SOURCE-MANIFEST.sha256'), 'utf8'),
+      'fixture  SOURCE-MANIFEST.json\n',
+    );
+    assert.equal(
+      fs.readFileSync(
+        path.join(output, 'app/build/reports/verification/verification.json'),
+        'utf8',
+      ),
+      '{"status":"failed"}\n',
+    );
+    assert.equal(
+      fs.readFileSync(
+        path.join(output, 'app/build/test-results/unitTest/results.xml'),
+        'utf8',
+      ),
+      '<testsuite/>',
+    );
+    const partialBundle = path.join(
+      output,
+      'app/build/outputs/bundle/automotiveRelease/app-automotive-release.aab',
+    );
+    assert.ok(
+      fs.existsSync(partialBundle),
+      'failed verify must retain an available bundle',
+    );
+    assert.equal(fs.readFileSync(partialBundle, 'utf8'), 'partial bundle');
+    for (const name of [
+      'Streaming-Radio-unsigned.aab',
+      'Streaming-Radio-phone-unsigned.aab',
+      'Streaming-Radio-play-upload.aab',
+      'SHA256SUMS',
+    ]) {
+      assert.equal(
+        fs.existsSync(path.join(output, name)),
+        false,
+        'failed verification must not expose success-only outputs',
+      );
+    }
+    fs.rmSync(work, { recursive: true, force: true });
+    fs.rmSync(output, { recursive: true, force: true });
+    fs.mkdirSync(output);
+    fs.writeFileSync(path.join(output, 'app'), 'blocks evidence destination');
+    const copyFailure = runVerify(false);
+    assert.notEqual(
+      copyFailure.status,
+      0,
+      'successful build must fail if required report copying is obstructed',
+    );
+    assert.match(copyFailure.stderr, /Could not retain verification evidence/);
+    assert.ok(
+      fs.existsSync(path.join(output, 'SOURCE-MANIFEST.json')),
+      'manifest copy should succeed before the report obstruction',
+    );
+    for (const name of [
+      'Streaming-Radio-unsigned.aab',
+      'Streaming-Radio-phone-unsigned.aab',
+    ]) {
+      assert.equal(
+        fs.existsSync(path.join(output, name)),
+        false,
+        'copy failure must not expose success-named bundles',
+      );
+    }
+  },
+);
+test('Android CI retains both phone and automotive release bundles', () => {
+  const workflow = fs.readFileSync(
+    path.join(sourceRepo, '.github', 'workflows', 'android-ci.yml'),
+    'utf8',
+  );
+  assert.match(workflow, /sha256sum[^>]*app\/build\/outputs\/bundle\/automotiveRelease\/\*\.aab/);
+  assert.match(workflow, /sha256sum[^>]*app\/build\/outputs\/bundle\/phoneRelease\/\*\.aab/);
+  const digest = workflow.indexOf('Write candidate SHA-256 report');
+  assert.ok(workflow.indexOf('Run shared local and CI verification') < digest &&
+    digest < workflow.indexOf('Retain review evidence'));
+  assert.match(workflow, /sha256sum[\s\S]*candidate-sha256\.txt/);
+  assert.match(
+    workflow,
+    /name: Retain review evidence[\s\S]*app\/build\/reports\//,
+  );
 });

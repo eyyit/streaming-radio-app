@@ -41,6 +41,12 @@ jobs:
         run: sdkmanager 'platforms;android-36' 'build-tools;35.0.0'
       - name: Run shared local and CI verification
         run: node tools/verify-automotive.cjs
+      - name: Write candidate SHA-256 report
+        run: |
+          sha256sum \
+            app/build/outputs/bundle/automotiveRelease/*.aab \
+            app/build/outputs/bundle/phoneRelease/*.aab \
+            > app/build/reports/verification/candidate-sha256.txt
       - name: Retain review evidence
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
@@ -52,6 +58,7 @@ jobs:
             app/build/reports/
             app/build/test-results/
             app/build/outputs/bundle/automotiveRelease/*.aab
+            app/build/outputs/bundle/phoneRelease/*.aab
 
   phone-transfer-rules:
     runs-on: ubuntu-24.04

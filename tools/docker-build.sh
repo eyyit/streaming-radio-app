@@ -139,7 +139,26 @@ fi
 command -v docker >/dev/null 2>&1 || fail 'Docker is not installed or not on PATH'
 pending=''
 cleanup_run() {
-    [ -z "$pending" ] || rm -rf -- "$pending"
+    cleanup_exit_status=$?
+    trap - EXIT
+    if [ -n "$pending" ]; then
+        if [ "$mode" = verify ] && [ "$cleanup_exit_status" -ne 0 ]; then
+            failed_destination="$output/failed-verify-${run_id:-unknown}"
+            if mv -- "$pending" "$failed_destination"; then
+                pending=''
+                printf 'Verification failed; evidence retained under %s\n' \
+                    "$failed_destination" >&2
+            else
+                printf 'Verification failed; evidence remains under %s\n' \
+                    "$pending" >&2
+                pending=''
+            fi
+        else
+            rm -rf -- "$pending"
+            pending=''
+        fi
+    fi
+    exit "$cleanup_exit_status"
 }
 trap cleanup_run EXIT
 
