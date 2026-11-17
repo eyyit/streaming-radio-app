@@ -70,7 +70,7 @@ class ImpostorPlayerActivity : AppCompatActivity() {
  private lateinit var trackArtToggle: ImageButton
  private var controller: MediaController?=null
  private var generation=0
- private var mode=0 //0 split,2 player only
+ private var mode=2 //0 split,2 player only
  private var browseParent=RadioService.NODE_ALL
  private var rows=emptyList<Station>()
  private var direction=0
@@ -93,9 +93,6 @@ class ImpostorPlayerActivity : AppCompatActivity() {
  override fun onCreate(savedInstanceState:Bundle?) {
   super.onCreate(savedInstanceState)
   repo=StationRepository.get(this); prefs=Prefs(this); art=MetadataFactory(this,prefs)
-  val savedMode=ui.getInt("mode",0)
-  mode=if(savedMode==2)2 else 0
-  if(savedMode!=mode) ui.edit().putInt("mode",mode).apply()
   browseParent=ui.getString("browse",RadioService.NODE_ALL) ?: RadioService.NODE_ALL
   if(browseParent!=RadioService.NODE_ALL && browseParent!=RadioService.NODE_FAVOURITES) browseParent=RadioService.NODE_ALL
    val root=LinearLayout(this).apply { orientation=LinearLayout.VERTICAL; setBackgroundColor(AutomotiveDesign.CANVAS) }
@@ -175,7 +172,7 @@ class ImpostorPlayerActivity : AppCompatActivity() {
  }
  private fun setMode(value:Int) {
   val position=list.firstVisiblePosition; val offset=list.getChildAt(0)?.top ?: 0
-  mode=value; ui.edit().putInt("mode",mode).commit(); buildBody()
+  mode=value; buildBody()
   list.post { if(rows.isNotEmpty()) list.setSelectionFromTop(position.coerceIn(0,rows.lastIndex),offset) }
  }
  private fun buildBody() {

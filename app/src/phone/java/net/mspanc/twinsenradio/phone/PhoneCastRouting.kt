@@ -65,7 +65,16 @@ class PhoneCastRouting private constructor(private val context: Context) {
     }
 
     fun notification(): Notification = native.notification()
-    internal fun displaySnapshot(): PhoneCastNativeSession.DisplaySnapshot? = native.displaySnapshot()
+    internal fun displaySnapshot(): PhoneCastNativeSession.DisplaySnapshot? {
+        val snapshot = native.displaySnapshot() ?: return null
+        val pendingId = controller.pendingTargetStationId() ?: return snapshot
+        if (pendingId == snapshot.stationId) return snapshot
+        val pendingStation = repo.byId(pendingId)
+        return snapshot.copy(
+            title = pendingStation?.name ?: snapshot.title,
+            stationId = pendingId
+        )
+    }
     fun action(value: String?) = native.action(value)
     fun mediaButton(event: android.view.KeyEvent): Boolean = native.mediaButton(event)
 

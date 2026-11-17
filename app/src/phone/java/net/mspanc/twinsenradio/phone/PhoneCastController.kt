@@ -40,6 +40,7 @@ class PhoneCastController(
     private var loadedUri: String? = null
     private var loadedStationId: String? = null
     private var remoteShouldPlay = true
+    private var pendingPlay = false
     private var pendingStop = false
     private var awaitingFormat: PlaybackTarget? = null
     private var unconfirmedStop = false
@@ -155,6 +156,7 @@ class PhoneCastController(
         explicitStationSelection = stationId
         explicitQueueTarget = null
         explicitQueueNavigationPending = false
+        onPlaybackChanged()
     }
 
     fun onExplicitQueueNavigation() {
@@ -165,6 +167,21 @@ class PhoneCastController(
         explicitQueueTarget = playbackTarget()
     }
 
+    internal fun pendingTargetStationId(): String? {
+        if (!mayLoadForSession || initialStatusRequestGeneration == attachmentGeneration ||
+            statusResolvedGeneration != attachmentGeneration) return null
+        val busStation = net.mspanc.twinsenradio.playback.PlaybackStatusBus.stationId.value
+        val navigatedStation = if (explicitQueueNavigationPending) {
+            val previousId = explicitQueueTarget?.mediaId?.let(Station::idFromMediaId)
+            busStation?.takeIf { it != previousId }
+                ?: currentStation()?.id?.takeIf { it != previousId }
+        } else null
+        return pendingStationId
+            ?: awaitingFormat?.mediaId?.let(Station::idFromMediaId)
+            ?: explicitStationSelection
+            ?: navigatedStation
+    }
+
     private fun playbackTarget(): PlaybackTarget? = localController()?.currentMediaItem?.let {
         PlaybackTarget(it.mediaId, it.localConfiguration?.uri?.toString())
     }
@@ -172,7 +189,9 @@ class PhoneCastController(
     fun isCasting(): Boolean = remoteClient != null && loadedUri != null
 
     fun isRemotePlaying(): Boolean =
-        if (pendingUri != null || pendingStop) remoteShouldPlay else remoteInPlayMode()
+        if (pendingUri != null || pendingStop || pendingPlay || (awaitingFormat != null && loadedUri != null)) {
+            remoteShouldPlay
+        } else remoteInPlayMode()
 
     private fun remoteInPlayMode(): Boolean = when (remoteClient?.mediaStatus?.playerState) {
         com.google.android.gms.cast.MediaStatus.PLAYER_STATE_PLAYING,
@@ -186,9 +205,11 @@ class PhoneCastController(
         if (initialStatusRequestGeneration == attachmentGeneration ||
             statusResolvedGeneration != attachmentGeneration) return
 
-        if (pendingUri != null || pendingStop) {
+        if (pendingUri != null || pendingStop || (awaitingFormat != null && loadedUri != null)) {
             remoteShouldPlay = !remoteShouldPlay
-
+            if (!remoteShouldPlay && pendingUri == null && !pendingStop && remoteInPlayMode()) {
+                client.pause()
+            }
             onPlaybackChanged()
             return
         }
@@ -196,7 +217,8 @@ class PhoneCastController(
         if (remoteInfo != null && !PhoneCastPolicy.ownsRemoteMedia(
                 remoteInfo.customData?.optString(CUSTOM_OWNER))) return
         if (loadedUri == null) return
-        if (remoteInPlayMode()) {
+        if (remoteInPlayMode() || pendingPlay) {
+            pendingPlay = false
             remoteShouldPlay = false
             client.pause()
         } else {
@@ -230,6 +252,7 @@ class PhoneCastController(
 
     private fun attach(session: CastSession, userSelectedReceiver: Boolean = false) {
         if (!active) return
+        pendingPlay = false
         pendingStop = false
         awaitingFormat = null
         unconfirmedStop = false
@@ -284,8 +307,16 @@ class PhoneCastController(
                         adoptOwnedRemoteMedia(client, requestGeneration)
                         if (relinquishForeignRemoteMedia(client)) unconfirmedStop = false
                     }
-                    if (pendingUri == null && !pendingStop && loadedUri != null && client.mediaStatus != null) {
-                        remoteShouldPlay = remoteInPlayMode()
+                    if (pendingPlay && remoteInPlayMode()) {
+                        pendingPlay = false
+                    }
+                    if (pendingUri == null && !pendingStop && awaitingFormat == null &&
+                        loadedUri != null && client.mediaStatus != null) {
+                        val state = client.mediaStatus?.playerState
+                        if (!pendingPlay || state == MediaStatus.PLAYER_STATE_IDLE) {
+                            pendingPlay = false
+                            remoteShouldPlay = remoteInPlayMode()
+                        }
                     }
                 }
                 onPlaybackChanged()
@@ -456,7 +487,15 @@ class PhoneCastController(
         if (contentType == null && selectedAudio == null && local.playerError == null &&
             local.playbackState != Player.STATE_ENDED
         ) {
+            if (pendingUri != null) {
+                pendingLease?.close()
+                pendingLease = null
+                pendingUri = null
+                pendingStationId = null
+                requestGeneration += 1
+            }
             awaitingFormat = PlaybackTarget(localItem.mediaId, uri)
+            onPlaybackChanged()
             return
         }
         awaitingFormat = null
@@ -481,6 +520,7 @@ class PhoneCastController(
         }
         remoteShouldPlay = autoplay
         val token = ++requestGeneration
+        pendingPlay = false
         pendingStop = false
         unconfirmedStop = false
         pendingUri = uri
@@ -509,6 +549,7 @@ class PhoneCastController(
             onPlaybackChanged()
             return
         }
+        onPlaybackChanged()
         pending.setResultCallback { result ->
             if (token != requestGeneration || pendingUri != uri || pendingStationId != station.id) {
                 lease?.close()
@@ -548,7 +589,14 @@ class PhoneCastController(
                         loadedStationId = null
                         failedUri = uri
                         remoteShouldPlay = false
-                    } else if (shouldPlay) client.play()
+                    } else if (shouldPlay) {
+                        pendingPlay = true
+                        client.play()
+                        if (remoteInPlayMode()) pendingPlay = false
+                    }
+                } else if (current != null && currentStationId != null && currentStationId != station.id) {
+                    pendingPlay = remoteShouldPlay
+                    loadCurrentStation()
                 }
             } else {
                 handleLoadFailure(client, uri, station.id, lease)
@@ -563,6 +611,7 @@ class PhoneCastController(
         stationId: String,
         lease: PhoneCastHandoffLease?
     ) {
+        pendingPlay = false
         pendingUri = null
         pendingStationId = null
         failedUri = uri
@@ -578,6 +627,7 @@ class PhoneCastController(
         stationId: String,
         lease: PhoneCastHandoffLease? = null
     ) {
+        pendingPlay = false
         pendingStop = true
         val stopToken = ++requestGeneration
         runCatching {
@@ -636,6 +686,7 @@ class PhoneCastController(
     }
 
     private fun clearRemote() {
+        pendingPlay = false
         pendingStop = false
         awaitingFormat = null
         unconfirmedStop = false

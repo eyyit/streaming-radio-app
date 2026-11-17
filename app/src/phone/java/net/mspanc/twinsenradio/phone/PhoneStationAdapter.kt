@@ -246,30 +246,65 @@ internal class PhoneStationAdapter(
 @UnstableApi
 internal class PhoneStationFollow {
     private var selection: Pair<String, String>? = null
+    private var userScrolled = false
+    private var activeAdapter: PhoneStationAdapter? = null
     private var motion: ValueAnimator? = null
     private var observedList: RecyclerView? = null
     private val touchListener = object : RecyclerView.SimpleOnItemTouchListener() {
         override fun onInterceptTouchEvent(rv: RecyclerView, e: MotionEvent): Boolean {
-            if (e.actionMasked == MotionEvent.ACTION_DOWN) stop()
+            if (e.actionMasked == MotionEvent.ACTION_DOWN) {
+                userScrolled = true
+                stop()
+            }
             return false
         }
     }
+    private val layoutListener = View.OnLayoutChangeListener { view, _, top, _, bottom, _, oldTop, _, oldBottom ->
+        val list = view as? RecyclerView ?: return@OnLayoutChangeListener
+        if (userScrolled || motion != null || isCentering) return@OnLayoutChangeListener
+        if (bottom - top >= oldBottom - oldTop) return@OnLayoutChangeListener
+        val adapter = activeAdapter ?: return@OnLayoutChangeListener
+        val stationId = selection?.second ?: return@OnLayoutChangeListener
+        if (list.adapter !== adapter || !list.isShown || list.scrollState == RecyclerView.SCROLL_STATE_DRAGGING) return@OnLayoutChangeListener
+        val position = adapter.positionOf(stationId)
+        val layout = list.layoutManager as? LinearLayoutManager ?: return@OnLayoutChangeListener
+        if (position < 0) return@OnLayoutChangeListener
+        val distance = remainingDistance(list, layout, position)
+        if (distance != 0f) list.scrollBy(0, kotlin.math.round(distance).toInt())
+    }
 
     fun reveal(list: RecyclerView, adapter: PhoneStationAdapter, collection: String, stationId: String?) {
+        activeAdapter = adapter
         if (observedList !== list) {
             stop()
             observedList?.removeOnItemTouchListener(touchListener)
+            observedList?.removeOnLayoutChangeListener(layoutListener)
             observedList = list
             list.addOnItemTouchListener(touchListener)
+            list.addOnLayoutChangeListener(layoutListener)
         }
         if (stationId == null) {
             stop()
+            userScrolled = false
             selection = null
             return
         }
         val key = collection to stationId
-        if (key == selection) return
+        if (key == selection) {
+            if (userScrolled || motion != null || isCentering) return
+            list.doOnLayout {
+                if (selection != key || userScrolled || motion != null || isCentering) return@doOnLayout
+                if (list.adapter !== adapter || !list.isShown || list.scrollState == RecyclerView.SCROLL_STATE_DRAGGING) return@doOnLayout
+                val position = adapter.positionOf(stationId)
+                val layout = list.layoutManager as? LinearLayoutManager ?: return@doOnLayout
+                if (position < 0) return@doOnLayout
+                val distance = remainingDistance(list, layout, position)
+                if (distance != 0f) list.scrollBy(0, kotlin.math.round(distance).toInt())
+            }
+            return
+        }
         stop()
+        userScrolled = false
         if (adapter.positionOf(stationId) < 0) {
             selection = null
             return
@@ -300,6 +335,7 @@ internal class PhoneStationFollow {
     fun reset() {
         stop()
         cancelCentering()
+        userScrolled = false
         selection = null
     }
 
@@ -321,6 +357,7 @@ internal class PhoneStationFollow {
         cancelCentering()
         val key = collection to stationId
         stop()
+        userScrolled = false
         selection = key
         list.stopScroll()
         var estimated = false
@@ -381,18 +418,20 @@ internal class PhoneStationFollow {
             doOnEnd {
                 motion = null
                 list.post {
-                    if (selection != key ||
+                    if (selection != key || userScrolled ||
                         list.adapter !== adapter || !list.isShown
                     ) return@post
                     val position = adapter.positionOf(stationId)
                     if (position < 0) return@post
                     val target = layout.findViewByPosition(position)
-                    if (target == null ||
-                            layout.getDecoratedTop(target) < list.paddingTop ||
-                            layout.getDecoratedBottom(target) > list.height - list.paddingBottom
-                    ) {
+                    if (target != null) {
+                        val remaining = remainingDistance(list, layout, position)
+                        if (remaining != 0f) {
+                            list.scrollBy(0, kotlin.math.round(remaining).toInt())
+                        }
+                    } else {
                         // Estimates are only used while the target is far offscreen;
-                        // anchor it exactly once variable-height rows are encountered.
+                        // anchor it once variable-height rows are encountered.
                         layout.scrollToPositionWithOffset(position, list.paddingTop)
                     }
                 }

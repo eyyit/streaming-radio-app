@@ -56,7 +56,7 @@ class PlaylistLibraryTest {
         assertEquals(b, result[0])
         assertEquals(local, result[1])
         assertEquals("https://new/list.m3u", result[2].url)
-        assertEquals("new / list.m3u", result[2].name)
+        assertEquals("new/list.m3u", result[2].name)
         assertEquals(3, result.map { it.id }.distinct().size)
         assertEquals(listOf(b), result.filter { it.id == "b" })
         assertEquals(listOf(local), PlaylistLibrary.reconcileRemoteUrls(listOf(a, local, b), emptyList()))

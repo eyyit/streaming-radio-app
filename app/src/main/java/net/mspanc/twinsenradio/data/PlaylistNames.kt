@@ -10,22 +10,26 @@ object PlaylistNames {
      * Builds a name from the host and decoded URL path. Query parameters,
      * fragments, and user info are intentionally excluded.
      */
-    fun fromUrl(url: String, fallback: String): String {
+    fun fromUrl(url: String, fallback: String): String = fromUrl(url, fallback, "/")
+
+    private fun fromUrl(url: String, fallback: String, separator: String): String {
         val uri = runCatching { URI(url.trim()) }.getOrNull() ?: return fallback
         val host = uri.host?.takeIf { it.isNotBlank() } ?: return fallback
         val safeHost = sanitize(host)
         val path = sanitize(uri.path.orEmpty().trim('/'))
         if (path.isBlank()) return boundedHost(safeHost)
-        return boundedPath(safeHost, path)
+        return boundedPath(safeHost, path, separator)
     }
 
-    /** Replaces blank or legacy host-only names while leaving custom labels untouched. */
+    /** Replaces blank or legacy generated names while leaving custom labels untouched. */
     fun normalizeStoredName(name: String, url: String, fallback: String): String {
         val trimmed = name.trim()
         if (trimmed.isEmpty()) return fromUrl(url, fallback)
 
         val host = runCatching { URI(url.trim()).host }.getOrNull()
-        return if (host != null && trimmed.equals(host, ignoreCase = true)) {
+        val legacyGenerated = fromUrl(url, "", " / ")
+        return if (host != null && (trimmed.equals(host, ignoreCase = true) ||
+                trimmed == legacyGenerated)) {
             fromUrl(url, fallback)
         } else {
             name
@@ -36,8 +40,8 @@ object PlaylistNames {
         if (host.length <= CatalogLimits.MAX_NAME) host
         else host.take(CatalogLimits.MAX_NAME - 1) + MIDDLE_ELLIPSIS
 
-    private fun boundedPath(host: String, path: String): String {
-        val prefix = "$host / "
+    private fun boundedPath(host: String, path: String, separator: String): String {
+        val prefix = host + separator
         val full = prefix + path
         if (full.length <= CatalogLimits.MAX_NAME) return full
 

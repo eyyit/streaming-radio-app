@@ -1,3 +1,10 @@
+# Paired 0.27.0 / 0.27.0.aaos transport dock, Cast handoff, and AAOS label update — 17 November 2026
+
+Mobile internal uses build 27 (`0.27.0`) and Android Automotive internal uses build 28 (`0.27.0.aaos`).
+- Phone transport dock (`DK-01`): widened Previous/Next cells (`1.35f : 0.9f : 1.35f`), square-shaped Play/Pause detection cell with `76dp` visual circle, reduced top dead padding (`4dp`), and full-column click delegation on Settings, Shuffle stations, and Favorite station.
+- Phone Cast handoff & continuity: added `pendingPlay` state protection across async `client.play()` after `load(..., autoplay = false)`, invalidated superseded in-flight loads when skipping to `awaitingFormat` streams, surfaced `pendingTargetStationId()` immediately in `PhoneCastRouting.displaySnapshot()`, and kept revealed station rows visible in `PhoneStationFollow` when the library viewport shrinks.
+- Shared & AAOS: unexpected phone stream endings automatically retry the same station, phone cover faces stay joined during turns, generated hosted-playlist labels use `host/path` without inserted spaces (normalizing legacy generated labels), and the app-owned AAOS debug player opens expanded on launch.
+
 # Acceptance audit, 16 November 2026 (local only)
 
 Audit base: `bc12ed13015dd5f6492d5798e254b2425767d495`.

@@ -724,6 +724,102 @@ class PhoneFlowUiTest {
         }
     }
 
+
+    @Test fun dockDk01FavorsPrevNextAndMakesFullSquarePlayAndSecondaryCellsClickable() {
+        runBlocking {
+            repo.saveLocalPlaylist("Test list",
+                "#EXTM3U\n#EXTINF:-1,Alpha\nhttps://radio.example/a\n#EXTINF:-1,Beta\nhttps://radio.example/b\n")
+        }
+        val alpha = repo.all().first()
+        PlaybackStatusBus.setStation(alpha.id)
+        val controller = org.mockito.Mockito.mock(androidx.media3.session.MediaController::class.java)
+        val item = androidx.media3.common.MediaItem.Builder().setMediaId(alpha.mediaId).build()
+        org.mockito.Mockito.`when`(controller.currentMediaItem).thenReturn(item)
+        org.mockito.Mockito.`when`(controller.isCommandAvailable(androidx.media3.common.Player.COMMAND_SEEK_TO_PREVIOUS_MEDIA_ITEM)).thenReturn(true)
+        org.mockito.Mockito.`when`(controller.isCommandAvailable(androidx.media3.common.Player.COMMAND_SEEK_TO_NEXT_MEDIA_ITEM)).thenReturn(true)
+        withActivity(PhoneLibraryActivity::class.java) { activity, root ->
+            PhonePlaybackActivity::class.java.getDeclaredField("controller")
+                .apply { isAccessible = true }.set(activity, controller)
+            activity.runOnUiThread {
+                val refresh = PhonePlaybackActivity::class.java.getDeclaredMethod("refreshPlaybackUi")
+                refresh.isAccessible = true
+                refresh.invoke(activity)
+            }
+            measureCompact(root)
+            val transport = root.findViewWithTag<ViewGroup>("phone_primary_transport")
+            assertEquals(3, transport.childCount)
+            val prevSlot = transport.getChildAt(0) as ViewGroup
+            val playSlot = transport.getChildAt(1) as ViewGroup
+            val nextSlot = transport.getChildAt(2) as ViewGroup
+            assertTrue("Prev/Next slots must be wider than the center Play slot",
+                prevSlot.width > playSlot.width && nextSlot.width > playSlot.width)
+            assertEquals("Prev and Next slots must be symmetric", prevSlot.width, nextSlot.width)
+            assertEquals("The 3 slots must cover the full transport width without horizontal gaps",
+                transport.width - transport.paddingLeft - transport.paddingRight,
+                prevSlot.width + playSlot.width + nextSlot.width)
+
+            assertTrue(prevSlot.performClick())
+            org.mockito.Mockito.verify(controller).seekToPreviousMediaItem()
+            assertTrue(nextSlot.performClick())
+            org.mockito.Mockito.verify(controller).seekToNextMediaItem()
+            assertTrue(playSlot.performClick())
+            org.mockito.Mockito.verify(controller).play()
+
+            val secondary = root.findViewWithTag<ViewGroup>("phone_secondary_actions")
+            val favoriteSlot = secondary.getChildAt(2)
+            assertFalse(alpha.id in Prefs(context).favourites)
+            assertTrue("Clicking the full Favorite column (including caption area) must toggle favorite",
+                favoriteSlot.performClick())
+            assertTrue(alpha.id in Prefs(context).favourites)
+        }
+    }
+
+    @Test fun shrinkingLibraryViewportKeepsRevealedBottomStationVisibleUntilUserScrolls() {
+        org.robolectric.Shadows.shadowOf(context).declareComponentUnbindable(
+            android.content.ComponentName(context, RadioService::class.java)
+        )
+        val entries = (1..12).joinToString("\n", prefix = "#EXTM3U\n") {
+            "#EXTINF:-1,Station $it\nhttps://radio.example/$it"
+        }
+        runBlocking { repo.saveLocalPlaylist("Test list", entries) }
+        val all = repo.all()
+        val target = all[8]
+        PlaybackStatusBus.setStation(target.id)
+        val host = Robolectric.buildActivity(PhoneLibraryActivity::class.java)
+        host.get().setTheme(R.style.Theme_StreamingRadioPhone)
+        try {
+            val activity = host.setup().get()
+            val adapter = PhoneStationAdapter(activity, prefs, repo) {}
+            adapter.update(all)
+            val list = RecyclerView(activity).apply {
+                layoutManager = androidx.recyclerview.widget.LinearLayoutManager(activity)
+                this.adapter = adapter
+            }
+            activity.setContentView(list)
+            val widthSpec = View.MeasureSpec.makeMeasureSpec(360, View.MeasureSpec.EXACTLY)
+            list.measure(widthSpec, View.MeasureSpec.makeMeasureSpec(320, View.MeasureSpec.EXACTLY))
+            list.layout(0, 0, 360, 320)
+
+            val follow = PhoneStationFollow()
+            follow.reveal(list, adapter, "all", target.id)
+            org.robolectric.shadows.ShadowLooper.idleMainLooper(2, java.util.concurrent.TimeUnit.SECONDS)
+            list.measure(widthSpec, View.MeasureSpec.makeMeasureSpec(320, View.MeasureSpec.EXACTLY))
+            list.layout(0, 0, 360, 320)
+
+            // Simulate Cast summary bar or 2-line track metadata shrinking the RecyclerView viewport height.
+            list.measure(widthSpec, View.MeasureSpec.makeMeasureSpec(220, View.MeasureSpec.EXACTLY))
+            list.layout(0, 0, 360, 220)
+
+            val layout = list.layoutManager as androidx.recyclerview.widget.LinearLayoutManager
+            val row = layout.findViewByPosition(8)
+            assertNotNull("Active station row must remain bound in viewport after height shrink", row)
+            assertTrue("Active station row bottom must not be clipped below the shrunk list viewport",
+                layout.getDecoratedBottom(row!!) <= list.height - list.paddingBottom)
+        } finally {
+            host.pause().stop().destroy()
+        }
+    }
+
     private fun measureCompact(root: View) {
         val density = context.resources.displayMetrics.density
         root.measure(View.MeasureSpec.makeMeasureSpec((320*density).toInt(), View.MeasureSpec.EXACTLY),

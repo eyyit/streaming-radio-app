@@ -683,4 +683,73 @@ class PhoneCastControllerTestPart3 {
         verify(client, never()).pause()
         verify(client, never()).load(Mockito.any(MediaLoadRequestData::class.java))
     }
+
+    @Test
+    fun asyncPlayAfterAutoplayFalseLoadSurvivesTransientPausedStatusAndKeepsNextStationPlaying() {
+        val rig = Rig(station = station("one", STREAM), localPlaying = false)
+        val client = rig.remoteClient(initiallyPlaying = true)
+        `when`(client.mediaInfo).thenReturn(remoteInfo(STREAM, PhoneCastPolicy.OWNER_MARKER, "old"))
+        // Simulate a real Chromecast where client.play() is asynchronous and does not
+        // synchronously flip mediaStatus from the post-load PAUSED state to PLAYING.
+        doAnswer { null }.`when`(client).play()
+        val firstLoad = rig.loadResult(client)
+        rig.start(currentSession = rig.session(client))
+        rig.selectStationOnCast(client, "one")
+        assertEquals("one", rig.controller.pendingTargetStationId())
+
+        rig.completeLoad(firstLoad, success = true)
+        verify(client).play()
+        // Receiver emits its post-load(autoplay=false) PAUSED status before PLAY takes effect.
+        rig.remoteState(client, MediaStatus.PLAYER_STATE_PAUSED)
+        rig.remoteStatusUpdated(client)
+        assertTrue("Transient post-load PAUSED status must not flip play state to paused",
+            rig.controller.isRemotePlaying())
+
+        // User skips to a second station before or after PLAY settles.
+        val secondLoad = rig.loadResult(client)
+        rig.controller.onExplicitQueueNavigation()
+        rig.select(station("two", "https://radio.test/two.mp3"))
+        rig.controller.onLocalPlaybackChanged()
+        assertEquals("two", rig.controller.pendingTargetStationId())
+        rig.completeLoad(secondLoad, success = true)
+        verify(client, Mockito.times(2)).play()
+        assertTrue(rig.controller.isRemotePlaying())
+    }
+
+    @Test
+    fun skippingToAwaitingFormatStreamSupersedesInFlightLoadAndPreservesPlayIntent() {
+        val rig = Rig(station = station("one", STREAM), localPlaying = false)
+        val client = rig.remoteClient(initiallyPlaying = true)
+        `when`(client.mediaInfo).thenReturn(remoteInfo(STREAM, PhoneCastPolicy.OWNER_MARKER, "old"))
+        `when`(rig.player.playbackState).thenReturn(androidx.media3.common.Player.STATE_BUFFERING)
+        val firstLoad = rig.loadResult(client)
+        rig.start(currentSession = rig.session(client))
+        rig.selectStationOnCast(client, "one")
+
+        // Before firstLoad finishes, user skips to an extensionless stream that awaits format.
+        rig.controller.onExplicitQueueNavigation()
+        rig.select(station("dublab", "http://dublab.out.airtime.pro:8000/dublab_a"))
+        rig.controller.onLocalPlaybackChanged()
+        assertEquals("dublab", rig.controller.pendingTargetStationId())
+        assertTrue(rig.controller.isRemotePlaying())
+
+        // Stale completion of firstLoad must be ignored and must not leave the receiver paused.
+        rig.completeLoad(firstLoad, success = true)
+        rig.remoteStatusUpdated(client)
+        assertTrue("Superseded load must not clobber remoteShouldPlay", rig.controller.isRemotePlaying())
+
+        // Once ExoPlayer sniffs the audio format for dublab, it loads and plays on Cast.
+        val secondLoad = rig.loadResult(client)
+        val format = androidx.media3.common.Format.Builder().setSampleMimeType("audio/mpeg").build()
+        val group = androidx.media3.common.Tracks.Group(
+            androidx.media3.common.TrackGroup(format), false,
+            intArrayOf(androidx.media3.common.C.FORMAT_HANDLED), booleanArrayOf(true)
+        )
+        `when`(rig.player.currentTracks).thenReturn(androidx.media3.common.Tracks(listOf(group)))
+        rig.controller.onLocalPlaybackChanged()
+        assertEquals("http://dublab.out.airtime.pro:8000/dublab_a", rig.loadRequest(client).mediaInfo!!.contentId)
+        rig.completeLoad(secondLoad, success = true)
+        assertTrue(rig.remoteIsPlaying(client))
+        assertTrue(rig.controller.isRemotePlaying())
+    }
 }

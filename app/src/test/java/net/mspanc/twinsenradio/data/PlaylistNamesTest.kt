@@ -9,11 +9,11 @@ class PlaylistNamesTest {
     @Test
     fun sameHostUsesPathToDistinguishPlaylistFiles() {
         assertEquals(
-            "radio.example / jazz.m3u",
+            "radio.example/jazz.m3u",
             PlaylistNames.fromUrl("https://radio.example/jazz.m3u", "Playlist 1")
         )
         assertEquals(
-            "radio.example / soul.m3u",
+            "radio.example/soul.m3u",
             PlaylistNames.fromUrl("https://radio.example/soul.m3u", "Playlist 2")
         )
         assertTrue(
@@ -25,7 +25,7 @@ class PlaylistNamesTest {
     @Test
     fun pathIsDecodedWithoutTreatingPlusAsSpace() {
         assertEquals(
-            "listen.example / mix plus+radio.m3u",
+            "listen.example/mix plus+radio.m3u",
             PlaylistNames.fromUrl(
                 "https://listen.example/mix%20plus+radio.m3u",
                 "Playlist"
@@ -40,7 +40,7 @@ class PlaylistNamesTest {
         val name = PlaylistNames.fromUrl(url, "Playlist 1")
 
         assertTrue(name.length <= CatalogLimits.MAX_NAME)
-        assertTrue(name.startsWith("radio.example / "))
+        assertTrue(name.startsWith("radio.example/"))
         assertTrue(name.endsWith(filename))
         assertTrue(name.contains("…"))
     }
@@ -52,7 +52,7 @@ class PlaylistNamesTest {
             "Playlist 1"
         )
 
-        assertEquals("radio.example / jazz\uFFFD.m3u", name)
+        assertEquals("radio.example/jazz\uFFFD.m3u", name)
         assertTrue(name.none { it.isISOControl() })
     }
 
@@ -63,7 +63,7 @@ class PlaylistNamesTest {
             "Playlist"
         )
 
-        assertEquals("radio.example / jazz.m3u", name)
+        assertEquals("radio.example/jazz.m3u", name)
         assertFalse(name.contains("user"))
         assertFalse(name.contains("pass"))
         assertFalse(name.contains("secret"))
@@ -74,11 +74,11 @@ class PlaylistNamesTest {
         val url = "https://radio.example/collections/jazz.m3u"
 
         assertEquals(
-            "radio.example / collections/jazz.m3u",
+            "radio.example/collections/jazz.m3u",
             PlaylistNames.normalizeStoredName("RADIO.EXAMPLE", url, "Playlist 1")
         )
         assertEquals(
-            "radio.example / collections/jazz.m3u",
+            "radio.example/collections/jazz.m3u",
             PlaylistNames.normalizeStoredName("  ", url, "Playlist 1")
         )
         assertEquals(
@@ -88,6 +88,19 @@ class PlaylistNamesTest {
         assertEquals(
             "Saved stations",
             PlaylistNames.normalizeStoredName("Saved stations", "local:saved-stations", "Saved stations")
+        )
+    }
+
+    @Test
+    fun refreshesPreviouslyGeneratedNamesButPreservesCustomSlashLabels() {
+        val url = "https://radio.example/other/Playlist.m3u"
+        assertEquals(
+            "radio.example/other/Playlist.m3u",
+            PlaylistNames.normalizeStoredName("radio.example / other/Playlist.m3u", url, "Playlist")
+        )
+        assertEquals(
+            "Radio / Favorites",
+            PlaylistNames.normalizeStoredName("Radio / Favorites", url, "Playlist")
         )
     }
 

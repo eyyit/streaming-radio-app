@@ -246,7 +246,10 @@ abstract class PhonePlaybackActivity : AppCompatActivity() {
         val metrics = status.paint.fontMetricsInt
         return maxOf(dp(24), metrics.bottom - metrics.top)
     }
-    protected fun shownStation(): Station? = PlaybackStatusBus.stationId.value?.let(repo::byId) ?: repo.resumeCandidate()
+    protected fun shownStation(): Station? =
+        PlaybackStatusBus.stationId.value?.let(repo::byId)
+            ?: PhoneCastRouting.get(applicationContext).displaySnapshot()?.stationId?.let(repo::byId)
+            ?: repo.resumeCandidate()
     private fun activePlaybackStation(): Station? = controller?.currentMediaItem?.mediaId?.let(repo::byMediaId)
     protected fun trackText(): PhoneText = MetadataFactory.forPhone(
         PlaybackStatusBus.nowPlaying.value.takeUnless { PlaybackStatusBus.joining() },
@@ -603,12 +606,16 @@ abstract class PhonePlaybackActivity : AppCompatActivity() {
         val secondary = PhoneUi.row(this).apply { tag = "phone_secondary_actions" }
         fun action(drawable: Int, caption: String, click: () -> Unit): LinearLayout = PhoneUi.column(this).apply {
             gravity = Gravity.CENTER; minimumHeight = dp(if (compact) 48 else 64)
-            addView(PhoneUi.icon(this@PhonePlaybackActivity, drawable, caption).apply {
+            val button = PhoneUi.icon(this@PhonePlaybackActivity, drawable, caption).apply {
                 setPadding(dp(8), dp(8), dp(8), dp(8)); setOnClickListener { click() }
-            })
+            }
+            addView(button)
             if (!compact) addView(PhoneUi.text(this@PhonePlaybackActivity, caption, 12f).apply {
                 gravity = Gravity.CENTER; maxLines = 2; importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
             })
+            isClickable = true
+            isFocusable = false
+            setOnClickListener { if (button.isEnabled) button.performClick() }
         }
         fun actionParams() = if (compact) LinearLayout.LayoutParams(dp(48), dp(48))
             else LinearLayout.LayoutParams(0, -2, 1f)
@@ -641,7 +648,7 @@ abstract class PhonePlaybackActivity : AppCompatActivity() {
         val transport = PhoneUi.row(this).apply {
             tag = "phone_primary_transport"
             if (split) gravity = Gravity.CENTER
-            else setPadding(0, dp(12), 0, 0)
+            else setPadding(0, dp(4), 0, 0)
         }
         previous = PhoneUi.icon(this, R.drawable.ic_transport_previous, "Previous station", if (split) 52 else 64).apply {
             val padding = dp(if (split) 11 else 16)
@@ -652,8 +659,8 @@ abstract class PhonePlaybackActivity : AppCompatActivity() {
                 controller?.seekToPreviousMediaItem()
             }
         }
-        play = PhoneUi.icon(this, R.drawable.ic_transport_play, "Play", if (split) 56 else 88).apply {
-            val padding = dp(if (split) 15 else 26)
+        play = PhoneUi.icon(this, R.drawable.ic_transport_play, "Play", if (split) 56 else 76).apply {
+            val padding = dp(if (split) 15 else 22)
             setPadding(padding, padding, padding, padding)
             setOnClickListener { togglePlayback() }
         }
@@ -666,10 +673,15 @@ abstract class PhonePlaybackActivity : AppCompatActivity() {
                 controller?.seekToNextMediaItem()
             }
         }
-        listOf(previous, play, next).forEach { button -> transport.addView(FrameLayout(this).apply {
-            addView(button, FrameLayout.LayoutParams(button.layoutParams.width, button.layoutParams.height, Gravity.CENTER))
-        }, if (split) LinearLayout.LayoutParams(dp(82), dp(56))
-            else LinearLayout.LayoutParams(0, dp(88), 1f)) }
+        listOf(previous to 1.35f, play to 0.9f, next to 1.35f).forEach { (button, weight) ->
+            transport.addView(FrameLayout(this).apply {
+                isClickable = true
+                isFocusable = false
+                setOnClickListener { if (button.isEnabled) button.performClick() }
+                addView(button, FrameLayout.LayoutParams(button.layoutParams.width, button.layoutParams.height, Gravity.CENTER))
+            }, if (split) LinearLayout.LayoutParams(dp(if (button === play) 68 else 96), dp(56))
+                else LinearLayout.LayoutParams(0, dp(88), weight))
+        }
         controls.addView(transport); return controls
     }
 
@@ -722,7 +734,10 @@ abstract class PhonePlaybackActivity : AppCompatActivity() {
             (c != null && (c.currentMediaItem != null || shown != null))
         previous.isEnabled = c?.currentMediaItem != null && c.isCommandAvailable(Player.COMMAND_SEEK_TO_PREVIOUS_MEDIA_ITEM)
         next.isEnabled = c?.currentMediaItem != null && c.isCommandAvailable(Player.COMMAND_SEEK_TO_NEXT_MEDIA_ITEM)
-        listOf(play, previous, next, shuffle, favorite).forEach { it.alpha = if (it.isEnabled) 1f else .35f }
+        listOf(play, previous, next, shuffle, favorite).forEach {
+            it.alpha = if (it.isEnabled) 1f else .35f
+            (it.parent as? View)?.isEnabled = it.isEnabled
+        }
         renderStatus()
         artVisibility?.apply {
             isSelected = artworkHidden; contentDescription = if (artworkHidden) "Show artwork" else "Hide artwork"
