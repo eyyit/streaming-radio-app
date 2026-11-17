@@ -1,7 +1,7 @@
 {
   "formatVersion": 1,
   "project": "Twinsen Radio independent source candidate",
-  "gitHead": "50c03afe0034aa74989c9a1fcdaa0e9688385022",
+  "gitHead": "51dca8ac60f8a2b388b3f58706fb1a6390f5af0b",
   "workingTree": "clean",
   "hashAlgorithm": "SHA-256",
   "selfHashExcluded": true,
@@ -52,8 +52,8 @@
     },
     {
       "path": "app/build.gradle.kts",
-      "size": 9277,
-      "sha256": "036b35dd93242eb5229197b3a17197fccc57f17d4f829c6f23013b35c7a159c8"
+      "size": 9680,
+      "sha256": "e8fdeabbe54eb0aaa8062d2600a96ce48fda96401522faeb44153dc405678355"
     },
     {
       "path": "app/src/androidTest/java/net/mspanc/twinsenradio/automotive/PrototypeSmokeInstrumentation.kt",
@@ -877,8 +877,8 @@
     },
     {
       "path": "app/src/phone/java/net/mspanc/twinsenradio/phone/PhoneCarouselArtwork.kt",
-      "size": 17615,
-      "sha256": "341068a6a21fced45e923874bc10b957b7c19de9f36812809c0010241d6da8c5"
+      "size": 17613,
+      "sha256": "e97e46807bea7163b05f137070173a36d099bf60cc5dc584cd76bdc3310c6406"
     },
     {
       "path": "app/src/phone/java/net/mspanc/twinsenradio/phone/PhoneCastController.kt",
@@ -1492,8 +1492,8 @@
     },
     {
       "path": "app/src/testPhone/java/net/mspanc/twinsenradio/phone/PhoneFlowUiTest.kt",
-      "size": 46844,
-      "sha256": "cf8a4901fb18a942ce8f371c25713ef4c948538ea21d8eebff568fdd2d4942cc"
+      "size": 48052,
+      "sha256": "2d69bf4be5889e0bf3079b56d5833c24048ca8d06feeba3c44ef298c43878568"
     },
     {
       "path": "app/src/testPhone/java/net/mspanc/twinsenradio/phone/PhoneImportFlowTest.kt",
@@ -1597,8 +1597,8 @@
     },
     {
       "path": "gradle.properties",
-      "size": 297,
-      "sha256": "fe8adb429cf10d6d0ffdf6280da039c5c8055e44146bb3e6f139226f82dab0e8"
+      "size": 295,
+      "sha256": "7a10db8a31f1e0a65b428bebc697745f36e69c00b2e2d08590aeaec369ca1d1c"
     },
     {
       "path": "gradle/wrapper/gradle-wrapper.jar",
