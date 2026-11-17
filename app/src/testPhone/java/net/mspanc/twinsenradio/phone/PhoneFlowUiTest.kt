@@ -489,17 +489,13 @@ class PhoneFlowUiTest {
                         android.graphics.drawable.ColorDrawable(blue))
                     cover.drag(direction * cover.width * progress, enabled = true)
                     decor.draw(canvas)
-                    val visibleColors = mutableSetOf<Int>()
                     val rootLeft = rootLocation[0] - decorLocation[0]
-                    for (x in rootLeft until rootLeft + root.width) {
-                        val pixel = frame.getPixel(x, y)
-                        visibleColors += pixel
-                        assertTrue(
-                            "Open background strip at x=$x, direction=$direction, progress=$progress",
-                            pixel == red || pixel == blue
-                        )
-                    }
-                    assertEquals("Both current and actual neighbor must be visible",
+                    val coverLeft = coverLocation[0] - decorLocation[0]
+                    val visibleColors = (rootLeft until rootLeft + root.width)
+                        .map { frame.getPixel(it, y) }
+                        .filter { it == red || it == blue }
+                        .toSet()
+                    assertEquals("Both current and actual neighbor must be visible on the rotating padded cube",
                         setOf(red, blue), visibleColors)
                     val belowArtwork = coverLocation[1] - decorLocation[1] + cover.height + 12
                     val outsidePixel = frame.getPixel(rootLeft + root.width / 2, belowArtwork)
@@ -512,7 +508,26 @@ class PhoneFlowUiTest {
                     org.robolectric.shadows.ShadowLooper.idleMainLooper(
                         1, java.util.concurrent.TimeUnit.SECONDS
                     )
+                    decor.draw(canvas)
+                    assertEquals("Left padding must remain unstretched when settled",
+                        android.graphics.Color.BLACK, frame.getPixel(coverLeft - 4, y))
+                    assertEquals("Right padding must remain unstretched when settled",
+                        android.graphics.Color.BLACK, frame.getPixel(coverLeft + cover.width + 4, y))
                 }
+                // Near-zero drag start must not stretch the inset square cover out to the screen edges.
+                cover.setAdjacentPreview(direction, "neighbor",
+                    android.graphics.drawable.ColorDrawable(blue))
+                cover.drag(direction * 1f, enabled = true)
+                decor.draw(canvas)
+                val coverLeft = coverLocation[0] - decorLocation[0]
+                assertEquals("Cover must not stretch into left padding when cube rotation starts",
+                    android.graphics.Color.BLACK, frame.getPixel(coverLeft - 6, y))
+                assertEquals("Cover must not stretch into right padding when cube rotation starts",
+                    android.graphics.Color.BLACK, frame.getPixel(coverLeft + cover.width + 6, y))
+                cover.settle()
+                org.robolectric.shadows.ShadowLooper.idleMainLooper(
+                    1, java.util.concurrent.TimeUnit.SECONDS
+                )
             }
         } finally {
             host.pause().stop().destroy()

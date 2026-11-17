@@ -1,6 +1,7 @@
-# Paired 0.27.0 / 0.27.0.aaos transport dock, Cast handoff, and AAOS label update — 17 November 2026
+# Paired 28.0 / 28.0.aaos padded full-width cover cube, transport dock, Cast handoff, and AAOS label update — 17 November 2026
 
-Mobile internal uses build 27 (`0.27.0`) and Android Automotive internal uses build 28 (`0.27.0.aaos`).
+Mobile internal uses build 2800 (`28.0`) and Android Automotive internal uses build 2801 (`28.0.aaos`).
+- Full-screen player cover cube (`PhoneCarouselArtwork`): each cube face spans the full padded viewport width (`faceBounds.left .. faceBounds.right`) so the cover art square rotates together with its left/right padding without stretching to screen width at the start of a turn or shrinking back when the turn finishes.
 - Phone transport dock (`DK-01`): widened Previous/Next cells (`1.35f : 0.9f : 1.35f`), square-shaped Play/Pause detection cell with `76dp` visual circle, reduced top dead padding (`4dp`), and full-column click delegation on Settings, Shuffle stations, and Favorite station.
 - Phone Cast handoff & continuity: added `pendingPlay` state protection across async `client.play()` after `load(..., autoplay = false)`, invalidated superseded in-flight loads when skipping to `awaitingFormat` streams, surfaced `pendingTargetStationId()` immediately in `PhoneCastRouting.displaySnapshot()`, and kept revealed station rows visible in `PhoneStationFollow` when the library viewport shrinks.
 - Shared & AAOS: unexpected phone stream endings automatically retry the same station, phone cover faces stay joined during turns, generated hosted-playlist labels use `host/path` without inserted spaces (normalizing legacy generated labels), and the app-owned AAOS debug player opens expanded on launch.

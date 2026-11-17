@@ -7,6 +7,11 @@ plugins {
 }
 
 val sharedVersionName = providers.gradleProperty("streamingRadioVersionName").get()
+val sharedVersionParts = sharedVersionName.split(".").map { it.toIntOrNull() ?: error("Numeric version required: $sharedVersionName") }
+require(sharedVersionParts.size in 1..2 && sharedVersionParts[0] > 0) {
+    "Use MAJOR.MINOR without a leading zero (for example, 28.0)."
+}
+val baseVersionCode = sharedVersionParts[0] * 100 + (sharedVersionParts.getOrElse(1) { 0 } * 10)
 
 android {
     useLibrary("android.car", false)
@@ -85,13 +90,13 @@ android {
         create("phone") {
             dimension = "platform"
             applicationId = providers.gradleProperty("publicApplicationId").orElse("com.impostorlabs.streamingradio").get()
-            versionCode = 27
+            versionCode = baseVersionCode
         }
         create("automotive") {
             dimension = "platform"
             applicationId = providers.gradleProperty("publicApplicationId").orElse("com.impostorlabs.streamingradio").get()
             // Keep AAOS above the paired phone code so the car can replace a phone build.
-            versionCode = 28
+            versionCode = baseVersionCode + 1
             versionNameSuffix = ".aaos"
             minSdk = 28
             buildConfigField("boolean", "IS_AUTOMOTIVE", "true")

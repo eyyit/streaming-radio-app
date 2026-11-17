@@ -372,15 +372,14 @@ internal class PhoneCarouselArtwork @JvmOverloads constructor(
         val right = left + faceWidth
         val leftInset = h * (0.10f * depth - 0.10f * offset)
         val rightInset = h * (0.10f * depth + 0.10f * offset)
-        // The artwork is inset horizontally in the expanded viewport. Use
-        // its local x bounds so both faces meet at the hinge, while retaining
-        // the viewport-relative y extent so the cover does not stretch over
-        // the surrounding controls.
-        faceCorners[0] = 0f
-        faceCorners[2] = width.toFloat()
-        faceCorners[4] = width.toFloat()
+        // Each cube face spans the full padded viewport width so the cover art
+        // rotates together with its horizontal padding without stretching to
+        // the screen width when the turn starts or shrinking when it finishes.
+        faceCorners[0] = faceBounds.left
+        faceCorners[2] = faceBounds.right
+        faceCorners[4] = faceBounds.right
         faceCorners[5] = faceBounds.bottom
-        faceCorners[6] = 0f
+        faceCorners[6] = faceBounds.left
         faceCorners[7] = faceBounds.bottom
         projectedCorners[0] = left
         projectedCorners[1] = leftInset
