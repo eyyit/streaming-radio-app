@@ -97,7 +97,6 @@ android {
             applicationId = providers.gradleProperty("publicApplicationId").orElse("com.impostorlabs.streamingradio").get()
             // Keep AAOS above the paired phone code so the car can replace a phone build.
             versionCode = baseVersionCode + 1
-            versionNameSuffix = ".aaos"
             minSdk = 28
             buildConfigField("boolean", "IS_AUTOMOTIVE", "true")
         }
@@ -150,12 +149,9 @@ kotlin {
 }
 
 androidComponents.finalizeDsl { dsl ->
-    val phoneFlavor = dsl.productFlavors.getByName("phone")
-    val automotiveFlavor = dsl.productFlavors.getByName("automotive")
-    val platforms = listOf(phoneFlavor, automotiveFlavor)
-    require(phoneFlavor.versionName == null && phoneFlavor.versionNameSuffix.isNullOrEmpty() &&
-        automotiveFlavor.versionName == null && automotiveFlavor.versionNameSuffix == ".aaos") {
-        "Phone and automotive must inherit the shared release version name, with .aaos on automotive."
+    val platforms = listOf("phone", "automotive").map(dsl.productFlavors::getByName)
+    require(platforms.all { it.versionName == null && it.versionNameSuffix.isNullOrEmpty() }) {
+        "Phone and automotive must inherit the same release version name."
     }
     require(dsl.buildTypes.getByName("release").versionNameSuffix.isNullOrEmpty()) {
         "Release bundles must use the shared version name without a suffix."
