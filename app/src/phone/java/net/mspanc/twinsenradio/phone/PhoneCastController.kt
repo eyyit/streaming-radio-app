@@ -307,13 +307,24 @@ class PhoneCastController(
                         adoptOwnedRemoteMedia(client, requestGeneration)
                         if (relinquishForeignRemoteMedia(client)) unconfirmedStop = false
                     }
-                    if (pendingPlay && remoteInPlayMode()) {
+                    if (pendingPlay && status?.playerState == MediaStatus.PLAYER_STATE_PLAYING) {
                         pendingPlay = false
                     }
                     if (pendingUri == null && !pendingStop && awaitingFormat == null &&
-                        loadedUri != null && client.mediaStatus != null) {
-                        val state = client.mediaStatus?.playerState
-                        if (!pendingPlay || state == MediaStatus.PLAYER_STATE_IDLE) {
+                        loadedUri != null && status != null) {
+                        val state = status.playerState
+                        if (state == MediaStatus.PLAYER_STATE_IDLE &&
+                            status.idleReason == MediaStatus.IDLE_REASON_ERROR) {
+                            val resumePhone = remoteShouldPlay || pendingPlay
+                            failedUri = loadedUri
+                            loadedUri = null
+                            loadedStationId = null
+                            pendingPlay = false
+                            remoteShouldPlay = false
+                            if (resumePhone) {
+                                localController()?.takeIf { !it.playWhenReady }?.play()
+                            }
+                        } else if (!pendingPlay || state == MediaStatus.PLAYER_STATE_IDLE) {
                             pendingPlay = false
                             remoteShouldPlay = remoteInPlayMode()
                         }
@@ -592,7 +603,9 @@ class PhoneCastController(
                     } else if (shouldPlay) {
                         pendingPlay = true
                         client.play()
-                        if (remoteInPlayMode()) pendingPlay = false
+                        if (client.mediaStatus?.playerState == MediaStatus.PLAYER_STATE_PLAYING) {
+                            pendingPlay = false
+                        }
                     }
                 } else if (current != null && currentStationId != null && currentStationId != station.id) {
                     pendingPlay = remoteShouldPlay

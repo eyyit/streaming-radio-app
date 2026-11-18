@@ -752,4 +752,72 @@ class PhoneCastControllerTestPart3 {
         assertTrue(rig.remoteIsPlaying(client))
         assertTrue(rig.controller.isRemotePlaying())
     }
+
+    @Test
+    fun pendingPlaySurvivesIntermediateBufferingBeforePostLoadPausedStatus() {
+        val rig = Rig(station = station("one", STREAM), localPlaying = false)
+        val client = rig.remoteClient(initiallyPlaying = true)
+        `when`(client.mediaInfo).thenReturn(remoteInfo(STREAM, PhoneCastPolicy.OWNER_MARKER, "old"))
+        doAnswer { null }.`when`(client).play()
+        val firstLoad = rig.loadResult(client)
+        rig.start(currentSession = rig.session(client))
+        rig.selectStationOnCast(client, "one")
+
+        rig.completeLoad(firstLoad, success = true)
+        verify(client).play()
+
+        rig.remoteState(client, MediaStatus.PLAYER_STATE_BUFFERING)
+        rig.remoteStatusUpdated(client)
+        assertTrue(rig.controller.isRemotePlaying())
+
+        rig.remoteState(client, MediaStatus.PLAYER_STATE_PAUSED)
+        rig.remoteStatusUpdated(client)
+        assertTrue(
+            "Intermediate BUFFERING must not clear pendingPlay before post-load PAUSED arrives",
+            rig.controller.isRemotePlaying()
+        )
+
+        rig.remoteState(client, MediaStatus.PLAYER_STATE_PLAYING)
+        rig.remoteStatusUpdated(client)
+        assertTrue(rig.controller.isRemotePlaying())
+
+        rig.remoteState(client, MediaStatus.PLAYER_STATE_PAUSED)
+        rig.remoteStatusUpdated(client)
+        assertFalse(rig.controller.isRemotePlaying())
+    }
+
+    @Test
+    fun postLoadReceiverIdleErrorClearsCastAndResumesLocalPhonePlayback() {
+        val rig = Rig(station = station("one", STREAM), localPlaying = true)
+        val client = rig.remoteClient()
+        doAnswer { null }.`when`(client).play()
+        val firstLoad = rig.loadResult(client)
+        rig.start()
+        rig.listener().onSessionStarted(rig.session(client), "session")
+        rig.confirmEmptyReceiver(client)
+
+        rig.completeLoad(firstLoad, success = true)
+        assertTrue(rig.controller.isCasting())
+        assertTrue(rig.controller.isRemotePlaying())
+        assertFalse(rig.phonePlaying)
+
+        val status = client.mediaStatus!!
+        `when`(status.idleReason).thenReturn(MediaStatus.IDLE_REASON_ERROR)
+        rig.remoteState(client, MediaStatus.PLAYER_STATE_IDLE)
+        rig.remoteStatusUpdated(client)
+
+        assertFalse("Error idle state must clear active Cast media", rig.controller.isCasting())
+        assertFalse(rig.controller.isRemotePlaying())
+        assertTrue("Local phone playback must resume when receiver errors after load", rig.phonePlaying)
+
+        `when`(status.idleReason).thenReturn(MediaStatus.IDLE_REASON_NONE)
+        val secondLoad = rig.loadResult(client)
+        rig.select(station("two", "https://radio.test/two.mp3"))
+        rig.controller.onExplicitStationSelection("two")
+        rig.controller.onLocalPlaybackChanged()
+        assertEquals("https://radio.test/two.mp3", rig.loadRequest(client).mediaInfo!!.contentId)
+        rig.completeLoad(secondLoad, success = true)
+        assertTrue(rig.controller.isCasting())
+        assertTrue(rig.controller.isRemotePlaying())
+    }
 }
