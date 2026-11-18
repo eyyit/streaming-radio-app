@@ -1,7 +1,7 @@
 {
   "formatVersion": 1,
   "project": "Twinsen Radio independent source candidate",
-  "gitHead": "8218fa263496406b7065d421bd9a1cb877b88956",
+  "gitHead": "7433734c0020b7c621861346f9a13f967384de76",
   "workingTree": "clean",
   "hashAlgorithm": "SHA-256",
   "selfHashExcluded": true,
@@ -882,8 +882,8 @@
     },
     {
       "path": "app/src/phone/java/net/mspanc/twinsenradio/phone/PhoneCastController.kt",
-      "size": 32268,
-      "sha256": "a32e2284157daff376574a283e1f8cd7d263fce07b38902e8b445ba58ddba147"
+      "size": 32574,
+      "sha256": "ba6139d53f830e6f6aad00112bbd75712aa45dcd99c4b459c490b4db90460d4b"
     },
     {
       "path": "app/src/phone/java/net/mspanc/twinsenradio/phone/PhoneCastHandoffLease.kt",
@@ -907,8 +907,8 @@
     },
     {
       "path": "app/src/phone/java/net/mspanc/twinsenradio/phone/PhoneCastPolicy.kt",
-      "size": 3631,
-      "sha256": "c21f1295f40c8fd97e9be852ad45e5cac6aba649d8524f0ce6cf42a784f61e13"
+      "size": 4992,
+      "sha256": "13433039630da1ea0ba84a9f2b3d474b7fa61524b4d66c88f6d303dc8331764a"
     },
     {
       "path": "app/src/phone/java/net/mspanc/twinsenradio/phone/PhoneCastReceiverDialog.kt",
@@ -1442,8 +1442,8 @@
     },
     {
       "path": "app/src/testPhone/java/net/mspanc/twinsenradio/phone/PhoneCastControllerTestPart3.kt",
-      "size": 38089,
-      "sha256": "bdbf75d124f01d55f2040224d92d06083e0d389a3e200825fac545b8fb5bd586"
+      "size": 38342,
+      "sha256": "a4e1fc9c50a7f9e0569ac421a0239bd5f5d9d63d89f7c494818902aa05f176eb"
     },
     {
       "path": "app/src/testPhone/java/net/mspanc/twinsenradio/phone/PhoneCastControllerTestShared.kt",
@@ -1482,8 +1482,8 @@
     },
     {
       "path": "app/src/testPhone/java/net/mspanc/twinsenradio/phone/PhoneCastPolicyTest.kt",
-      "size": 5135,
-      "sha256": "e140e40cb4a4278a98b378298ac647f80d817596f33aaf4d0970f5202538ed1a"
+      "size": 6324,
+      "sha256": "2e7bca24c9870aa74c7d42643c1c5b1f0278303d493a43d6c91daff8f57870be"
     },
     {
       "path": "app/src/testPhone/java/net/mspanc/twinsenradio/phone/PhoneExpandedPlayerTest.kt",
@@ -1598,7 +1598,7 @@
     {
       "path": "gradle.properties",
       "size": 295,
-      "sha256": "c884be32c51368f8c0ca6de958efde9398a9fe208129d3f9fc10be43f5c0e2b7"
+      "sha256": "bed143b0560e5a117537f159d1a42fe1155d730db8646845c6286947a604d0e0"
     },
     {
       "path": "gradle/wrapper/gradle-wrapper.jar",
