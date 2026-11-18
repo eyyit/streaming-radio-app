@@ -1,7 +1,7 @@
 {
   "formatVersion": 1,
   "project": "Twinsen Radio independent source candidate",
-  "gitHead": "51dca8ac60f8a2b388b3f58706fb1a6390f5af0b",
+  "gitHead": "8218fa263496406b7065d421bd9a1cb877b88956",
   "workingTree": "clean",
   "hashAlgorithm": "SHA-256",
   "selfHashExcluded": true,
@@ -52,8 +52,8 @@
     },
     {
       "path": "app/build.gradle.kts",
-      "size": 9680,
-      "sha256": "e8fdeabbe54eb0aaa8062d2600a96ce48fda96401522faeb44153dc405678355"
+      "size": 9412,
+      "sha256": "6e8094769c9fa01ae82a2371528faf76c23a4dd8aa7b560a96c8243218ff339e"
     },
     {
       "path": "app/src/androidTest/java/net/mspanc/twinsenradio/automotive/PrototypeSmokeInstrumentation.kt",
@@ -882,8 +882,8 @@
     },
     {
       "path": "app/src/phone/java/net/mspanc/twinsenradio/phone/PhoneCastController.kt",
-      "size": 31502,
-      "sha256": "4a88f7fd43328e923266d7202269dd5cc50d33fcd07e2f81aef5ebfa545db66f"
+      "size": 32268,
+      "sha256": "a32e2284157daff376574a283e1f8cd7d263fce07b38902e8b445ba58ddba147"
     },
     {
       "path": "app/src/phone/java/net/mspanc/twinsenradio/phone/PhoneCastHandoffLease.kt",
@@ -1442,8 +1442,8 @@
     },
     {
       "path": "app/src/testPhone/java/net/mspanc/twinsenradio/phone/PhoneCastControllerTestPart3.kt",
-      "size": 35057,
-      "sha256": "07e873ec8cfa7533ecf7c85893fe1357c72805caa383d769c6022d5b9d6d5bca"
+      "size": 38089,
+      "sha256": "bdbf75d124f01d55f2040224d92d06083e0d389a3e200825fac545b8fb5bd586"
     },
     {
       "path": "app/src/testPhone/java/net/mspanc/twinsenradio/phone/PhoneCastControllerTestShared.kt",
@@ -1598,7 +1598,7 @@
     {
       "path": "gradle.properties",
       "size": 295,
-      "sha256": "7a10db8a31f1e0a65b428bebc697745f36e69c00b2e2d08590aeaec369ca1d1c"
+      "sha256": "c884be32c51368f8c0ca6de958efde9398a9fe208129d3f9fc10be43f5c0e2b7"
     },
     {
       "path": "gradle/wrapper/gradle-wrapper.jar",
