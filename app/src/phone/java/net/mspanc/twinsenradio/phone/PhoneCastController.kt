@@ -495,8 +495,10 @@ class PhoneCastController(
             uri, variantLabel, sampleMimeType = selectedAudio?.sampleMimeType,
             containerMimeType = selectedAudio?.containerMimeType
         )
-        if (contentType == null && selectedAudio == null && local.playerError == null &&
-            local.playbackState != Player.STATE_ENDED
+        val ambiguousLiveFlac = contentType == "audio/flac" && selectedAudio == null &&
+            !uri.substringBefore('?').lowercase(java.util.Locale.ROOT).endsWith(".flac")
+        if ((contentType == null || ambiguousLiveFlac) && selectedAudio == null &&
+            local.playerError == null && local.playbackState != Player.STATE_ENDED
         ) {
             if (pendingUri != null) {
                 pendingLease?.close()
@@ -504,6 +506,9 @@ class PhoneCastController(
                 pendingUri = null
                 pendingStationId = null
                 requestGeneration += 1
+            }
+            if (local.playbackState == Player.STATE_IDLE) {
+                local.prepare()
             }
             awaitingFormat = PlaybackTarget(localItem.mediaId, uri)
             onPlaybackChanged()

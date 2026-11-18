@@ -29,20 +29,31 @@ class PhoneCastPolicyTest {
         )
         assertEquals("audio/mpeg", PhoneCastPolicy.contentType("https://radio.test/_mp3"))
         assertEquals("audio/mpeg", PhoneCastPolicy.contentType("https://radio.test/mp3"))
+        assertEquals("audio/mpeg", PhoneCastPolicy.contentType("https://sohoradiomusic.doughunt.co.uk:8010/320mp3"))
         assertEquals("audio/aac", PhoneCastPolicy.contentType("https://radio.test/live-aac"))
         assertEquals("audio/aac", PhoneCastPolicy.contentType("https://radio.test/_aac"))
         assertEquals("audio/aac", PhoneCastPolicy.contentType("https://radio.test/live-aacp"))
         assertEquals("audio/aac", PhoneCastPolicy.contentType("https://radio.test/aacp"))
+        assertEquals("audio/aac", PhoneCastPolicy.contentType("http://stream.radioparadise.com/aac-320"))
+        assertEquals("audio/aac", PhoneCastPolicy.contentType("http://live-radio01.mediahubaustralia.com/DJDW/aac/"))
         assertEquals(null, PhoneCastPolicy.contentType("https://radio.test/live-mpeg"))
     }
 
     @Test
-    fun recognizesNativeFlacWithoutOverridingHlsOrOgg() {
+    fun recognizesNativeAndOggFlacWithoutOverridingHls() {
         assertEquals("audio/flac", PhoneCastPolicy.contentType("https://radio.test/live.FLAC?key=1"))
         assertEquals("audio/flac", PhoneCastPolicy.contentType("https://radio.test/live", "FLAC lossless"))
         assertEquals("audio/flac", PhoneCastPolicy.contentType("https://radio.test/live", sampleMimeType = "audio/flac"))
-        assertEquals(null, PhoneCastPolicy.contentType(
+        assertEquals("audio/ogg; codecs=flac", PhoneCastPolicy.contentType("http://stream.radioparadise.com/flacm"))
+        assertEquals("audio/ogg; codecs=flac", PhoneCastPolicy.contentType("http://stream.radioparadise.com/mellow-flacm"))
+        assertEquals("audio/ogg; codecs=flac", PhoneCastPolicy.contentType(
+            "http://stream.radioparadise.com/flac", sampleMimeType = "audio/flac", containerMimeType = "audio/ogg"
+        ))
+        assertEquals("audio/ogg; codecs=flac", PhoneCastPolicy.contentType(
             "https://radio.test/live.ogg", sampleMimeType = "audio/flac", containerMimeType = "audio/ogg"
+        ))
+        assertEquals(null, PhoneCastPolicy.contentType(
+            "https://radio.test/live", sampleMimeType = "audio/flac", containerMimeType = "video/mp4"
         ))
         assertEquals("application/vnd.apple.mpegurl", PhoneCastPolicy.contentType(
             "https://radio.test/live.m3u8", sampleMimeType = "audio/flac"
@@ -56,8 +67,10 @@ class PhoneCastPolicyTest {
         assertEquals("audio/mp4", PhoneCastPolicy.contentType(url,
             sampleMimeType = "audio/mp4a-latm", containerMimeType = "video/mp4"))
         assertEquals("audio/ogg", PhoneCastPolicy.contentType("$url.opus", sampleMimeType = "audio/opus"))
+        assertEquals("audio/ogg", PhoneCastPolicy.contentType(url, sampleMimeType = "audio/opus"))
         assertEquals("audio/ogg; codecs=vorbis", PhoneCastPolicy.contentType(url,
             sampleMimeType = "audio/vorbis", containerMimeType = "audio/ogg"))
+        assertEquals("audio/ogg; codecs=vorbis", PhoneCastPolicy.contentType(url, sampleMimeType = "audio/vorbis"))
         assertEquals("audio/webm", PhoneCastPolicy.contentType("$url.webm", sampleMimeType = "audio/opus"))
         assertEquals("audio/wav", PhoneCastPolicy.contentType("$url.wav", sampleMimeType = "audio/raw"))
         assertEquals(null, PhoneCastPolicy.contentType("$url.wav", sampleMimeType = "audio/aac"))

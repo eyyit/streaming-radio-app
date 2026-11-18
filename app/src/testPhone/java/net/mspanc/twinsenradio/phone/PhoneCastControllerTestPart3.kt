@@ -193,7 +193,11 @@ class PhoneCastControllerTestPart3 {
     @Test
     fun firstCastWaitsForFlacAndSucceedsWithoutWarning() = firstCastWaitsForFormat("audio/flac", "audio/flac")
 
-    private fun firstCastWaitsForFormat(sampleMimeType: String, expected: String) {
+    @Test
+    fun firstCastWaitsForOggFlacAndSucceedsWithoutWarning() =
+        firstCastWaitsForFormat("audio/flac", "audio/ogg; codecs=flac", containerMimeType = "audio/ogg")
+
+    private fun firstCastWaitsForFormat(sampleMimeType: String, expected: String, containerMimeType: String? = null) {
         val rig = Rig(station = station("unknown", "https://radio.test/live"), localPlaying = true)
         val client = rig.remoteClient()
         val pending = rig.loadResult(client)
@@ -210,7 +214,7 @@ class PhoneCastControllerTestPart3 {
         assertTrue(rig.messages.isEmpty())
         verify(client, never()).load(Mockito.any(MediaLoadRequestData::class.java))
 
-        val format = androidx.media3.common.Format.Builder().setSampleMimeType(sampleMimeType).build()
+        val format = androidx.media3.common.Format.Builder().setSampleMimeType(sampleMimeType).setContainerMimeType(containerMimeType).build()
         val group = androidx.media3.common.Tracks.Group(
             androidx.media3.common.TrackGroup(format), false,
             intArrayOf(androidx.media3.common.C.FORMAT_HANDLED), booleanArrayOf(true)

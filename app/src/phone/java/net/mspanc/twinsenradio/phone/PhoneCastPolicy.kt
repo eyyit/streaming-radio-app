@@ -14,27 +14,54 @@ internal object PhoneCastPolicy {
     ): String? {
         val path = runCatching { URI(uri).path.orEmpty() }.getOrDefault("")
             .lowercase(Locale.ROOT)
+            .trimEnd('/')
         val label = variantLabel.lowercase(Locale.ROOT)
         val codec = measuredCodec.orEmpty().uppercase(Locale.ROOT)
         return when {
-            path.endsWith(".m3u8") || Regex("\\bhls\\b").containsMatchIn(label) ->
+            containerMimeType in setOf(
+                "application/x-mpegURL",
+                "application/vnd.apple.mpegurl",
+                "audio/mpegurl",
+                "audio/x-mpegurl"
+            ) || path.endsWith(".m3u8") || Regex("\\bhls\\b").containsMatchIn(label) ->
                 "application/vnd.apple.mpegurl"
-            containerMimeType == "audio/mp4" || containerMimeType == "video/mp4" ||
+            containerMimeType in setOf("audio/mp4", "video/mp4", "application/mp4") ||
                 path.endsWith(".m4a") || path.endsWith(".mp4") ->
-                if (sampleMimeType == null || sampleMimeType == "audio/mp4a-latm") "audio/mp4" else null
+                if (sampleMimeType == null ||
+                    sampleMimeType in setOf("audio/mp4a-latm", "audio/aac", "audio/aacp")
+                ) "audio/mp4" else null
             containerMimeType in setOf("audio/ogg", "application/ogg") ||
-                path.endsWith(".ogg") || path.endsWith(".oga") || path.endsWith(".opus") ->
-                if (sampleMimeType == null || sampleMimeType == "audio/opus") "audio/ogg"
-                else if (sampleMimeType == "audio/vorbis") "audio/ogg; codecs=vorbis" else null
-            containerMimeType in setOf("audio/webm", "video/webm") || path.endsWith(".webm") ->
+                path.endsWith(".ogg") || path.endsWith(".oga") || path.endsWith(".opus") ||
+                hasTerminalPathToken(path, "ogg") || hasTerminalPathToken(path, "opus") ->
+                when (sampleMimeType) {
+                    null, "audio/opus" -> "audio/ogg"
+                    "audio/vorbis" -> "audio/ogg; codecs=vorbis"
+                    "audio/flac" -> "audio/ogg; codecs=flac"
+                    else -> null
+                }
+            hasTerminalPathToken(path, "flacm") ->
+                if (containerMimeType in setOf(null, "audio/ogg", "application/ogg") &&
+                    (sampleMimeType == null || sampleMimeType == "audio/flac")
+                ) "audio/ogg; codecs=flac" else null
+            containerMimeType in setOf(
+                "audio/webm",
+                "video/webm",
+                "audio/x-matroska",
+                "video/x-matroska"
+            ) || path.endsWith(".webm") ->
                 if (sampleMimeType == null || sampleMimeType in setOf("audio/opus", "audio/vorbis")) "audio/webm"
                 else null
-            containerMimeType == "audio/wav" || path.endsWith(".wav") ->
-                if (sampleMimeType == null || sampleMimeType == "audio/raw") "audio/wav" else null
+            containerMimeType in setOf("audio/wav", "audio/x-wav", "audio/vnd.wave") ||
+                path.endsWith(".wav") ->
+                if (sampleMimeType == null ||
+                    sampleMimeType in setOf("audio/raw", "audio/wav", "audio/x-wav")
+                ) "audio/wav" else null
             sampleMimeType in setOf("audio/mp4a-latm", "audio/aac", "audio/aacp") -> "audio/aac"
-            sampleMimeType == "audio/mpeg" -> "audio/mpeg"
+            sampleMimeType in setOf("audio/mpeg", "audio/mpeg-L1", "audio/mpeg-L2", "audio/mp3") -> "audio/mpeg"
+            sampleMimeType == "audio/opus" && containerMimeType == null -> "audio/ogg"
+            sampleMimeType == "audio/vorbis" && containerMimeType == null -> "audio/ogg; codecs=vorbis"
             sampleMimeType == "audio/flac" && containerMimeType != null &&
-                containerMimeType != "audio/flac" -> null
+                containerMimeType !in setOf("audio/flac", "application/flac", "application/x-flac") -> null
             sampleMimeType == "audio/flac" || hasTerminalPathToken(path, "flac") ||
                 Regex("\\bflac\\b").containsMatchIn(label) || codec == "FLAC" -> "audio/flac"
             hasTerminalPathToken(path, "aacp") || "aacp" in label || codec.startsWith("AAC+") ->
@@ -47,8 +74,10 @@ internal object PhoneCastPolicy {
         }
     }
 
-    private fun hasTerminalPathToken(path: String, token: String): Boolean =
-        Regex("(?:^|[._/-])${Regex.escape(token)}$").containsMatchIn(path)
+    private fun hasTerminalPathToken(path: String, token: String): Boolean {
+        val esc = Regex.escape(token)
+        return Regex("(?:^|[._/-])(?:$esc(?:[._-]?\\d+k?)?|\\d+k?[._-]?$esc)$").containsMatchIn(path)
+    }
 
     fun shouldPauseLocalAfterLoad(
         loadSucceeded: Boolean,
