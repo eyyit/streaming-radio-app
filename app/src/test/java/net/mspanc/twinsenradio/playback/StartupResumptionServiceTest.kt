@@ -509,6 +509,25 @@ class StartupResumptionServiceTest {
         RadioService::class.java.getDeclaredMethod("navigateStationOrder", Int::class.java)
             .apply { isAccessible = true }.invoke(service, delta) as Boolean
 
+    @Test fun coldAutomotiveServiceStartPrepopulatesPausedResumeStationAndQueue() {
+        val stations = repo.sourceStations("startup")
+        val selected = stations.last()
+        prefs.activeBrowseParent = imported
+        prefs.recent = listOf(selected.id)
+        withService { service, player, _, _ ->
+            assertEquals(0, player.mediaItemCount)
+            invoke(service, "seedInitialAutomotiveQueue")
+            assertEquals(stations.map { it.mediaId },
+                (0 until player.mediaItemCount).map { player.getMediaItemAt(it).mediaId })
+            assertEquals(selected.mediaId, player.currentMediaItem?.mediaId)
+            assertEquals(selected.id, PlaybackStatusBus.stationId.value)
+            assertEquals(PlaybackStatusBus.Join.NONE, PlaybackStatusBus.join.value)
+            assertFalse("Cold queue seed must remain paused until explicit play or resumption",
+                player.playWhenReady)
+            assertEquals(0, Prefs(context).playCount(selected.id))
+        }
+    }
+
     private fun assertResume(parent: String, selected: Station, members: List<Station>) {
         withService { _, player, callback, session ->
             val result = callback.onPlaybackResumption(session, controller).get()
