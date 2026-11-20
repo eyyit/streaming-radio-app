@@ -39,6 +39,7 @@ internal class PhoneStationAdapter(
     private val prefs: Prefs,
     private val repo: StationRepository,
     private val compact: Boolean = false,
+    private val showStreamUrl: Boolean = false,
     private val artworkCache: PhoneStationArtworkCache = PhoneStationArtworkCache(
         owner as android.content.Context,
         owner.lifecycleScope
@@ -190,6 +191,7 @@ internal class PhoneStationAdapter(
         holder.title.text = station.name
         val now = PlaybackStatusBus.nowPlaying.value
         holder.subtitle.text = when {
+            showStreamUrl -> station.stream
             repo.isDetachedFavorite(station.id) -> "Not in current playlists"
             playing && !now?.songTitle.isNullOrBlank() -> listOfNotNull(now?.songTitle, now?.artist).joinToString(" — ")
             else -> station.genre

@@ -73,9 +73,24 @@ class PhonePlaylistActivity : PhonePlaybackActivity() {
         }
         addView(refresh)
         list = RecyclerView(this@PhonePlaylistActivity).apply { layoutManager = LinearLayoutManager(context) }
-        adapter = PhoneStationAdapter(this@PhonePlaylistActivity, prefs, repo) { station ->
+        adapter = PhoneStationAdapter(
+            this@PhonePlaylistActivity,
+            prefs,
+            repo,
+            showStreamUrl = true
+        ) { station ->
             playStation(station, "/playlist/$sourceId", explicitCollectionSelection = true)
         }
+        list.addOnScrollListener(object : RecyclerView.OnScrollListener() {
+            override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
+                if (dy == 0 || recyclerView.adapter !== adapter) return
+                val layout = recyclerView.layoutManager as? LinearLayoutManager ?: return
+                val first = layout.findFirstVisibleItemPosition()
+                val last = layout.findLastVisibleItemPosition()
+                if (dy > 0) adapter.prefetchAhead(last + 1, last + 32)
+                else adapter.prefetchAhead(first - 32, first - 1, backwards = true)
+            }
+        })
         list.adapter = adapter; addView(list, LinearLayout.LayoutParams(-1, 0, 1f))
         animateStationArea(list)
     }
@@ -89,6 +104,13 @@ class PhonePlaylistActivity : PhonePlaybackActivity() {
         val stations = if (source == null) emptyList() else repo.sourceStations(sourceId)
         count.text = "${stations.size} saved stations"
         adapter.update(stations)
+        val layout = list.layoutManager as? LinearLayoutManager
+        val firstVisible = layout?.findFirstVisibleItemPosition() ?: RecyclerView.NO_POSITION
+        if (firstVisible == RecyclerView.NO_POSITION) {
+            adapter.prefetchAhead(0, 31)
+        } else {
+            adapter.prefetchAhead(firstVisible, (layout?.findLastVisibleItemPosition() ?: firstVisible) + 31)
+        }
         val cast = PhoneCastRouting.get(applicationContext).displaySnapshot()
         val activeStation = if (cast == null) PlaybackStatusBus.stationId.value else cast.stationId
         if (intent.getBooleanExtra(PhonePlayerActivity.CENTER_ACTIVE_STATION, false)) {
