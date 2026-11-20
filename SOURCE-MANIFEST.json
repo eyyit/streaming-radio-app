@@ -1,7 +1,7 @@
 {
   "formatVersion": 1,
   "project": "Twinsen Radio independent source candidate",
-  "gitHead": "ffaac25700b5a2e9cc791273cb212d210183ee0e",
+  "gitHead": "7ae28c68963e42cd3b389303d07cb404d02e2841",
   "workingTree": "clean",
   "hashAlgorithm": "SHA-256",
   "selfHashExcluded": true,
@@ -962,13 +962,13 @@
     },
     {
       "path": "app/src/phone/java/net/mspanc/twinsenradio/phone/PhonePlaylistActivity.kt",
-      "size": 6934,
-      "sha256": "56edfbf5d3f4c71cdeb487a23fbbb4e2d7fd117b05654c2d6537ac9292adc970"
+      "size": 8176,
+      "sha256": "81fd010f82bd26a75fb99507928c419b0d8f71c0354b4f3bf94e0fd4fcdd9428"
     },
     {
       "path": "app/src/phone/java/net/mspanc/twinsenradio/phone/PhonePlaylistCatalogActivity.kt",
-      "size": 7977,
-      "sha256": "a155ff12becd8c8cd8d93d225d757ce72c0077da43e07cd93556f09d170eed35"
+      "size": 9488,
+      "sha256": "dcec13b63c96b630c9c7aa4fa3a564e12b9e8b08a2a96e1157d9138d7bfb4e45"
     },
     {
       "path": "app/src/phone/java/net/mspanc/twinsenradio/phone/PhoneSettingsActivity.kt",
@@ -977,8 +977,8 @@
     },
     {
       "path": "app/src/phone/java/net/mspanc/twinsenradio/phone/PhoneStationAdapter.kt",
-      "size": 22912,
-      "sha256": "31b74e72b0873cc32bd0474bceb337c36f0c904f99cb75e8240e1cda4ac54caf"
+      "size": 23127,
+      "sha256": "070c2f10fdbb424a601663e2cb8eaa2221744058ace05bb5c26410516b9a42ed"
     },
     {
       "path": "app/src/phone/java/net/mspanc/twinsenradio/phone/PhoneStationArtwork.kt",
@@ -1019,6 +1019,11 @@
       "path": "app/src/phone/res/drawable/phone_ic_artwork_refresh.xml",
       "size": 822,
       "sha256": "ba5cbbcb0df987f3e019fa5121689ed6adbdc0aa9cc9f11647f5174cc65977f1"
+    },
+    {
+      "path": "app/src/phone/res/drawable/phone_ic_delete.xml",
+      "size": 546,
+      "sha256": "228340b385589a311c14f62faa2ed358d8302a7a3375f32fe7501b11bf500f03"
     },
     {
       "path": "app/src/phone/res/drawable/phone_ic_settings_gear.xml",
@@ -1512,8 +1517,8 @@
     },
     {
       "path": "app/src/testPhone/java/net/mspanc/twinsenradio/phone/PhonePlaylistUiTest.kt",
-      "size": 7759,
-      "sha256": "9f24e1ef2c3b721f631a5c3bba58016ce8cb816b703430ec802949fc30babe93"
+      "size": 12660,
+      "sha256": "ca4a31a7d6cdf3dcd9e02fa30c1f11bd16bee3d429374c9c487848cd44f506d7"
     },
     {
       "path": "app/src/testPhone/java/net/mspanc/twinsenradio/phone/PhoneStationAdapterUpdateTest.kt",
