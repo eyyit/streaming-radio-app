@@ -1,7 +1,7 @@
 {
   "formatVersion": 1,
   "project": "Twinsen Radio independent source candidate",
-  "gitHead": "0d052eb0e716246ed4a14e74dc89f90f20709f7c",
+  "gitHead": "ffaac25700b5a2e9cc791273cb212d210183ee0e",
   "workingTree": "clean",
   "hashAlgorithm": "SHA-256",
   "selfHashExcluded": true,
@@ -962,13 +962,13 @@
     },
     {
       "path": "app/src/phone/java/net/mspanc/twinsenradio/phone/PhonePlaylistActivity.kt",
-      "size": 5830,
-      "sha256": "234e62962d0a84d5e1b73bb181a6ba808374415a0a615ebec478751bb004fd19"
+      "size": 6934,
+      "sha256": "56edfbf5d3f4c71cdeb487a23fbbb4e2d7fd117b05654c2d6537ac9292adc970"
     },
     {
       "path": "app/src/phone/java/net/mspanc/twinsenradio/phone/PhonePlaylistCatalogActivity.kt",
-      "size": 4174,
-      "sha256": "10500ebb78445f1743bf3cf525efc3ffdbbc9d329864d00e2b70dfd328803d6a"
+      "size": 7977,
+      "sha256": "a155ff12becd8c8cd8d93d225d757ce72c0077da43e07cd93556f09d170eed35"
     },
     {
       "path": "app/src/phone/java/net/mspanc/twinsenradio/phone/PhoneSettingsActivity.kt",
@@ -977,8 +977,8 @@
     },
     {
       "path": "app/src/phone/java/net/mspanc/twinsenradio/phone/PhoneStationAdapter.kt",
-      "size": 22820,
-      "sha256": "64fa8e23ac5cef181a389b7441ed99994faa2231c1b42546feedb36423889615"
+      "size": 22912,
+      "sha256": "31b74e72b0873cc32bd0474bceb337c36f0c904f99cb75e8240e1cda4ac54caf"
     },
     {
       "path": "app/src/phone/java/net/mspanc/twinsenradio/phone/PhoneStationArtwork.kt",
@@ -1509,6 +1509,11 @@
       "path": "app/src/testPhone/java/net/mspanc/twinsenradio/phone/PhonePlayerRoutingTest.kt",
       "size": 1565,
       "sha256": "fe311bd718899ab813aded4a6fa577118d7031038b238eee47dcb419a4f7261b"
+    },
+    {
+      "path": "app/src/testPhone/java/net/mspanc/twinsenradio/phone/PhonePlaylistUiTest.kt",
+      "size": 7759,
+      "sha256": "9f24e1ef2c3b721f631a5c3bba58016ce8cb816b703430ec802949fc30babe93"
     },
     {
       "path": "app/src/testPhone/java/net/mspanc/twinsenradio/phone/PhoneStationAdapterUpdateTest.kt",
