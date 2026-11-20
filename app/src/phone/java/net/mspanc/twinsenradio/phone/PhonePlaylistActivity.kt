@@ -13,6 +13,7 @@ import androidx.lifecycle.repeatOnLifecycle
 import androidx.media3.common.util.UnstableApi
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
@@ -28,6 +29,7 @@ class PhonePlaylistActivity : PhonePlaybackActivity() {
     private lateinit var count: TextView
     private lateinit var error: TextView
     private lateinit var refresh: Button
+    private lateinit var remove: Button
     private lateinit var list: RecyclerView
     private lateinit var adapter: PhoneStationAdapter
     private val stationFollow = PhoneStationFollow()
@@ -68,10 +70,19 @@ class PhonePlaylistActivity : PhonePlaybackActivity() {
         count = PhoneUi.text(this@PhonePlaylistActivity, muted = true)
         error = PhoneUi.text(this@PhonePlaylistActivity, size = 14f).apply { setTextColor(PhoneUi.WARNING) }
         addView(location); addView(count); addView(error)
+        val actions = PhoneUi.row(this@PhonePlaylistActivity)
         refresh = PhoneUi.button(this@PhonePlaylistActivity, "Refresh playlist") {
             repo.playlists().firstOrNull { it.id == sourceId }?.let { source -> model.refresh(repo, source) }
         }
-        addView(refresh)
+        remove = PhoneUi.button(this@PhonePlaylistActivity, "Remove playlist") {
+            repo.playlists().firstOrNull { it.id == sourceId }?.let(::confirmRemove)
+        }.apply {
+            tag = "phone_playlist_detail_remove"
+            setTextColor(PhoneUi.WARNING)
+        }
+        actions.addView(refresh, LinearLayout.LayoutParams(0, -2, 1f).apply { marginEnd = PhoneUi.dp(context, 8) })
+        actions.addView(remove, LinearLayout.LayoutParams(0, -2, 1f))
+        addView(actions)
         list = RecyclerView(this@PhonePlaylistActivity).apply { layoutManager = LinearLayoutManager(context) }
         adapter = PhoneStationAdapter(
             this@PhonePlaylistActivity,
@@ -127,6 +138,20 @@ class PhonePlaylistActivity : PhonePlaybackActivity() {
         refresh.visibility = if (source != null && !source.isLocal) View.VISIBLE else View.GONE
         refresh.isEnabled = !state.busy
         refresh.text = if (state.failed) "Retry refresh" else "Refresh playlist"
+        remove.visibility = if (source != null) View.VISIBLE else View.GONE
+        remove.isEnabled = !state.busy
+    }
+
+    private fun confirmRemove(source: PlaylistSource) {
+        MaterialAlertDialogBuilder(this)
+            .setTitle("Remove playlist?")
+            .setMessage("Remove \"${source.name}\"? Stations only in this playlist will be removed from your library.")
+            .setNegativeButton(android.R.string.cancel, null)
+            .setPositiveButton("Remove") { _, _ ->
+                repo.removePlaylist(source.id)
+                finish()
+            }
+            .show()
     }
 
     class RefreshModel : ViewModel() {

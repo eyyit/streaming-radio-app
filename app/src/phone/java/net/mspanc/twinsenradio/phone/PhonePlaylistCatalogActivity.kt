@@ -23,6 +23,7 @@ import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import androidx.lifecycle.viewModelScope
 import androidx.media3.common.util.UnstableApi
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
@@ -153,8 +154,39 @@ class PhonePlaylistCatalogActivity : AppCompatActivity() {
                 marginStart = dp(12)
             })
         }
+        val removeBox = FrameLayout(this).apply {
+            background = PhoneUi.shape(this@PhonePlaylistCatalogActivity, PhoneUi.CONTROL, 12)
+        }
+        val removeButton = PhoneUi.icon(
+            this,
+            R.drawable.phone_ic_delete,
+            "Remove ${source.name}",
+            size = 44
+        ).apply {
+            tag = "phone_playlist_remove_${source.id}"
+            imageTintList = ColorStateList.valueOf(PhoneUi.WARNING)
+            setPadding(dp(11), dp(11), dp(11), dp(11))
+            setOnClickListener { confirmRemove(source) }
+        }
+        removeBox.addView(removeButton, FrameLayout.LayoutParams(-1, -1, Gravity.CENTER))
+        row.addView(removeBox, LinearLayout.LayoutParams(dp(44), dp(44)).apply {
+            marginStart = dp(if (source.isLocal) 12 else 8)
+        })
         entries.addView(row)
         entries.addView(PhoneUi.divider(this))
+    }
+
+    private fun confirmRemove(source: PlaylistSource) {
+        MaterialAlertDialogBuilder(this)
+            .setTitle("Remove playlist?")
+            .setMessage("Remove \"${source.name}\"? Stations only in this playlist will be removed from your library.")
+            .setNegativeButton(android.R.string.cancel, null)
+            .setPositiveButton("Remove") { _, _ ->
+                model.clear(source.id)
+                repo.removePlaylist(source.id)
+                render()
+            }
+            .show()
     }
 
     private fun dp(value: Int) = PhoneUi.dp(this, value)
@@ -162,6 +194,10 @@ class PhonePlaylistCatalogActivity : AppCompatActivity() {
     class RefreshModel : ViewModel() {
         data class EntryState(val busy: Boolean = false, val failed: Boolean = false)
         val states = MutableStateFlow<Map<String, EntryState>>(emptyMap())
+
+        fun clear(sourceId: String) {
+            states.value = states.value - sourceId
+        }
 
         fun refresh(repo: StationRepository, source: PlaylistSource) {
             if (source.isLocal || states.value[source.id]?.busy == true) return

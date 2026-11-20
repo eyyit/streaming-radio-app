@@ -190,12 +190,14 @@ internal class PhoneStationAdapter(
         holder.row.tag = "phone_station_${station.id}"
         holder.title.text = station.name
         val now = PlaybackStatusBus.nowPlaying.value
-        holder.subtitle.text = when {
+        val subtitleText = when {
             showStreamUrl -> station.stream
             repo.isDetachedFavorite(station.id) -> "Not in current playlists"
             playing && !now?.songTitle.isNullOrBlank() -> listOfNotNull(now?.songTitle, now?.artist).joinToString(" — ")
-            else -> station.genre
+            else -> station.genre.takeUnless { it.isBlank() || it.equals("Playlist", ignoreCase = true) }.orEmpty()
         }
+        holder.subtitle.text = subtitleText
+        holder.subtitle.visibility = if (subtitleText.isBlank()) View.GONE else View.VISIBLE
         holder.selected.setBackgroundColor(if (playing) net.mspanc.twinsenradio.data.AppearanceTheme.current(holder.row.context).accent else PhoneUi.CANVAS)
         val favorite = station.id in prefs.favourites
         holder.heart.setImageResource(if (favorite) R.drawable.ic_star_filled else R.drawable.ic_star_outline)

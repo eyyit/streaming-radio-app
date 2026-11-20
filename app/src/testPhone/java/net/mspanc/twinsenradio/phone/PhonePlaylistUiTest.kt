@@ -80,8 +80,57 @@ class PhonePlaylistUiTest {
 
             assertEquals("KEXP 90.3 FM", holder.title.text.toString())
             assertEquals("https://kexp.streamguys1.com/kexp160.aac", holder.subtitle.text.toString())
+            assertEquals(View.VISIBLE, holder.subtitle.visibility)
             assertEquals(2, holder.subtitle.maxLines)
             assertEquals(View.VISIBLE, holder.logo.visibility)
+        } finally {
+            host.pause().stop().destroy()
+        }
+    }
+
+    @Test
+    fun libraryAdapterHidesDefaultPlaylistGenreAndShowsOnlyStationNameUntilPlaying() {
+        val playlistStation = Station(
+            id = "nova",
+            name = "Radio Nova",
+            genre = "Playlist",
+            stream = "https://novazz.ice.infomaniak.ch/novazz-128.mp3",
+            source = Station.Source.USER_M3U
+        )
+        val jazzStation = Station(
+            id = "wwoz",
+            name = "WWOZ",
+            genre = "Jazz",
+            stream = "https://wwoz-sc.streamguys1.com/wwoz-hi.mp3",
+            source = Station.Source.USER_M3U
+        )
+        val host = Robolectric.buildActivity(ComponentActivity::class.java).setup()
+        try {
+            val adapter = PhoneStationAdapter(host.get(), prefs, repo) { }
+            adapter.update(listOf(playlistStation, jazzStation))
+            val holder = adapter.onCreateViewHolder(FrameLayout(context), 0)
+
+            adapter.onBindViewHolder(holder, 0)
+            assertEquals("Radio Nova", holder.title.text.toString())
+            assertEquals("", holder.subtitle.text.toString())
+            assertEquals(View.GONE, holder.subtitle.visibility)
+
+            PlaybackStatusBus.setStation(playlistStation.id)
+            PlaybackStatusBus.setNowPlaying(NowPlaying("Girl, You'll Be A Woman Soon", "Urge Overkill", "Girl, You'll Be A Woman Soon"))
+            adapter.onBindViewHolder(holder, 0)
+            assertEquals("Girl, You'll Be A Woman Soon — Urge Overkill", holder.subtitle.text.toString())
+            assertEquals(View.VISIBLE, holder.subtitle.visibility)
+
+            PlaybackStatusBus.setStation(null)
+            PlaybackStatusBus.setNowPlaying(null)
+            adapter.onBindViewHolder(holder, 0)
+            assertEquals("", holder.subtitle.text.toString())
+            assertEquals(View.GONE, holder.subtitle.visibility)
+
+            adapter.onBindViewHolder(holder, 1)
+            assertEquals("WWOZ", holder.title.text.toString())
+            assertEquals("Jazz", holder.subtitle.text.toString())
+            assertEquals(View.VISIBLE, holder.subtitle.visibility)
         } finally {
             host.pause().stop().destroy()
         }
@@ -145,15 +194,19 @@ class PhonePlaylistUiTest {
             .apply { isAccessible = true }.set(null, null)
 
         val controller = Robolectric.buildActivity(PhonePlaylistCatalogActivity::class.java)
-        controller.get().setTheme(R.style.Theme_TwinsenRadio)
+        controller.get().setTheme(R.style.Theme_StreamingRadioPhone)
         try {
             val activity = controller.setup().get()
             val root = activity.findViewById<View>(android.R.id.content)
 
             val hostedRefresh = root.findViewWithTag<ImageButton>("phone_playlist_refresh_$hostedId")
             val localRefresh = root.findViewWithTag<View>("phone_playlist_refresh_$localId")
+            val hostedRemove = root.findViewWithTag<ImageButton>("phone_playlist_remove_$hostedId")
+            val localRemove = root.findViewWithTag<ImageButton>("phone_playlist_remove_$localId")
             assertNotNull("Hosted playlist row must show a refresh button on the right", hostedRefresh)
             assertNull("Local import row must not show a refresh button", localRefresh)
+            assertNotNull("Hosted playlist row must show a remove button", hostedRemove)
+            assertNotNull("Local import row must show a remove button", localRemove)
 
             val hostedTitle = descendants(root).filterIsInstance<TextView>()
                 .single { it.text.toString() == "World Independent Radio" }
@@ -161,8 +214,48 @@ class PhonePlaylistUiTest {
             val opened = Shadows.shadowOf(activity).nextStartedActivity
             assertEquals(PhonePlaylistActivity::class.java.name, opened.component?.className)
             assertEquals(hostedId, opened.getStringExtra("source_id"))
+
+            localRemove.performClick()
+            val dialog = org.robolectric.shadows.ShadowAlertDialog.getLatestDialog() as androidx.appcompat.app.AlertDialog
+            assertNotNull("Clicking remove should open confirmation dialog", dialog)
+            dialog.getButton(android.content.DialogInterface.BUTTON_POSITIVE).performClick()
+            org.robolectric.shadows.ShadowLooper.idleMainLooper()
+            assertEquals(listOf(hostedId), StationRepository.get(context).playlists().map { it.id })
+            assertNull(root.findViewWithTag<View>("phone_playlist_remove_$localId"))
         } finally {
             controller.pause().stop().destroy()
+        }
+    }
+
+    @Test
+    fun playlistDetailScreenAllowsRemovingPlaylistWithConfirmation() {
+        runBlocking {
+            repo.saveLocalPlaylist(
+                "Road Trip Backup",
+                "#EXTM3U\n#EXTINF:-1,KEXP 90.3 FM\nhttps://kexp.streamguys1.com/kexp160.aac\n"
+            )
+        }
+        val sourceId = repo.playlists().single().id
+        val intent = Intent(context, PhonePlaylistActivity::class.java).putExtra("source_id", sourceId)
+        val controller = Robolectric.buildActivity(PhonePlaylistActivity::class.java, intent)
+        controller.get().setTheme(R.style.Theme_StreamingRadioPhone)
+        try {
+            val activity = controller.create().get()
+            val removeButton = activity.findViewById<View>(android.R.id.content)
+                .findViewWithTag<android.widget.Button>("phone_playlist_detail_remove")
+            assertNotNull("Playlist detail screen must show a Remove playlist button", removeButton)
+            assertEquals(View.VISIBLE, removeButton.visibility)
+
+            removeButton.performClick()
+            val dialog = org.robolectric.shadows.ShadowAlertDialog.getLatestDialog() as androidx.appcompat.app.AlertDialog
+            assertNotNull("Clicking Remove playlist should open confirmation dialog", dialog)
+            dialog.getButton(android.content.DialogInterface.BUTTON_POSITIVE).performClick()
+            org.robolectric.shadows.ShadowLooper.idleMainLooper()
+
+            assertTrue("Playlist should be removed from repository", repo.playlists().isEmpty())
+            assertTrue("Activity should finish after removing playlist", activity.isFinishing)
+        } finally {
+            controller.destroy()
         }
     }
 
