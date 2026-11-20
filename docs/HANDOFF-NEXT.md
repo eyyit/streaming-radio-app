@@ -1,8 +1,8 @@
-# Paired 29.0 AAOS cold-start mini-player pre-population and shared release versionName — 19 November 2026
+# Paired 31.0 AAOS cold-start mini-player pre-population — 19 November 2026
 
-Mobile uses build 2900 (`29.0`) and Android Automotive uses build 2901 (`29.0`).
+Mobile uses build 3100 (`31.0`) and Android Automotive uses build 3101 (`31.0`).
 - AAOS cold-start mini-player & Home tile pre-population (`RadioService.seedInitialAutomotiveQueue`): when `RadioService` starts on AAOS, it pre-populates `ExoPlayer` with `repo.resumeCandidate()` and its active collection queue in a paused state (`playWhenReady = false`) with stopped/standby metadata, without triggering join timers or bumping play counts. This ensures Volvo's bottom mini-player bar and Home screen Media tile are immediately populated and expandable to full-screen Now Playing on cold start.
-- Shared release `versionName`: both Phone (`2900`) and AAOS (`2901`) share `versionName = "29.0"`.
+- Shared release `versionName`: both Phone (`3100`) and AAOS (`3101`) share `versionName = "31.0"`.
 
 # Paired 30.0 release: Comprehensive Cast MIME/container detection (including Ogg FLAC), Cast state recovery, cover cube, and DK-01 dock — 17 November 2026
 
