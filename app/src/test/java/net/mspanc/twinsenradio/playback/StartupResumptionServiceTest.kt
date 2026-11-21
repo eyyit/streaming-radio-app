@@ -509,54 +509,6 @@ class StartupResumptionServiceTest {
         RadioService::class.java.getDeclaredMethod("navigateStationOrder", Int::class.java)
             .apply { isAccessible = true }.invoke(service, delta) as Boolean
 
-    @Test fun coldAutomotiveServiceStartPrepopulatesPausedResumeStationAndQueue() {
-        val stations = repo.sourceStations("startup")
-        val selected = stations.last()
-        prefs.activeBrowseParent = imported
-        prefs.recent = listOf(selected.id)
-        withService { service, player, _, _ ->
-            assertEquals(0, player.mediaItemCount)
-            invoke(service, "seedInitialAutomotiveQueue")
-            assertEquals(stations.map { it.mediaId },
-                (0 until player.mediaItemCount).map { player.getMediaItemAt(it).mediaId })
-            assertEquals(selected.mediaId, player.currentMediaItem?.mediaId)
-            assertEquals(selected.id, PlaybackStatusBus.stationId.value)
-            assertEquals(PlaybackStatusBus.Join.NONE, PlaybackStatusBus.join.value)
-            assertFalse("Cold queue seed must remain paused until explicit play or resumption",
-                player.playWhenReady)
-            assertEquals(0, Prefs(context).playCount(selected.id))
-        }
-    }
-
-    @Test fun coldSeedSucceedsBeforeSessionIsInitialized() {
-        val stations = repo.sourceStations("startup")
-        val selected = stations.last()
-        prefs.activeBrowseParent = imported
-        prefs.recent = listOf(selected.id)
-        val service = Robolectric.buildService(RadioService::class.java).get()
-        setField(service, "prefs", Prefs(context))
-        val player = RadioService::class.java.getDeclaredMethod("buildPlayer")
-            .apply { isAccessible = true }.invoke(service) as ExoPlayer
-        setField(service, "repo", repo)
-        setField(service, "metadata", MetadataFactory(context, Prefs(context)))
-        setField(service, "player", player)
-        try {
-            // Intentionally leave lateinit `session` uninitialized, matching onCreate() before MediaLibrarySession.Builder.
-            invoke(service, "seedInitialAutomotiveQueue")
-            assertEquals(stations.map { it.mediaId },
-                (0 until player.mediaItemCount).map { player.getMediaItemAt(it).mediaId })
-            assertEquals(selected.mediaId, player.currentMediaItem?.mediaId)
-            assertEquals(selected.id, PlaybackStatusBus.stationId.value)
-            assertFalse("Cold queue seed must remain paused until explicit play or resumption",
-                player.playWhenReady)
-            assertEquals(0, Prefs(context).playCount(selected.id))
-        } finally {
-            PlaybackStatusBus.setStation(null)
-            (field(service, "scope") as CoroutineScope).cancel()
-            player.release()
-        }
-    }
-
     private fun assertResume(parent: String, selected: Station, members: List<Station>) {
         withService { _, player, callback, session ->
             val result = callback.onPlaybackResumption(session, controller).get()

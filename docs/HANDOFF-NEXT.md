@@ -1,3 +1,8 @@
+# Paired 34.0 revert AAOS cold-start queue pre-population — 21 November 2026
+
+Mobile uses build 3400 (`34.0`) and Android Automotive uses build 3401 (`34.0`).
+- Reverted v31.0's `RadioService.seedInitialAutomotiveQueue()` on AAOS cold start and repo revision load, restoring `RadioService` startup behavior to verified v30.0 after `33.0` still showed a blank media host screen on Volvo AAOS 5.2.16. Retained the defensive `if (!this@RadioService::session.isInitialized) return` guard in `notifyBrowseNodesChanged()`.
+
 # Paired 33.0 AAOS cold-start crash fix — 21 November 2026
 
 Mobile uses build 3300 (`33.0`) and Android Automotive uses build 3301 (`33.0`).

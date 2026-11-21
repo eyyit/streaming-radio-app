@@ -332,9 +332,6 @@ class RadioService : MediaLibraryService() {
             PlaybackStatusBus.phoneStationNeighbor = { stationNavigationTarget(it, preview = true) }
         }
         player.addListener(PlayerEvents())
-        if (net.mspanc.twinsenradio.BuildConfig.IS_AUTOMOTIVE) {
-            seedInitialAutomotiveQueue()
-        }
         player.addAnalyticsListener(
             LoadDiagnostics { format ->
                 audioFormat = format
@@ -385,9 +382,6 @@ class RadioService : MediaLibraryService() {
         }
         scope.launch {
             repo.revisions.collect {
-                if (net.mspanc.twinsenradio.BuildConfig.IS_AUTOMOTIVE && player.currentMediaItem == null) {
-                    seedInitialAutomotiveQueue()
-                }
                 preloadStationArtwork()
                 notifyBrowseNodesChanged(NODE_ALL, NODE_FAVOURITES, NODE_RECENT, NODE_GENRES, NODE_PLAYLISTS)
                 repo.playlists().forEach { notifyBrowseNodesChanged("/playlist/${it.id}") }
@@ -593,31 +587,9 @@ class RadioService : MediaLibraryService() {
 
     // --- reactions to player events --------------------------------------------
 
-    private var seedingInitialQueue = false
-
-    private fun seedInitialAutomotiveQueue() {
-        if (player.currentMediaItem != null) return
-        val station = repo.resumeCandidate() ?: return
-        val queue = CollectionQueue.withSelected(childrenOf(prefs.activeBrowseParent), station) { it.id }
-        val startIndex = queue.indexOfFirst { it.id == station.id }.coerceAtLeast(0)
-        seedingInitialQueue = true
-        try {
-            player.setMediaItems(queue.map(::playableItem), startIndex, C.TIME_UNSET)
-            resetStationState()
-            PlaybackStatusBus.setStation(station.id)
-            refreshCurrentMetadata(force = true, now = null, why = "cold-seed")
-            if (this@RadioService::session.isInitialized) {
-                session.setCustomLayout(customLayout())
-            }
-        } finally {
-            seedingInitialQueue = false
-        }
-    }
-
     private inner class PlayerEvents : Player.Listener {
 
         override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
-            if (seedingInitialQueue) return
             // A station change starts everything from scratch. Without this, the cover art
             // from the previous station would stay in the `coverArtUrl` field and come back
             // on screen at the next metadata refresh - after switching from RMF to RNS
