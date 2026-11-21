@@ -1,7 +1,7 @@
 {
   "formatVersion": 1,
   "project": "Twinsen Radio independent source candidate",
-  "gitHead": "43e35314b57b96e9fa5e26a3211d146c01d10747",
+  "gitHead": "4d064efc6090470cc339bd8eec6d80b49b97058b",
   "workingTree": "clean",
   "hashAlgorithm": "SHA-256",
   "selfHashExcluded": true,
@@ -492,8 +492,8 @@
     },
     {
       "path": "app/src/main/java/net/mspanc/twinsenradio/playback/RadioService.kt",
-      "size": 152327,
-      "sha256": "3c290750c136386f3dde5bf44d7567d0c32212f059223aab767e944fb77a3a61"
+      "size": 151095,
+      "sha256": "58c7e5e96f7d2acd54711f24af8814135fde1b8a6f4f92fd13f22dbde486515c"
     },
     {
       "path": "app/src/main/java/net/mspanc/twinsenradio/playback/ReconnectController.kt",
@@ -1292,8 +1292,8 @@
     },
     {
       "path": "app/src/test/java/net/mspanc/twinsenradio/playback/StartupResumptionServiceTest.kt",
-      "size": 32398,
-      "sha256": "d87ad283f276acbbe98aceae91c33824b8d64d6236150efd3bd6857efe77822c"
+      "size": 29824,
+      "sha256": "609015bb5f33b27d513b85b6ebcc890ba1295cca052a5a4e6256fcc71a149557"
     },
     {
       "path": "app/src/test/java/net/mspanc/twinsenradio/playback/StationArtworkPreloadPruneTest.kt",
@@ -1608,7 +1608,7 @@
     {
       "path": "gradle.properties",
       "size": 295,
-      "sha256": "252bdca4639f76303009fcae6d022554fd1a8e3e1271388d8eb298c006a1e029"
+      "sha256": "b667f8049dcd3bbfa0b7e247fbc4e1dadcb67f6551c885bcd46633a97cdc4230"
     },
     {
       "path": "gradle/wrapper/gradle-wrapper.jar",
