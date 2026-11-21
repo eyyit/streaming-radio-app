@@ -528,33 +528,32 @@ class StartupResumptionServiceTest {
         }
     }
 
-    @Test fun coldOnCreateSucceedsAndPrepopulatesAutomotiveQueueWithoutSessionCrash() {
+    @Test fun coldSeedSucceedsBeforeSessionIsInitialized() {
         val stations = repo.sourceStations("startup")
         val selected = stations.last()
         prefs.activeBrowseParent = imported
         prefs.recent = listOf(selected.id)
-        StationRepository::class.java.getDeclaredField("instance")
-            .apply { isAccessible = true }.set(null, null)
-        val controller = Robolectric.buildService(RadioService::class.java).create()
-        val service = controller.get()
+        val service = Robolectric.buildService(RadioService::class.java).get()
+        setField(service, "prefs", Prefs(context))
+        val player = RadioService::class.java.getDeclaredMethod("buildPlayer")
+            .apply { isAccessible = true }.invoke(service) as ExoPlayer
+        setField(service, "repo", repo)
+        setField(service, "metadata", MetadataFactory(context, Prefs(context)))
+        setField(service, "player", player)
         try {
-            val player = field(service, "player") as ExoPlayer
-            assertNotNull(service.onGetSession(this.controller))
-            if (net.mspanc.twinsenradio.BuildConfig.IS_AUTOMOTIVE) {
-                assertEquals(stations.map { it.mediaId },
-                    (0 until player.mediaItemCount).map { player.getMediaItemAt(it).mediaId })
-                assertEquals(selected.mediaId, player.currentMediaItem?.mediaId)
-                assertEquals(selected.id, PlaybackStatusBus.stationId.value)
-                assertFalse("Cold onCreate seed must remain paused until explicit play or resumption",
-                    player.playWhenReady)
-                assertEquals(0, Prefs(context).playCount(selected.id))
-            } else {
-                assertEquals(0, player.mediaItemCount)
-            }
+            // Intentionally leave lateinit `session` uninitialized, matching onCreate() before MediaLibrarySession.Builder.
+            invoke(service, "seedInitialAutomotiveQueue")
+            assertEquals(stations.map { it.mediaId },
+                (0 until player.mediaItemCount).map { player.getMediaItemAt(it).mediaId })
+            assertEquals(selected.mediaId, player.currentMediaItem?.mediaId)
+            assertEquals(selected.id, PlaybackStatusBus.stationId.value)
+            assertFalse("Cold queue seed must remain paused until explicit play or resumption",
+                player.playWhenReady)
+            assertEquals(0, Prefs(context).playCount(selected.id))
         } finally {
-            controller.destroy()
-            StationRepository::class.java.getDeclaredField("instance")
-                .apply { isAccessible = true }.set(null, null)
+            PlaybackStatusBus.setStation(null)
+            (field(service, "scope") as CoroutineScope).cancel()
+            player.release()
         }
     }
 

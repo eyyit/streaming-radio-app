@@ -2,7 +2,7 @@
 
 Mobile uses build 3300 (`33.0`) and Android Automotive uses build 3301 (`33.0`).
 - Fix AAOS cold-start blank screen (`RadioService.notifyBrowseNodesChanged`): guarded `notifyBrowseNodesChanged` with `if (!this@RadioService::session.isInitialized) return`. On AAOS cold start, `seedInitialAutomotiveQueue()` called `refreshCurrentMetadata()` before `session` was constructed in `onCreate()`, triggering `notifyBrowseNodesChanged()` and throwing `UninitializedPropertyAccessException` on `session.connectedControllers`, which crashed `RadioService` and left Volvo's native AAOS Media host blank.
-- Regression coverage: added `StartupResumptionServiceTest.coldOnCreateSucceedsAndPrepopulatesAutomotiveQueueWithoutSessionCrash` exercising the real `RadioService.onCreate()` lifecycle via Robolectric on both `automotive` and `phone` variants.
+- Regression coverage: added `StartupResumptionServiceTest.coldSeedSucceedsBeforeSessionIsInitialized` exercising `seedInitialAutomotiveQueue()` with `lateinit var session` uninitialized on both `automotive` and `phone` variants.
 
 # Paired 31.0 AAOS cold-start mini-player pre-population — 19 November 2026
 
