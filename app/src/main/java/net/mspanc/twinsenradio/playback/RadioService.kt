@@ -2099,6 +2099,7 @@ class RadioService : MediaLibraryService() {
      * notify each connected controller by address instead.
      */
     private fun notifyBrowseNodesChanged(vararg nodes: String) {
+        if (!this@RadioService::session.isInitialized) return
         val controllers = session.connectedControllers
         // Media3 matches notifications to the parameters the controller
         // registered with. Sending with null missed the target - Android Auto
