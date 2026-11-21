@@ -1,7 +1,7 @@
 {
   "formatVersion": 1,
   "project": "Twinsen Radio independent source candidate",
-  "gitHead": "6cfdda344ca7327c9b058976305fcafa938fce43",
+  "gitHead": "43e35314b57b96e9fa5e26a3211d146c01d10747",
   "workingTree": "clean",
   "hashAlgorithm": "SHA-256",
   "selfHashExcluded": true,
@@ -1292,8 +1292,8 @@
     },
     {
       "path": "app/src/test/java/net/mspanc/twinsenradio/playback/StartupResumptionServiceTest.kt",
-      "size": 32391,
-      "sha256": "01a68879782f148cd358d8c99c9c166155a7c0c62d10cba8ace4754f4c66e4a9"
+      "size": 32398,
+      "sha256": "d87ad283f276acbbe98aceae91c33824b8d64d6236150efd3bd6857efe77822c"
     },
     {
       "path": "app/src/test/java/net/mspanc/twinsenradio/playback/StationArtworkPreloadPruneTest.kt",
