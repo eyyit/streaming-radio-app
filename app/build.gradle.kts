@@ -197,8 +197,12 @@ dependencies {
 
 
 
-// Keep Android JVM fixtures on canonical Maven Central and reuse their SDK jar.
+// Use Google's official Maven Central mirror for Robolectric SDK jars and store them under
+// ~/.gradle/caches so CI Gradle caching reuses them without hitting Maven Central rate limits.
 tasks.withType<org.gradle.api.tasks.testing.Test>().configureEach {
-    systemProperty("robolectric.dependency.repo.url", "https://repo.maven.apache.org/maven2")
-    systemProperty("maven.repo.local", gradle.gradleUserHomeDir.resolve("robolectric").path)
+    systemProperty(
+        "robolectric.dependency.repo.url",
+        System.getenv("ROBOLECTRIC_REPO_URL") ?: "https://maven-central.storage-download.googleapis.com/maven2"
+    )
+    systemProperty("maven.repo.local", gradle.gradleUserHomeDir.resolve("caches/robolectric").path)
 }
