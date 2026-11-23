@@ -1,7 +1,7 @@
 {
   "formatVersion": 1,
   "project": "Twinsen Radio independent source candidate",
-  "gitHead": "2a2c7bc19d4796391e3703cccd691e95853e05ee",
+  "gitHead": "57a028598c860a5b79f14d03d40e4b5c1cff791d",
   "workingTree": "clean",
   "hashAlgorithm": "SHA-256",
   "selfHashExcluded": true,
@@ -882,8 +882,8 @@
     },
     {
       "path": "app/src/phone/java/net/mspanc/twinsenradio/phone/PhoneCastController.kt",
-      "size": 32574,
-      "sha256": "ba6139d53f830e6f6aad00112bbd75712aa45dcd99c4b459c490b4db90460d4b"
+      "size": 32663,
+      "sha256": "266bfdbd01fc9ac6cd38738705ce307ca41c57c6dc1eb04ee37d516040ec4931"
     },
     {
       "path": "app/src/phone/java/net/mspanc/twinsenradio/phone/PhoneCastHandoffLease.kt",
@@ -1447,8 +1447,8 @@
     },
     {
       "path": "app/src/testPhone/java/net/mspanc/twinsenradio/phone/PhoneCastControllerTestPart3.kt",
-      "size": 38342,
-      "sha256": "a4e1fc9c50a7f9e0569ac421a0239bd5f5d9d63d89f7c494818902aa05f176eb"
+      "size": 38436,
+      "sha256": "325b6c88005df15336215516dda47aa849394d0740505779c1cee8d1215cabd3"
     },
     {
       "path": "app/src/testPhone/java/net/mspanc/twinsenradio/phone/PhoneCastControllerTestShared.kt",
