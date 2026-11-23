@@ -813,6 +813,7 @@ class PhoneCastControllerTestPart3 {
         assertFalse("Error idle state must clear active Cast media", rig.controller.isCasting())
         assertFalse(rig.controller.isRemotePlaying())
         assertTrue("Local phone playback must resume when receiver errors after load", rig.phonePlaying)
+        assertEquals(listOf("Could not play this station on the Cast device."), rig.messages)
 
         `when`(status.idleReason).thenReturn(MediaStatus.IDLE_REASON_NONE)
         val secondLoad = rig.loadResult(client)

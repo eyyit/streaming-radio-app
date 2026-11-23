@@ -321,6 +321,7 @@ class PhoneCastController(
                             loadedStationId = null
                             pendingPlay = false
                             remoteShouldPlay = false
+                            onMessage("Could not play this station on the Cast device.")
                             if (resumePhone) {
                                 localController()?.takeIf { !it.playWhenReady }?.play()
                             }
