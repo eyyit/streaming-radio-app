@@ -5,13 +5,13 @@ import org.junit.Test
 
 class NativeSessionControlsTest {
     @Test
-    fun automotiveBrowseContainsOnlyPlaylists() {
+    fun automotiveBrowseStartsWithActiveCollectionThenPlaylists() {
         assertEquals(
-            listOf("/playlists"),
+            listOf("/active", "/playlists"),
             NativeSessionControls.rootIds(automotive = true, hasFavourites = false)
         )
         assertEquals(
-            listOf("/playlists"),
+            listOf("/active", "/playlists"),
             NativeSessionControls.rootIds(automotive = true, hasFavourites = true)
         )
     }

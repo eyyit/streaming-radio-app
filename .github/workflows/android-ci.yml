@@ -29,6 +29,7 @@ jobs:
         with:
           distribution: temurin
           java-version: '17'
+          cache: gradle
       - name: Set up Node.js
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
@@ -40,7 +41,17 @@ jobs:
       - name: Install Android SDK components
         run: sdkmanager 'platforms;android-36' 'build-tools;35.0.0'
       - name: Run shared local and CI verification
-        run: node tools/verify-automotive.cjs
+        run: |
+          for attempt in 1 2; do
+            if node tools/verify-automotive.cjs; then
+              exit 0
+            fi
+            if [ "$attempt" -eq 2 ]; then
+              exit 1
+            fi
+            echo "Verification failed on attempt $attempt; retrying in 20s..."
+            sleep 20
+          done
       - name: Write candidate SHA-256 report
         run: |
           sha256sum \

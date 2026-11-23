@@ -2077,11 +2077,27 @@ class RadioService : MediaLibraryService() {
         // registered with. Sending with null missed the target - Android Auto
         // subscribes with content style parameters, so we pass the same ones.
         val params = contentStyleParams()
-        for (node in nodes) {
+        val effectiveNodes = buildList {
+            addAll(nodes)
+            if (net.mspanc.twinsenradio.BuildConfig.IS_AUTOMOTIVE &&
+                NODE_ACTIVE !in nodes &&
+                nodes.any { it == NODE_ALL || it == NODE_FAVOURITES || it == NODE_PLAYLISTS }
+            ) {
+                add(NODE_ACTIVE)
+            }
+        }
+        for (node in effectiveNodes) {
             // The actual item count, not Int.MAX_VALUE - this way the HDU gets
             // a meaningful sense of how much the list changed.
-            val count = if (node == NODE_PLAYLISTS) 2 + repo.playlists().size
-                else childrenOf(node).size
+            val count = when (node) {
+                NODE_ROOT -> NativeSessionControls.rootIds(
+                    net.mspanc.twinsenradio.BuildConfig.IS_AUTOMOTIVE,
+                    repo.favourites().isNotEmpty()
+                ).size
+                NODE_ACTIVE -> childrenOf(resolvedActiveBrowseParent()).size
+                NODE_PLAYLISTS -> 2 + repo.playlists().size
+                else -> childrenOf(node).size
+            }
             session.notifyChildrenChanged(node, count, params)
             session.notifyChildrenChanged(node, count, null)
             for (controller in controllers) {
@@ -2089,7 +2105,15 @@ class RadioService : MediaLibraryService() {
                 session.notifyChildrenChanged(controller, node, count, null)
             }
         }
-        debugInfo(TAG, "powiadomiono ${controllers.size} kontroler(ow) o ${nodes.joinToString()}")
+        debugInfo(TAG, "powiadomiono ${controllers.size} kontroler(ow) o ${effectiveNodes.joinToString()}")
+    }
+
+    private fun resolvedActiveBrowseParent(): String {
+        val active = prefs.activeBrowseParent
+        if (active != NODE_ALL && collectionLabel(active) != null && childrenOf(active).isNotEmpty()) {
+            return active
+        }
+        return NODE_ALL
     }
 
     private fun collectionLabel(parent: String): String? = when (parent) {
@@ -2522,6 +2546,18 @@ class RadioService : MediaLibraryService() {
                         repo.favourites().isNotEmpty()
                     ).map { node ->
                         when (node) {
+                            NODE_ACTIVE -> {
+                                val active = resolvedActiveBrowseParent()
+                                val label = collectionLabel(active)
+                                    ?: getString(net.mspanc.twinsenradio.R.string.node_all)
+                                MediaItem.Builder().setMediaId(NODE_ACTIVE)
+                                    .setMediaMetadata(
+                                        metadata.forFolder(
+                                            label,
+                                            MediaMetadata.MEDIA_TYPE_FOLDER_RADIO_STATIONS
+                                        )
+                                    ).build()
+                            }
                             NODE_PLAYLISTS -> MediaItem.Builder().setMediaId(NODE_PLAYLISTS)
                                 .setMediaMetadata(metadata.forFolder(getString(net.mspanc.twinsenradio.R.string.node_playlists),
                                     MediaMetadata.MEDIA_TYPE_FOLDER_PLAYLISTS)).build()
@@ -2540,6 +2576,11 @@ class RadioService : MediaLibraryService() {
                     page,
                     pageSize
                 ) { it }
+
+                parentId == NODE_ACTIVE -> {
+                    val active = resolvedActiveBrowseParent()
+                    BrowsePage.map(childrenOf(active), page, pageSize) { browseItem(it, active) }
+                }
 
                 parentId == NODE_PLAYLISTS -> {
                     val collections = listOf(
@@ -2722,6 +2763,7 @@ class RadioService : MediaLibraryService() {
                     }
                     prefs.activeBrowseParent = parent
                     stationTraversal.invalidateOrder()
+                    notifyBrowseNodesChanged(NODE_ROOT, NODE_ACTIVE)
                     val current = Station.idFromMediaId(player.currentMediaItem?.mediaId.orEmpty())
                     val index = CollectionQueue.startIndex(stations.map { it.id }, current)!!
                     refreshCurrentMetadata(force = true, why = "collection")
@@ -2798,12 +2840,7 @@ class RadioService : MediaLibraryService() {
             .setMediaId(if (net.mspanc.twinsenradio.BuildConfig.IS_AUTOMOTIVE)
                 Station.contextualMediaId(station.mediaId, parentId) else station.mediaId)
             .setMediaMetadata(
-                metadata.forBrowseItem(station).buildUpon().apply {
-                    if (net.mspanc.twinsenradio.BuildConfig.IS_AUTOMOTIVE &&
-                        Station.idFromMediaId(player.currentMediaItem?.mediaId.orEmpty()) == station.id) {
-                        setSubtitle(player.mediaMetadata.subtitle)
-                    }
-                }.setExtras(extras).build()
+                metadata.forBrowseItem(station).buildUpon().setExtras(extras).build()
             )
             .build()
     }
@@ -3096,6 +3133,7 @@ class RadioService : MediaLibraryService() {
         private const val SILENCE_GRACE_MS = 60_000L
 
         const val NODE_ROOT = "/"
+        const val NODE_ACTIVE = "/active"
         const val NODE_FAVOURITES = "/fav"
         const val NODE_ALL = "/all"
         const val NODE_PLAYLISTS = "/playlists"

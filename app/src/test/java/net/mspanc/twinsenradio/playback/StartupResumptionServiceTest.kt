@@ -156,7 +156,19 @@ class StartupResumptionServiceTest {
                 val root = callback.onGetLibraryRoot(session, controller, null).get().value!!
                 val folders = callback.onGetChildren(session, controller, root.mediaId, 0, 100, null)
                     .get().value!!
-                assertTrue(folders.any { it.mediaId == RadioService.NODE_PLAYLISTS })
+                assertEquals(
+                    listOf(RadioService.NODE_ACTIVE, RadioService.NODE_PLAYLISTS),
+                    folders.map { it.mediaId }
+                )
+                assertEquals("All stations", folders.first().mediaMetadata.title?.toString())
+                val activeItems = callback.onGetChildren(session, controller, RadioService.NODE_ACTIVE, 0, 100, null)
+                    .get().value!!
+                assertEquals(repo.all().size, activeItems.size)
+                assertTrue(activeItems.all {
+                    it.mediaMetadata.subtitle == null &&
+                        it.mediaMetadata.description == null &&
+                        it.mediaMetadata.artist == null
+                })
             }
             val saved = callback.onGetChildren(session, controller, RadioService.NODE_PLAYLISTS, 0, 100, null)
                 .get().value!!.single { it.mediaId == "/collection" + imported }
@@ -168,6 +180,19 @@ class StartupResumptionServiceTest {
             assertEquals(repo.sourceStations("startup").map { it.mediaId },
                 result.mediaItems.map { it.mediaId })
             assertEquals(0, result.startIndex)
+            if (net.mspanc.twinsenradio.BuildConfig.IS_AUTOMOTIVE) {
+                assertTrue(result.mediaItems.all {
+                    it.mediaMetadata.subtitle == null &&
+                        it.mediaMetadata.description == null &&
+                        it.mediaMetadata.artist == null
+                })
+                val updatedFolders = callback.onGetChildren(session, controller, RadioService.NODE_ROOT, 0, 100, null)
+                    .get().value!!
+                assertEquals("Startup", updatedFolders.first().mediaMetadata.title?.toString())
+                val updatedActive = callback.onGetChildren(session, controller, RadioService.NODE_ACTIVE, 0, 100, null)
+                    .get().value!!
+                assertEquals(repo.sourceStations("startup").size, updatedActive.size)
+            }
         }
     }
 

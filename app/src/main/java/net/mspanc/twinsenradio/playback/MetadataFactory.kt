@@ -61,19 +61,23 @@ class MetadataFactory(private val context: Context, private val prefs: Prefs) {
     private val artworkBytesCache = HashMap<String, ByteArray?>()
 
     /** Metadata for a browse-list item (Android Auto renders a tile from it). */
-    fun forBrowseItem(station: Station): MediaMetadata =
-        MediaMetadata.Builder()
+    fun forBrowseItem(station: Station): MediaMetadata {
+        val builder = MediaMetadata.Builder()
             .setTitle(station.name)
             .setDisplayTitle(station.name)
-            .setSubtitle(StationText.subtitle(station))
-            .setDescription(StationText.subtitle(station))
-            .setArtist(station.genre)
             .setStation(station.name)
             .setIsBrowsable(false)
             .setIsPlayable(true)
             .setMediaType(MediaMetadata.MEDIA_TYPE_RADIO_STATION)
             .setArtworkUri(logoUri(station))
-            .build()
+        if (!net.mspanc.twinsenradio.BuildConfig.IS_AUTOMOTIVE) {
+            builder
+                .setSubtitle(StationText.subtitle(station))
+                .setDescription(StationText.subtitle(station))
+                .setArtist(station.genre)
+        }
+        return builder.build()
+    }
 
     fun forFolder(title: String, mediaType: Int, artwork: Uri? = null): MediaMetadata =
         MediaMetadata.Builder()
