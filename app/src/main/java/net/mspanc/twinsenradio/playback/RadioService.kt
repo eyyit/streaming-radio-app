@@ -590,12 +590,16 @@ class RadioService : MediaLibraryService() {
     private inner class PlayerEvents : Player.Listener {
 
         override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
+            val id = mediaItem?.mediaId?.let { Station.idFromMediaId(it) }
+            if (reason == Player.MEDIA_ITEM_TRANSITION_REASON_PLAYLIST_CHANGED &&
+                id != null && id == PlaybackStatusBus.stationId.value) {
+                return
+            }
             // A station change starts everything from scratch. Without this, the cover art
             // from the previous station would stay in the `coverArtUrl` field and come back
             // on screen at the next metadata refresh - after switching from RMF to RNS
             // the RMF cover art would briefly show instead of the Nowy Swiat logo.
             resetStationState()
-            val id = mediaItem?.mediaId?.let { Station.idFromMediaId(it) }
             id?.let { stationTraversal.observe(it); saveStationTraversal() }
             // Also prune a former outside item after an automatic stream transition.
             if (!net.mspanc.twinsenradio.BuildConfig.IS_AUTOMOTIVE) refreshAutomotiveQueue()
@@ -1958,8 +1962,15 @@ class RadioService : MediaLibraryService() {
             JoinPhase.NONE -> metadata.forPlayback(station, now, coverArtUrl, trackInfo, onAir, stopped, standby)
         }
         PlaybackStatusBus.setOnAir(onAir)
-        if (item.mediaMetadata != fresh) {
-            player.replaceMediaItem(index, item.buildUpon().setMediaMetadata(fresh).build())
+        val activeCoverArt = coverArtUrl?.takeIf { fresh.artworkUri?.toString() == it }
+        val targetMediaId = if (net.mspanc.twinsenradio.BuildConfig.IS_AUTOMOTIVE) {
+            Station.withArtworkMediaId(station.mediaId, activeCoverArt)
+        } else item.mediaId
+        if (item.mediaMetadata != fresh || item.mediaId != targetMediaId) {
+            player.replaceMediaItem(
+                index,
+                item.buildUpon().setMediaId(targetMediaId).setMediaMetadata(fresh).build()
+            )
         }
         if (net.mspanc.twinsenradio.BuildConfig.IS_AUTOMOTIVE &&
             item.mediaMetadata.subtitle?.toString() != fresh.subtitle?.toString()) {
@@ -2853,7 +2864,7 @@ class RadioService : MediaLibraryService() {
         val desiredIndex = desired.indexOfFirst { it.id == id }
         val queue = if (desiredIndex >= 0) desired else listOf(repo.byId(id) ?: return) + desired
         if (player.mediaItemCount == queue.size && queue.indices.all {
-                player.getMediaItemAt(it).mediaId == queue[it].mediaId
+                Station.idFromMediaId(player.getMediaItemAt(it).mediaId) == queue[it].id
             }) return
         val oldIndex = player.currentMediaItemIndex
         player.removeMediaItems(oldIndex + 1, player.mediaItemCount)

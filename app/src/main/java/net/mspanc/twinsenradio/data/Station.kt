@@ -77,16 +77,31 @@ data class Station(
         const val DEFAULT_LABEL = "Strumień stacji"
 
         fun idFromMediaId(mediaId: String): String? =
-            if (mediaId.startsWith(MEDIA_ID_PREFIX)) mediaId.removePrefix(MEDIA_ID_PREFIX).substringBefore(CONTEXT_SEPARATOR) else null
+            if (mediaId.startsWith(MEDIA_ID_PREFIX)) {
+                mediaId.removePrefix(MEDIA_ID_PREFIX)
+                    .substringBefore(CONTEXT_SEPARATOR)
+                    .substringBefore(ARTWORK_SEPARATOR)
+            } else null
 
         private const val CONTEXT_SEPARATOR = "!ctx!"
+        private const val ARTWORK_SEPARATOR = "!art!"
         fun contextualMediaId(mediaId: String, parentId: String): String =
             mediaId + CONTEXT_SEPARATOR + java.util.Base64.getUrlEncoder().withoutPadding()
                 .encodeToString(parentId.toByteArray(Charsets.UTF_8))
 
+        fun withArtworkMediaId(mediaId: String, artworkUri: String?): String {
+            val base = mediaId.substringBefore(ARTWORK_SEPARATOR)
+            val tag = artworkUri?.takeIf { it.isNotBlank() }?.let {
+                net.mspanc.twinsenradio.playback.ArtworkAccessPolicy.key(it).take(12)
+            } ?: return base
+            return "$base$ARTWORK_SEPARATOR$tag"
+        }
+
         fun parentFromMediaId(mediaId: String): String? = runCatching {
             if (CONTEXT_SEPARATOR !in mediaId) null else String(
-                java.util.Base64.getUrlDecoder().decode(mediaId.substringAfter(CONTEXT_SEPARATOR)), Charsets.UTF_8)
+                java.util.Base64.getUrlDecoder().decode(
+                    mediaId.substringAfter(CONTEXT_SEPARATOR).substringBefore(ARTWORK_SEPARATOR)
+                ), Charsets.UTF_8)
         }.getOrNull()
     }
 }

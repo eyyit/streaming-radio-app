@@ -576,6 +576,84 @@ class StartupResumptionServiceTest {
         }
     }
 
+    @Test fun artworkMediaIdTagPreservesStationIdentityAndKeepCurrentStream() {
+        val station = repo.all().first()
+        val stationArt = "content://com.impostorlabs.streamingradio.logos/station/abc?v=2"
+        val trackArt = "content://com.impostorlabs.streamingradio.logos/track/0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef.jpg"
+        val taggedStation = Station.withArtworkMediaId(station.mediaId, stationArt)
+        val taggedTrack = Station.withArtworkMediaId(taggedStation, trackArt)
+        assertNotEquals(station.mediaId, taggedStation)
+        assertNotEquals(taggedStation, taggedTrack)
+        assertEquals(station.id, Station.idFromMediaId(taggedStation))
+        assertEquals(station.id, Station.idFromMediaId(taggedTrack))
+        assertEquals(station.mediaId, Station.withArtworkMediaId(taggedTrack, null))
+        val contextual = Station.withArtworkMediaId(Station.contextualMediaId(station.mediaId, imported), trackArt)
+        assertEquals(station.id, Station.idFromMediaId(contextual))
+        assertEquals(imported, Station.parentFromMediaId(contextual))
+
+        withService { _, player, _, _ ->
+            val wrapper = KeepCurrentStreamPlayer(player)
+            val taggedItem = MediaItem.Builder().setMediaId(taggedTrack).setUri(station.stream).build()
+            player.setMediaItem(taggedItem)
+            player.prepare()
+            // Re-selecting the same station without the artwork tag must keep the current item.
+            wrapper.setMediaItem(MediaItem.Builder().setMediaId(station.mediaId).setUri(station.stream).build())
+            assertEquals(taggedTrack, player.currentMediaItem?.mediaId)
+            val queue = repo.all().map {
+                MediaItem.Builder().setMediaId(it.mediaId).setUri(it.stream).build()
+            }.toMutableList()
+            wrapper.setMediaItems(queue, 0, C.TIME_UNSET)
+            assertEquals(taggedTrack, player.currentMediaItem?.mediaId)
+            assertEquals(repo.all().size, player.mediaItemCount)
+        }
+    }
+
+    @Test fun automotiveArtworkChangeUpdatesMediaIdWithoutResettingPlaybackState() {
+        prefs.onlineArtworkEnabled = true
+        val station = repo.all().first()
+        val trackArt = "content://com.impostorlabs.streamingradio.logos/track/0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef.jpg"
+        val now = NowPlaying("Artist - Track", "Artist", "Track")
+        withService { service, player, _, _ ->
+            val events = RadioService::class.java.declaredClasses.single { it.simpleName == "PlayerEvents" }
+                .getDeclaredConstructor(RadioService::class.java).apply { isAccessible = true }
+                .newInstance(service) as androidx.media3.common.Player.Listener
+            player.addListener(events)
+            PlaybackStatusBus.setStation(station.id)
+            PlaybackStatusBus.setNowPlaying(now)
+            player.setMediaItem(MediaItem.Builder().setMediaId(station.mediaId).setUri(station.stream).build())
+            player.playWhenReady = true
+            val refresh = RadioService::class.java.getDeclaredMethod(
+                "refreshCurrentMetadata", Boolean::class.java, NowPlaying::class.java, String::class.java
+            ).apply { isAccessible = true }
+
+            try {
+                setField(service, "coverArtUrl", null)
+                refresh.invoke(service, true, now, "test-logo")
+                org.robolectric.Shadows.shadowOf(android.os.Looper.getMainLooper()).idle()
+                val logoMediaId = player.currentMediaItem!!.mediaId
+                assertEquals(station.mediaId, logoMediaId)
+
+                setField(service, "coverArtUrl", trackArt)
+                refresh.invoke(service, true, now, "test-cover")
+                org.robolectric.Shadows.shadowOf(android.os.Looper.getMainLooper()).idle()
+                val coverMediaId = player.currentMediaItem!!.mediaId
+
+                assertEquals(station.id, Station.idFromMediaId(coverMediaId))
+                assertEquals(trackArt, player.currentMediaItem!!.mediaMetadata.artworkUri?.toString())
+                assertEquals(trackArt, field(service, "coverArtUrl"))
+                assertEquals(now, PlaybackStatusBus.nowPlaying.value)
+                if (net.mspanc.twinsenradio.BuildConfig.IS_AUTOMOTIVE) {
+                    assertNotEquals(logoMediaId, coverMediaId)
+                } else {
+                    assertEquals(station.mediaId, coverMediaId)
+                }
+            } finally {
+                PlaybackStatusBus.setNowPlaying(null)
+                PlaybackStatusBus.setStation(null)
+            }
+        }
+    }
+
     private fun field(service: RadioService, name: String): Any? =
         RadioService::class.java.getDeclaredField(name).apply { isAccessible = true }.get(service)
     private fun setField(service: RadioService, name: String, value: Any?) {

@@ -74,7 +74,7 @@ class KeepCurrentStreamPlayer(player: Player) : ForwardingPlayer(player) {
         startPositionMs: Long
     ) {
         if (startIndex in mediaItems.indices &&
-            mediaItems[startIndex].mediaId == currentMediaItem?.mediaId &&
+            sameStationOrMediaId(mediaItems[startIndex].mediaId, currentMediaItem?.mediaId) &&
             playbackState != Player.STATE_IDLE && playbackState != Player.STATE_ENDED) {
             // Keep the current stream; only change its neighbors when choosing another browse context.
             val index = currentMediaItemIndex
@@ -98,12 +98,20 @@ class KeepCurrentStreamPlayer(player: Player) : ForwardingPlayer(player) {
         if (mediaItems.size != 1) return false
         val requested = mediaItems.first().mediaId
         val current = currentMediaItem?.mediaId ?: return false
-        if (requested != current) return false
+        if (!sameStationOrMediaId(requested, current)) return false
         if (playbackState == Player.STATE_IDLE || playbackState == Player.STATE_ENDED) return false
 
         Log.i(TAG, "stacja $requested juz gra - nie przerywam strumienia")
         if (!playWhenReady) play()
         return true
+    }
+
+    private fun sameStationOrMediaId(a: String?, b: String?): Boolean {
+        if (a == null || b == null) return false
+        if (a == b) return true
+        val idA = net.mspanc.twinsenradio.data.Station.idFromMediaId(a)
+        val idB = net.mspanc.twinsenradio.data.Station.idFromMediaId(b)
+        return idA != null && idA == idB
     }
 
     private companion object {
