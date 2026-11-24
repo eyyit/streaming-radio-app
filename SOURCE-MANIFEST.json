@@ -1,7 +1,7 @@
 {
   "formatVersion": 1,
   "project": "Twinsen Radio independent source candidate",
-  "gitHead": "57a028598c860a5b79f14d03d40e4b5c1cff791d",
+  "gitHead": "005924630bfc15457983edf7f39cde722435baaf",
   "workingTree": "clean",
   "hashAlgorithm": "SHA-256",
   "selfHashExcluded": true,
@@ -1608,7 +1608,7 @@
     {
       "path": "gradle.properties",
       "size": 295,
-      "sha256": "c6f5ab3941491c6607b757c6e2c541536e2efd58076087ee4151c9c4934530b5"
+      "sha256": "24c518c99f9069d2746198ded898827b726b63a5aa93584b16ac9618f99d2da7"
     },
     {
       "path": "gradle/wrapper/gradle-wrapper.jar",
