@@ -133,3 +133,82 @@ test('shared verification runs phone protocol tests and propagates their failure
     assert.throws(() => toolTests(root, childEnv), e => e.code === 'TOOL_TESTS_FAILED');
   } finally { fs.rmSync(root, { recursive: true, force: true }); }
 });
+
+test('AAOS cold media-button resumption contract stays wired in manifest and RadioService', () => {
+  const repoRoot = path.resolve(__dirname, '..');
+  const manifest = fs.readFileSync(path.join(repoRoot, 'app/src/main/AndroidManifest.xml'), 'utf8');
+  assert.match(
+    manifest,
+    /<receiver[\s\S]*?android:name="androidx\.media3\.session\.MediaButtonReceiver"[\s\S]*?android:exported="true"[\s\S]*?android\.intent\.action\.MEDIA_BUTTON[\s\S]*?<\/receiver>/,
+    'AndroidManifest.xml must declare exported Media3 MediaButtonReceiver for ACTION_MEDIA_BUTTON'
+  );
+  assert.match(
+    manifest,
+    /<service[\s\S]*?android:name="\.playback\.RadioService"[\s\S]*?android:exported="true"[\s\S]*?androidx\.media3\.session\.MediaLibraryService[\s\S]*?android\.media\.browse\.MediaBrowserService[\s\S]*?android\.intent\.action\.MEDIA_BUTTON[\s\S]*?<\/service>/,
+    'RadioService must remain exported with MediaLibraryService, MediaBrowserService, and MEDIA_BUTTON'
+  );
+  const service = fs.readFileSync(
+    path.join(repoRoot, 'app/src/main/java/net/mspanc/twinsenradio/playback/RadioService.kt'),
+    'utf8'
+  );
+  const trustCalls = service.match(/access\([^)]*verifiedLegacyMediaTrust\(/g) || [];
+  assert.ok(
+    trustCalls.length >= 3,
+    `RadioService must apply verifiedLegacyMediaTrust in onMediaButtonEvent, onConnect, and onCustomCommand (found ${trustCalls.length})`
+  );
+  assert.match(
+    service,
+    /override fun onPlaybackResumption\(/,
+    'RadioService must implement onPlaybackResumption for cold play/dial wake'
+  );
+});
+
+test('listening-time station sorting contract stays wired across shared, phone, AAOS, and docs', () => {
+  const repoRoot = path.resolve(__dirname, '..');
+  const read = rel => fs.readFileSync(path.join(repoRoot, rel), 'utf8');
+  const prefs = read('app/src/main/java/net/mspanc/twinsenradio/data/Prefs.kt');
+  assert.match(prefs, /const val KEY_SORT_BY_LISTENING_TIME = "sort_by_listening_time"/);
+  assert.match(prefs, /const val KEY_LISTEN_MS_PREFIX = "listen_ms_"/);
+  assert.match(prefs, /var sortByListeningTime: Boolean/);
+  assert.match(prefs, /fun listeningTimeMs\(stationId: String\): Long/);
+  assert.match(prefs, /fun addListeningTimeMs\(stationId: String, deltaMs: Long\)/);
+
+  const sorting = read('app/src/main/java/net/mspanc/twinsenradio/data/Sorting.kt');
+  assert.match(sorting, /class ListeningTimeTracker\(/);
+  assert.match(sorting, /fun update\(stationId: String\?\): Boolean/);
+  assert.match(sorting, /fun checkpoint\(\): Boolean/);
+  assert.match(sorting, /fun stop\(\): Boolean/);
+
+  const playlistLib = read('app/src/main/java/net/mspanc/twinsenradio/data/PlaylistLibrary.kt');
+  assert.match(playlistLib, /fun sortByListeningTime\(/);
+
+  const repo = read('app/src/main/java/net/mspanc/twinsenradio/data/StationRepository.kt');
+  assert.match(repo, /private fun applyListeningOrder\(/);
+  assert.match(repo, /return applyListeningOrder\(visible\)/);
+  assert.match(repo, /return applyListeningOrder\(ordered\(result, "favorite_order"\)\)/);
+
+  const service = read('app/src/main/java/net/mspanc/twinsenradio/playback/RadioService.kt');
+  assert.match(service, /ListeningTimeTracker\(/);
+  assert.match(service, /syncListeningTracker\(\)/);
+  assert.match(service, /listeningTracker\.checkpoint\(\)/);
+  assert.match(service, /listeningTracker\.stop\(\)/);
+  assert.match(service, /Prefs\.KEY_SORT_BY_LISTENING_TIME ->/);
+
+  const castRouting = read('app/src/phone/java/net/mspanc/twinsenradio/phone/PhoneCastRouting.kt');
+  assert.match(castRouting, /ListeningTimeTracker\(/);
+  assert.match(castRouting, /listeningTracker\.update\(/);
+
+  const phoneSettings = read('app/src/phone/java/net/mspanc/twinsenradio/phone/PhoneSettingsActivity.kt');
+  assert.match(phoneSettings, /R\.string\.phone_settings_station_order/);
+  assert.match(phoneSettings, /prefs\.sortByListeningTime/);
+
+  const aaosSettings = read('app/src/automotive/java/net/mspanc/twinsenradio/automotive/RadioManagement.kt');
+  const aaosToggles = aaosSettings.match(/Sort stations by listening time",prefs\.sortByListeningTime/g) || [];
+  assert.ok(
+    aaosToggles.length >= 2,
+    `RadioManagement must expose listening-time sort toggle in both full-area and dialog settings (found ${aaosToggles.length})`
+  );
+
+  const acceptance = read('docs/FEATURE-ACCEPTANCE.md');
+  assert.match(acceptance, /\| SHARED-LISTENING-SORT \|/);
+});

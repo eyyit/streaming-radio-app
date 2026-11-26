@@ -113,4 +113,40 @@ class ImportedPlaylistTest {
         assertTrue(edit.await().isFailure)
         assertTrue(fresh().playlists().isEmpty())
     }
+
+    @Test fun sortByListeningTimeOrdersAllAndFavoritesAndRestoresSavedOrderWhenDisabled() = runBlocking {
+        val repo = fresh()
+        val prefs = Prefs(context)
+        try {
+            val playlist = repo.saveLocalPlaylist(
+                "Stations",
+                "#EXTM3U\n#EXTINF:-1,Alpha\nhttps://radio.example/a\n#EXTINF:-1,Beta\nhttps://radio.example/b\n#EXTINF:-1,Gamma\nhttps://radio.example/c\n"
+            )
+            val initial = repo.all()
+            assertEquals(listOf("Alpha", "Beta", "Gamma"), initial.map { it.name })
+            val alpha = initial[0]
+            val beta = initial[1]
+            val gamma = initial[2]
+            prefs.toggleFavourite(alpha.id)
+            prefs.toggleFavourite(gamma.id)
+            assertEquals(listOf("Alpha", "Gamma"), repo.favourites().map { it.name })
+
+            prefs.addListeningTimeMs(gamma.id, 90_000L)
+            prefs.addListeningTimeMs(beta.id, 30_000L)
+            prefs.addListeningTimeMs(alpha.id, 10_000L)
+            assertEquals(90_000L, prefs.listeningTimeMs(gamma.id))
+
+            prefs.sortByListeningTime = true
+            assertEquals(listOf("Gamma", "Beta", "Alpha"), repo.all().map { it.name })
+            assertEquals(listOf("Gamma", "Alpha"), repo.favourites().map { it.name })
+            assertEquals(listOf("Alpha", "Beta", "Gamma"), repo.sourceStations(playlist.id).map { it.name })
+
+            prefs.sortByListeningTime = false
+            assertEquals(listOf("Alpha", "Beta", "Gamma"), repo.all().map { it.name })
+            assertEquals(listOf("Alpha", "Gamma"), repo.favourites().map { it.name })
+        } finally {
+            prefs.favourites = emptySet()
+            prefs.sortByListeningTime = false
+        }
+    }
 }

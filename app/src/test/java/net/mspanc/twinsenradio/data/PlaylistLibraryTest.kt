@@ -110,4 +110,45 @@ class PlaylistLibraryTest {
         assertEquals(listOf("b", "a", "c"), PlaylistLibrary.move(order, "a", 1))
         assertSame(order, PlaylistLibrary.move(order, "missing", 1))
     }
+
+    @Test
+    fun sortByListeningTimeRanksMostListenedFirstAndPreservesSavedOrderForTies() {
+        val list = listOf(
+            station("a", "https://radio/a"),
+            station("b", "https://radio/b"),
+            station("c", "https://radio/c"),
+            station("d", "https://radio/d")
+        )
+        val times = mapOf("a" to 0L, "b" to 120_000L, "c" to 300_000L, "d" to 120_000L)
+        assertEquals(
+            listOf("c", "b", "d", "a"),
+            PlaylistLibrary.sortByListeningTime(list) { times[it] ?: 0L }.map { it.id }
+        )
+    }
+
+    @Test
+    fun listeningTimeTrackerAccumulatesAcrossTransitionsCheckpointsAndIgnoresShortZaps() {
+        var now = 10_000L
+        val recorded = mutableMapOf<String, Long>()
+        val tracker = ListeningTimeTracker(
+            onAccumulated = { id, delta -> recorded[id] = (recorded[id] ?: 0L) + delta },
+            nowMs = { now }
+        )
+        tracker.update("a")
+        now += 500L
+        tracker.update("b")
+        assertEquals(null, recorded["a"])
+
+        now += 5_000L
+        assertEquals(true, tracker.checkpoint())
+        assertEquals(5_000L, recorded["b"])
+
+        now += 3_000L
+        tracker.update("a")
+        assertEquals(8_000L, recorded["b"])
+
+        now += 2_500L
+        tracker.stop()
+        assertEquals(2_500L, recorded["a"])
+    }
 }

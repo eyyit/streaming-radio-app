@@ -148,4 +148,11 @@ object PlaylistLibrary {
             it.add(to, item)
         }
     }
+
+    /**
+     * Sorts stations by accumulated listening time descending while preserving
+     * the incoming saved order as a stable tie-breaker.
+     */
+    fun sortByListeningTime(stations: List<Station>, listeningTimeMs: (String) -> Long): List<Station> =
+        stations.sortedByDescending { listeningTimeMs(it.id).coerceAtLeast(0L) }
 }

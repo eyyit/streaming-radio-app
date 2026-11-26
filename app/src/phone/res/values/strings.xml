@@ -5,6 +5,9 @@
     <string name="phone_settings_artwork">Artwork</string>
     <string name="phone_settings_artwork_online">Online track and station artwork</string>
     <string name="phone_settings_artwork_local">Local artwork only</string>
+    <string name="phone_settings_station_order">Station order</string>
+    <string name="phone_settings_station_order_saved">Saved order</string>
+    <string name="phone_settings_station_order_listening_time">Most listened (by time)</string>
     <string name="phone_settings_buffer">Playback buffer</string>
     <string name="phone_settings_playlists">Playlists</string>
     <string name="phone_settings_buffer_small">Small\nStarts in about 1s, 20s reserve</string>

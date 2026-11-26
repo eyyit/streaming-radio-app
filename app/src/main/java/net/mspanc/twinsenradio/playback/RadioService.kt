@@ -57,6 +57,7 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import net.mspanc.twinsenradio.data.BufferProfile
 import net.mspanc.twinsenradio.data.ContentStyle
+import net.mspanc.twinsenradio.data.ListeningTimeTracker
 import net.mspanc.twinsenradio.data.Prefs
 import net.mspanc.twinsenradio.data.LineContent
 import net.mspanc.twinsenradio.data.LineSpec
@@ -243,6 +244,15 @@ class RadioService : MediaLibraryService() {
      * independently - see [MetadataFactory.carAttached] for what hangs on it.
      */
     private var carControllers = 0
+    private lateinit var listeningTracker: ListeningTimeTracker
+
+    private fun syncListeningTracker() {
+        if (!this::listeningTracker.isInitialized || !this::player.isInitialized) return
+        val activeId = if (player.isPlaying) {
+            player.currentMediaItem?.mediaId?.let { Station.idFromMediaId(it) }
+        } else null
+        listeningTracker.update(activeId)
+    }
 
     private val prefsListener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
         // A setting changed halfway through a drive changes what the following
@@ -279,6 +289,12 @@ class RadioService : MediaLibraryService() {
                 notifyBrowseNodesChanged(NODE_FAVOURITES)
                 refreshAutomotiveQueue()
             }
+            Prefs.KEY_SORT_BY_LISTENING_TIME -> {
+                stationTraversal.invalidateOrder()
+                saveStationTraversal()
+                notifyBrowseNodesChanged(NODE_ALL, NODE_FAVOURITES)
+                refreshAutomotiveQueue()
+            }
             Prefs.KEY_STYLE_BROWSABLE, Prefs.KEY_STYLE_PLAYABLE, Prefs.KEY_M3U -> {
                 session.notifyChildrenChanged(NODE_ROOT, Int.MAX_VALUE, null)
                 BROWSE_NODES.forEach { session.notifyChildrenChanged(it, Int.MAX_VALUE, null) }
@@ -301,7 +317,13 @@ class RadioService : MediaLibraryService() {
             Prefs.KEY_BUFFER -> debugInfo(TAG, "Zmieniono bufor - zadziala po restarcie odtwarzania")
             // A quality change or a custom address change concerns a specific station.
             // The keys are prefixed with its identifier, so we check the beginning.
-            else -> if (key?.startsWith("stream_") == true) reloadCurrentStation()
+            else -> when {
+                key?.startsWith("stream_") == true -> reloadCurrentStation()
+                key?.startsWith(Prefs.KEY_LISTEN_MS_PREFIX) == true && prefs.sortByListeningTime -> {
+                    notifyBrowseNodesChanged(NODE_ALL, NODE_FAVOURITES)
+                    refreshAutomotiveQueue()
+                }
+            }
         }
     }
 
@@ -322,6 +344,10 @@ class RadioService : MediaLibraryService() {
         super.onCreate()
         StationArtworkStore.beginServiceLaunch()
         prefs = Prefs(this)
+        listeningTracker = ListeningTimeTracker(
+            onAccumulated = { stationId, deltaMs -> prefs.addListeningTimeMs(stationId, deltaMs) },
+            nowMs = { SystemClock.elapsedRealtime() }
+        )
         repo = StationRepository.get(this)
         metadata = MetadataFactory(this, prefs)
         restoreStationTraversal()
@@ -377,6 +403,7 @@ class RadioService : MediaLibraryService() {
         scope.launch {
             while (true) {
                 repo.refreshUserLists()
+                if (this@RadioService::listeningTracker.isInitialized) listeningTracker.checkpoint()
                 delay(60_000)
             }
         }
@@ -448,6 +475,7 @@ class RadioService : MediaLibraryService() {
 
     override fun onDestroy() {
         if (!net.mspanc.twinsenradio.BuildConfig.IS_AUTOMOTIVE) PlaybackStatusBus.phoneStationNeighbor = null
+        if (this::listeningTracker.isInitialized) listeningTracker.stop()
         PlaybackStatusBus.setActuallyPlaying(false)
         PlaybackStatusBus.resetMissingTrackInfo()
         clockTick?.let { clockHandler.removeCallbacks(it) }
@@ -466,7 +494,7 @@ class RadioService : MediaLibraryService() {
      * the car is a decision and stays in the trace; a play counter is not.
      */
     private fun isBookkeeping(key: String): Boolean =
-        key.startsWith("plays_") || key == Prefs.KEY_RECENT
+        key.startsWith("plays_") || key.startsWith(Prefs.KEY_LISTEN_MS_PREFIX) || key == Prefs.KEY_RECENT
 
     /**
      * Opens the trace and writes down the settings it was recorded under.
@@ -595,6 +623,7 @@ class RadioService : MediaLibraryService() {
                 id != null && id == PlaybackStatusBus.stationId.value) {
                 return
             }
+            syncListeningTracker()
             // A station change starts everything from scratch. Without this, the cover art
             // from the previous station would stay in the `coverArtUrl` field and come back
             // on screen at the next metadata refresh - after switching from RMF to RNS
@@ -749,6 +778,7 @@ class RadioService : MediaLibraryService() {
          * hide: ready, wanting to play, and suppressed.
          */
         override fun onIsPlayingChanged(isPlaying: Boolean) {
+            syncListeningTracker()
             PlaybackStatusBus.setActuallyPlaying(isPlaying)
             traceState("slychac")
         }
@@ -2335,7 +2365,7 @@ class RadioService : MediaLibraryService() {
             // player a new media item before we have returned the controller its
             // connection result. The post puts it after that.
             clockHandler.post { checkStale("klient") }
-            val access = access(controller)
+            val access = access(controller, verifiedLegacyMediaTrust(controller))
             val phoneNotification = !net.mspanc.twinsenradio.BuildConfig.IS_AUTOMOTIVE &&
                 session.isMediaNotificationController(controller)
             // Mirror Media3's controller-aware security defaults. The deprecated
@@ -2384,7 +2414,7 @@ class RadioService : MediaLibraryService() {
         ): ListenableFuture<SessionResult> {
             // Recheck identity and current diagnostic state on invocation too:
             // legacy custom actions may enter through the shared platform session.
-            val access = access(controller)
+            val access = access(controller, verifiedLegacyMediaTrust(controller))
             val allowed = when (customCommand.customAction) {
                 CMD_REFRESH_ARTWORK.customAction -> access.refreshArtwork
                 CMD_TOGGLE_SHUFFLE.customAction -> access.controlPlayback

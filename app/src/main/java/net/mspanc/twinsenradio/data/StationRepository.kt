@@ -449,9 +449,14 @@ class StationRepository internal constructor(
         if (readStringList(playlistPrefs.getString("all_order", "")).isEmpty()) {
             playlistPrefs.edit().putString("all_order", result.map { it.id }.joinToString("\n")).apply()
         }
-        return StationVisibility.visible(ordered(result, "all_order"), stationExclusions(), all = true)
+        val visible = StationVisibility.visible(ordered(result, "all_order"), stationExclusions(), all = true)
             .filterNot { it.id in hidden }
+        return applyListeningOrder(visible)
     }
+
+    private fun applyListeningOrder(stations: List<Station>): List<Station> =
+        if (prefs.sortByListeningTime) PlaylistLibrary.sortByListeningTime(stations, prefs::listeningTimeMs)
+        else stations
 
     /**
      * Ordering of the list. By default, the order from the file - arranged
@@ -500,7 +505,7 @@ class StationRepository internal constructor(
             val legacy = (prefs.presetOrder + result.map { it.id }).distinct()
             playlistPrefs.edit().putString("favorite_order", legacy.joinToString("\n")).apply()
         }
-        return ordered(result, "favorite_order")
+        return applyListeningOrder(ordered(result, "favorite_order"))
     }
 
     fun recent(): List<Station> {

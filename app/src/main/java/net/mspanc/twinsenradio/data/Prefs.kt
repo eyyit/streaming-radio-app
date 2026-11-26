@@ -552,6 +552,22 @@ class Prefs(context: Context) {
     fun bumpPlayCount(stationId: String) =
         sp.edit { putInt(KEY_PLAYS_PREFIX + stationId, playCount(stationId) + 1) }
 
+    /** Total accumulated playback duration for a station in milliseconds. */
+    fun listeningTimeMs(stationId: String): Long =
+        sp.getLong(KEY_LISTEN_MS_PREFIX + stationId, 0L).coerceAtLeast(0L)
+
+    fun addListeningTimeMs(stationId: String, deltaMs: Long) {
+        if (stationId.isBlank() || deltaMs <= 0L) return
+        val current = listeningTimeMs(stationId)
+        val updated = if (Long.MAX_VALUE - current < deltaMs) Long.MAX_VALUE else current + deltaMs
+        sp.edit { putLong(KEY_LISTEN_MS_PREFIX + stationId, updated) }
+    }
+
+    /** Sort All stations and Favorites by accumulated listening time (most listened first). */
+    var sortByListeningTime: Boolean
+        get() = sp.getBoolean(KEY_SORT_BY_LISTENING_TIME, false)
+        set(value) = sp.edit { putBoolean(KEY_SORT_BY_LISTENING_TIME, value) }
+
     /** Station list order, see [StationSort]. */
     var stationSort: StationSort
         get() = StationSort.at(sp.getInt(KEY_SORT_STATIONS, 0))
@@ -654,6 +670,7 @@ class Prefs(context: Context) {
         const val KEY_HIDDEN = "hidden_stations"
         const val KEY_SORT_STATIONS = "sort_stations"
         const val KEY_SORT_DISCOVER = "sort_discover"
+        const val KEY_SORT_BY_LISTENING_TIME = "sort_by_listening_time"
 
         // Station-dependent keys - the full key is the prefix plus its identifier
         private const val KEY_STREAM_PREFIX = "stream_choice_"
@@ -661,6 +678,7 @@ class Prefs(context: Context) {
         private const val KEY_CUSTOM_LOGO_PREFIX = "logo_custom_"
         private const val KEY_SLOGAN_PREFIX = "slogan_"
         private const val KEY_PLAYS_PREFIX = "plays_"
+        const val KEY_LISTEN_MS_PREFIX = "listen_ms_"
         const val KEY_HISTORY_LOCAL = "search_history_local"
         const val KEY_HISTORY_WEB = "search_history_web"
 

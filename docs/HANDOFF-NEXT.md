@@ -1,3 +1,10 @@
+# Paired 38.0 AAOS cold physical play/pause dial resumption & contract — 25 November 2026
+
+Mobile uses build 3800 (`38.0`) and Android Automotive uses build 3801 (`38.0`).
+- Added exported `androidx.media3.session.MediaButtonReceiver` for `android.intent.action.MEDIA_BUTTON` in `app/src/main/AndroidManifest.xml` so cold AAOS physical play/pause dial broadcasts wake `RadioService` and enter Media3's playback resumption flow.
+- Applied `verifiedLegacyMediaTrust(controller)` in `RadioService.LibraryCallback.onConnect()` and `onCustomCommand()` (matching `onMediaButtonEvent()`), so Media3's legacy media-button adapter (`isTrusted = false`) for verified privileged system controllers receives playback control commands (`COMMAND_PLAY_PAUSE`, `COMMAND_PREPARE`, `COMMAND_CHANGE_MEDIA_ITEMS`) while untrusted/spoofed controllers remain read-only.
+- Added regression coverage in `StartupResumptionServiceTest.onConnectAndCustomCommandsHonorVerifiedLegacyMediaController`, automated manifest/service contract enforcement in `tools/verify-automotive.test.cjs`, and updated `docs/FEATURE-ACCEPTANCE.md` (`AAOS-NATIVE`) so cold dial resumption is permanently gated in CI and verifier runs.
+
 # Paired 34.0 revert AAOS cold-start queue pre-population — 21 November 2026
 
 Mobile uses build 3400 (`34.0`) and Android Automotive uses build 3401 (`34.0`).

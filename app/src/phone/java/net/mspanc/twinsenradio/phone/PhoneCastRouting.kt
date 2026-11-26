@@ -15,6 +15,8 @@ import androidx.media3.common.util.UnstableApi
 import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
 import net.mspanc.twinsenradio.App
+import net.mspanc.twinsenradio.data.ListeningTimeTracker
+import net.mspanc.twinsenradio.data.Prefs
 import net.mspanc.twinsenradio.data.StationRepository
 import net.mspanc.twinsenradio.playback.RadioService
 
@@ -34,7 +36,12 @@ class PhoneApp : App() {
 class PhoneCastRouting private constructor(private val context: Context) {
     val listeners = mutableSetOf<() -> Unit>()
     private var local: MediaController? = null
+    private val prefs = Prefs(context)
     private val repo = StationRepository.get(context)
+    private val listeningTracker = ListeningTimeTracker(
+        onAccumulated = { stationId, deltaMs -> prefs.addListeningTimeMs(stationId, deltaMs) },
+        nowMs = { android.os.SystemClock.elapsedRealtime() }
+    )
     val controller = PhoneCastController(context, { local },
         { local?.currentMediaItem?.mediaId?.let(repo::byMediaId) },
         { Toast.makeText(context, it, Toast.LENGTH_SHORT).show() }, ::changed,
@@ -61,6 +68,10 @@ class PhoneCastRouting private constructor(private val context: Context) {
 
     private fun changed() {
         native.sync()
+        val castStationId = if (controller.isCasting() && controller.isRemotePlaying()) {
+            displaySnapshot()?.stationId
+        } else null
+        listeningTracker.update(castStationId)
         listeners.toList().forEach { it() }
     }
 

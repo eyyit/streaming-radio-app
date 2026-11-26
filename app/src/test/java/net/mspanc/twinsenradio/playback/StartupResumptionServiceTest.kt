@@ -654,6 +654,59 @@ class StartupResumptionServiceTest {
         }
     }
 
+    @Test fun onConnectAndCustomCommandsHonorVerifiedLegacyMediaController() {
+        val packageManager = org.robolectric.Shadows.shadowOf(context.packageManager)
+        fun install(name: String, uid: Int) {
+            packageManager.installPackage(android.content.pm.PackageInfo().apply {
+                packageName = name
+                applicationInfo = android.content.pm.ApplicationInfo().apply {
+                    packageName = name
+                    this.uid = uid
+                }
+            })
+        }
+        install("test.system.media", 1000)
+        install("test.unprivileged.media", 22001)
+        org.robolectric.Shadows.shadowOf(RuntimeEnvironment.getApplication())
+            .grantPermissions(-1, 1000, android.Manifest.permission.MEDIA_CONTENT_CONTROL)
+        fun legacy(name: String, uid: Int) = MediaSession.ControllerInfo.createTestOnlyControllerInfo(
+            name, -1, uid, MediaSession.ControllerInfo.LEGACY_CONTROLLER_VERSION, 0, false, Bundle.EMPTY, true)
+
+        val trustedLegacy = legacy("test.system.media", 1000)
+        val spoofedLegacy = legacy("test.unprivileged.media", 1000)
+        val unprivilegedLegacy = legacy("test.unprivileged.media", 22001)
+        assertFalse("Match Media3's legacy button adapter trust flag", trustedLegacy.isTrusted)
+
+        withService { _, _, callback, session ->
+            val trustedResult = callback.onConnect(session, trustedLegacy)
+            assertTrue(trustedResult.isAccepted)
+            for (command in listOf(
+                androidx.media3.common.Player.COMMAND_PLAY_PAUSE,
+                androidx.media3.common.Player.COMMAND_PREPARE,
+                androidx.media3.common.Player.COMMAND_CHANGE_MEDIA_ITEMS,
+                androidx.media3.common.Player.COMMAND_SET_MEDIA_ITEM
+            )) {
+                assertTrue("Verified legacy media controller must receive $command",
+                    trustedResult.availablePlayerCommands.contains(command))
+            }
+
+            for (untrusted in listOf(spoofedLegacy, unprivilegedLegacy)) {
+                val untrustedResult = callback.onConnect(session, untrusted)
+                assertFalse("Untrusted legacy controller must not receive play/pause",
+                    untrustedResult.availablePlayerCommands.contains(
+                        androidx.media3.common.Player.COMMAND_PLAY_PAUSE))
+            }
+
+            val shuffleCommand = androidx.media3.session.SessionCommand(
+                "net.mspanc.twinsenradio.TOGGLE_SHUFFLE", Bundle.EMPTY)
+            assertEquals(androidx.media3.session.SessionError.ERROR_PERMISSION_DENIED,
+                callback.onCustomCommand(session, unprivilegedLegacy, shuffleCommand, Bundle.EMPTY).get().resultCode)
+            assertEquals(androidx.media3.session.SessionResult.RESULT_SUCCESS,
+                callback.onCustomCommand(session, trustedLegacy, shuffleCommand, Bundle.EMPTY).get().resultCode)
+            assertTrue(Prefs(context).randomStationOrder)
+        }
+    }
+
     private fun field(service: RadioService, name: String): Any? =
         RadioService::class.java.getDeclaredField(name).apply { isAccessible = true }.get(service)
     private fun setField(service: RadioService, name: String, value: Any?) {

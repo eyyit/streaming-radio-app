@@ -210,6 +210,28 @@ class PhoneFlowUiTest {
         }
     }
 
+    @Test fun phoneSettingsTogglesListeningTimeStationSort() {
+        runBlocking {
+            repo.saveLocalPlaylist(
+                "Test list",
+                "#EXTM3U\n#EXTINF:-1,Alpha\nhttps://radio.example/a\n#EXTINF:-1,Beta\nhttps://radio.example/b\n"
+            )
+        }
+        val initial = repo.all()
+        prefs.addListeningTimeMs(initial[1].id, 60_000L)
+        assertFalse(prefs.sortByListeningTime)
+        withActivity(PhoneSettingsActivity::class.java) { _, root ->
+            val sortRow = descendants(root).filterIsInstance<TextView>()
+                .single { it.text == "Station order" }
+            (sortRow.parent as View).performClick()
+            val dialog = org.robolectric.shadows.ShadowAlertDialog.getLatestDialog()
+                as androidx.appcompat.app.AlertDialog
+            dialog.listView.performItemClick(dialog.listView.getChildAt(1), 1, 1L)
+            assertTrue(Prefs(context).sortByListeningTime)
+        }
+        assertEquals(listOf("Beta", "Alpha"), repo.all().map { it.name })
+    }
+
     @Test fun emptyCollectionSelectionKeepsCurrentStationAndScope() {
         runBlocking { repo.saveLocalPlaylist("Test list", "#EXTM3U\n#EXTINF:-1,Alpha\nhttps://radio.example/a\n") }
         prefs.activeBrowseParent = RadioService.NODE_ALL

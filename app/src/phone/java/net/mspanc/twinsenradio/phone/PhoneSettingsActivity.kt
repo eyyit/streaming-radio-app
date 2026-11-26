@@ -91,6 +91,10 @@ class PhoneSettingsActivity : AppCompatActivity() {
             showArtworkChoices()
         }
         content.addView(PhoneUi.divider(this))
+        addPreferenceRow(content, R.string.phone_settings_station_order) {
+            showStationOrderChoices()
+        }
+        content.addView(PhoneUi.divider(this))
         addPreferenceRow(content, R.string.phone_settings_buffer) {
             showBufferChoices()
         }
@@ -141,6 +145,22 @@ class PhoneSettingsActivity : AppCompatActivity() {
             .setTitle(R.string.phone_settings_artwork)
             .setSingleChoiceItems(choices, selected) { dialog, which ->
                 prefs.onlineArtworkEnabled = which == 0
+                dialog.dismiss()
+            }
+            .setNegativeButton(android.R.string.cancel, null)
+            .show()
+    }
+
+    private fun showStationOrderChoices() {
+        val choices = arrayOf(
+            getString(R.string.phone_settings_station_order_saved),
+            getString(R.string.phone_settings_station_order_listening_time)
+        )
+        val selected = if (prefs.sortByListeningTime) 1 else 0
+        MaterialAlertDialogBuilder(this)
+            .setTitle(R.string.phone_settings_station_order)
+            .setSingleChoiceItems(choices, selected) { dialog, which ->
+                prefs.sortByListeningTime = which == 1
                 dialog.dismiss()
             }
             .setNegativeButton(android.R.string.cancel, null)

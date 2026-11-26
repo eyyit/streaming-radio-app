@@ -233,6 +233,7 @@ class RadioManagement(
     settingsGroup { group ->
      settingsAction(group,"Theme",themeAction)
      settingsAction(group,"Manage playlists") { playlists() }
+     toggle(group,"Sort stations by listening time",prefs.sortByListeningTime) { prefs.sortByListeningTime=it }
      toggle(group,"Automatic track and station artwork",prefs.onlineArtworkEnabled) { prefs.onlineArtworkEnabled=it }
      settingsAction(group,"Refresh playlists") { refreshPlaylists() }
     }
@@ -244,6 +245,7 @@ class RadioManagement(
    } else {
     settingsAction(body,"Theme",themeAction)
     settingsAction(body,"Manage playlists") { playlists() }
+    toggle(body,"Sort stations by listening time",prefs.sortByListeningTime) { prefs.sortByListeningTime=it }
     toggle(body,"Automatic track and station artwork",prefs.onlineArtworkEnabled) { prefs.onlineArtworkEnabled=it }
     if(includeArtworkTransitions) toggle(body,"Animate artwork changes",prefs.artworkTransitionsEnabled) { prefs.artworkTransitionsEnabled=it }
     settingsAction(body,"Refresh playlists") { refreshPlaylists() }
